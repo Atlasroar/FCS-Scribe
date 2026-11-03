@@ -16,6 +16,8 @@ sessions, with original evidence identities and current-state validation.
 Workshop/cache/preview failures, with explicit partial-capture reasons.
 **v0.1.0-beta.7** adds portable draft workspaces and save/discard protection
 for draft text and its original AI-packet association.
+**v0.1.0-beta.8** makes failed new-project initialization and legacy conversion
+recoverable without claiming unrelated storage or deleting unknown artifacts.
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).
@@ -87,6 +89,20 @@ An old schema-1/2 AI export is not a full baseline. Explicit conversion approval
 preserves its exact bytes at `<file>.json.legacy.bak` and its evidence as history,
 then replaces that JSON with a fresh **current-editor-state** checkpoint.
 It cannot reconstruct earlier state.
+
+In beta 8, initialization durably marks its intended baseline before committing
+that JSON. If an operation fails, fix the reported storage/permissions problem.
+If **no baseline JSON exists**, use **New** with the same filename; only a
+recognized unfinished attempt can be retried, capturing the current editor.
+If the **baseline JSON exists**, use **Resume**; a complete matching baseline
+can finish its pending marker without being rewritten. Legacy conversion can
+retry while its original packet remains, with the original `.legacy.bak` intact.
+
+Preexisting history, foreign markers, changed sources and unrelated backups
+block initialization rather than being erased. Old unflagged markers cannot
+prove that an earlier attempt owned them: restore their original baseline or
+choose another filename. Do not delete the whole `.scribe` folder to retry.
+See [recovery details](Installation-and-Workflow#failed-project-initialization-beta-8).
 
 Starting/resuming replaces the in-window export association and clears the
 draft only after beta 7's save/discard protection. Save a draft workspace to

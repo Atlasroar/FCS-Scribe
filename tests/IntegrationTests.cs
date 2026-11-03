@@ -89,6 +89,7 @@ internal static class IntegrationTests
             var adapter = new FcsAdapter(assembly, editor);
             CheckWorkshop(adapter, editor, data, nav, assembly);
             CheckScribeWindow(adapter, editor);
+            CheckInitializationWindow(adapter, editor);
             CheckDraftWorkspaceWindow(adapter, editor);
             CheckTrackingWindow(adapter, editor);
             Snapshot initial = adapter.Capture();
@@ -438,6 +439,40 @@ internal static class IntegrationTests
             }
         }
         finally { Set(item, "Name", name); }
+    }
+
+    private static void CheckInitializationWindow(FcsAdapter adapter, Form editor)
+    {
+        string directory = Directory.GetCurrentDirectory();
+        string path = Path.Combine(directory, "mods", "failed-initialization.json");
+        Snapshot current = adapter.Capture();
+        Reject<IOException>(() => JournalProject.Create(path, current, step => {
+            if (step == "baseline-flush") throw new IOException("Injected baseline write failure.");
+        }), "window fixture leaves a recognized pending marker without a baseline");
+        Check(!File.Exists(path) && File.Exists(Path.Combine(path + ".scribe", "project.json")),
+            "interrupted initialization is distinguishable from a completed tracking project");
+        using (var window = new ScribeWindow(adapter, editor, Path.Combine(directory, "initialization-settings.json")))
+        {
+            RunWindow(window, "StartPath", path);
+            var project = (JournalProject)FcsAdapter.Field(window, "project");
+            Check(project.Fingerprint == current.Fingerprint() && project.EntryCount == 0 &&
+                File.Exists(project.SessionPath), "actual Start retries an uncommitted attempt and opens its first session");
+        }
+        string committed = Path.Combine(directory, "mods", "committed-initialization.json");
+        Reject<IOException>(() => JournalProject.Create(committed, current, step => {
+            if (step == "final-marker-flush") throw new IOException("Injected final marker failure.");
+        }), "window fixture interrupts finalization after a complete baseline commit");
+        string hash = TrackingStorage.HashFile(committed);
+        using (var window = new ScribeWindow(adapter, editor, Path.Combine(directory, "initialization-settings.json")))
+        {
+            RunWindow(window, "ResumePath", committed);
+            var project = (JournalProject)FcsAdapter.Field(window, "project");
+            Check(project.Fingerprint == current.Fingerprint() && File.Exists(project.SessionPath) &&
+                TrackingStorage.HashFile(committed) == hash,
+                "actual background Resume finalizes initialization without rewriting the captured baseline");
+            Check(!File.ReadAllText(Path.Combine(project.DirectoryName, "project.json")).Contains("\"Initialization\""),
+                "resumed window uses the unchanged normal durable-marker format");
+        }
     }
 
     private static void CheckTrackingWindow(FcsAdapter adapter, Form editor)

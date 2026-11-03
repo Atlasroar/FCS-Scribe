@@ -30,6 +30,7 @@ internal static class JournalTests
         Directory.CreateDirectory(directory);
         try
         {
+            CheckInitialization(directory);
             CheckRangeExports(directory);
             string invalid = Path.Combine(directory, "game.mod");
             Reject<InvalidDataException>(() => JournalProject.Create(invalid, State("10")), "mod targets rejected before creating session storage");
@@ -200,6 +201,223 @@ internal static class JournalTests
             return passed;
         }
         finally { Directory.Delete(directory, true); }
+    }
+
+    private static LegacyTrackingException Legacy(string path)
+    {
+        File.WriteAllText(path, Json.Pretty(Json.Write(new Tracker(State("9")).Export(State("10")))));
+        try { using (JournalProject.Open(path)) { } }
+        catch (LegacyTrackingException error) { return error; }
+        throw new Exception("Legacy fixture was not recognized.");
+    }
+
+    private static string MarkerPath(string path) { return Path.Combine(path + ".scribe", "project.json"); }
+
+    private static void CheckInitialization(string directory)
+    {
+        string[] stages = { "marker-write", "marker-flush", "marker-commit", "marker-committed",
+            "baseline-write", "baseline-flush", "baseline-commit", "baseline-committed",
+            "final-marker-write", "final-marker-flush", "final-marker-commit", "final-marker-committed" };
+        foreach (bool conversion in new[] { false, true })
+        foreach (string stage in stages)
+        {
+            string path = Path.Combine(directory, (conversion ? "convert-" : "create-") + stage + ".json");
+            LegacyTrackingException legacy = conversion ? Legacy(path) : null;
+            Action<string> fail = step => { if (step == stage) throw new IOException("Injected " + step); };
+            Reject<IOException>(() => {
+                using (conversion ? JournalProject.ConvertLegacy(path, State("12"), legacy, fail) :
+                    JournalProject.Create(path, State("12"), fail)) { }
+            }, "initialization reports interruption at " + stage + " (legacy=" + conversion + ")");
+            bool committed = File.Exists(path) && TrackingStorage.Load(path).Document != null;
+            if (conversion)
+                Check(TrackingStorage.HashFile(path + ".legacy.bak") == legacy.FileHash &&
+                    (committed || TrackingStorage.HashFile(path) == legacy.FileHash),
+                    "conversion interruption preserves original bytes and legacy backup at " + stage);
+            Check(Directory.GetFiles(path + ".scribe", "*.tmp").Length == 0 &&
+                Directory.GetFiles(directory, Path.GetFileName(path) + ".*.tmp").Length == 0,
+                "ordinary initialization failures clean only their temporary writes at " + stage);
+            if (committed)
+            {
+                string hash = TrackingStorage.HashFile(path);
+                Reject<IOException>(() => JournalProject.Create(path, State("99")),
+                    "committed baseline is never replaced by a New retry at " + stage);
+                using (var resumed = JournalProject.Open(path))
+                {
+                    Check(resumed.Fingerprint == State("12").Fingerprint() && TrackingStorage.HashFile(path) == hash,
+                        "Resume finishes or accepts committed initialization without rewriting the baseline at " + stage);
+                    resumed.BeginSession(); resumed.Record(State("13"));
+                }
+            }
+            else
+            {
+                using (var retried = conversion ? JournalProject.ConvertLegacy(path, State("14"), legacy) :
+                    JournalProject.Create(path, State("14")))
+                {
+                    Check(retried.Fingerprint == State("14").Fingerprint(),
+                        "uncommitted retry starts from current state without an orphan-marker block at " + stage);
+                    retried.BeginSession(); retried.Record(State("13"));
+                }
+            }
+            using (var reopened = JournalProject.Open(path))
+                Check(reopened.Fingerprint == State("13").Fingerprint() && reopened.EntryCount == 1,
+                    "recovered project records and replays normally after " + stage);
+            Check(!File.ReadAllText(MarkerPath(path)).Contains("\"Initialization\""),
+                "completed markers retain their preexisting serialized contract");
+        }
+
+        string denied = Path.Combine(directory, "denied.json");
+        Reject<UnauthorizedAccessException>(() => JournalProject.Create(denied, State("10"), step => {
+            if (step == "baseline-write") throw new UnauthorizedAccessException("Injected access denial.");
+        }), "access-denied failure is explicit after marker persistence");
+        using (var retried = JournalProject.Create(denied, State("11")))
+            Check(retried.Fingerprint == State("11").Fingerprint(), "retry works after simulated permissions are restored");
+
+        string blocked = Path.Combine(directory, "blocked-target.json");
+        Reject<IOException>(() => JournalProject.Create(blocked, State("10"), step => {
+            if (step == "baseline-commit") Directory.CreateDirectory(blocked);
+        }), "real directory collision interrupts baseline commit");
+        Check(Directory.Exists(blocked) && !File.Exists(blocked), "failed commit never deletes a colliding destination");
+        Directory.Delete(blocked);
+        using (JournalProject.Create(blocked, State("11"))) { }
+        Check(true, "same filename retries after the user fixes the target collision");
+
+        string locked = Path.Combine(directory, "locked-conversion.json");
+        LegacyTrackingException source = Legacy(locked);
+        FileStream held = null;
+        try
+        {
+            Reject<IOException>(() => JournalProject.ConvertLegacy(locked, State("12"), source, step => {
+                if (step == "baseline-commit") held = new FileStream(locked, FileMode.Open, FileAccess.Read, FileShare.Read);
+            }), "real sharing violation interrupts legacy replacement");
+        }
+        finally { if (held != null) held.Dispose(); }
+        Check(TrackingStorage.HashFile(locked) == source.FileHash &&
+            TrackingStorage.HashFile(locked + ".legacy.bak") == source.FileHash,
+            "sharing failure preserves the legacy source and backup exactly");
+        using (JournalProject.ConvertLegacy(locked, State("13"), source)) { }
+        Check(true, "legacy conversion retries after the competing reader closes");
+
+        string repeated = Path.Combine(directory, "repeated-initialization.json");
+        for (int i = 0; i < 2; i++)
+            Reject<IOException>(() => JournalProject.Create(repeated, State("10"), step => {
+                if (step == "baseline-flush") throw new IOException("Interrupted again.");
+            }), "repeated uncommitted attempts retain recoverable ownership");
+        string pendingHash = TrackingStorage.HashFile(MarkerPath(repeated));
+        Check(File.Exists(MarkerPath(repeated) + ".bak"), "retry retains the preceding owned initialization marker");
+        bool actionable = false;
+        try { using (JournalProject.Open(repeated)) { } }
+        catch (IOException error) { actionable = error.Message.Contains("retry Start tracking > New"); }
+        Check(actionable && TrackingStorage.HashFile(MarkerPath(repeated)) == pendingHash,
+            "Resume of an uncommitted initialization explains New retry without mutating its marker");
+        using (JournalProject.Create(repeated, State("14"))) { }
+        Check(true, "retry accepts only recognizable prior initialization backups");
+
+        CheckInitializationOwnership(directory);
+    }
+
+    private static void CheckInitializationOwnership(string directory)
+    {
+        string path = Path.Combine(directory, "old-orphan.json");
+        Directory.CreateDirectory(path + ".scribe");
+        string oldId = Guid.NewGuid().ToString("N");
+        string old = Json.Write(new JournalMarker { ProjectId = oldId,
+            HeadId = oldId, Fingerprint = State("10").Fingerprint() });
+        File.WriteAllText(MarkerPath(path), old);
+        Reject<InvalidDataException>(() => JournalProject.Create(path, State("10")),
+            "unmarked old-version orphan cannot be assumed to belong to a failed attempt");
+        Check(File.ReadAllText(MarkerPath(path)) == old && !File.Exists(path),
+            "unrecognized preexisting marker remains byte-identical");
+
+        foreach (string artifact in new[] { "journal.jsonl", "journal.jsonl.bak", "sessions", "recovery", "sessions\\old.jsonl",
+            "sessions\\unfinished.tmp", "recovery\\old.bak" })
+        {
+            string root = Path.Combine(directory, "history-" + Guid.NewGuid().ToString("N") + ".json");
+            string existing = Path.Combine(root + ".scribe", artifact);
+            Directory.CreateDirectory(Path.GetDirectoryName(existing));
+            File.WriteAllText(existing, "Existing data must survive.");
+            Reject<IOException>(() => JournalProject.Create(root, State("10")), "existing history blocks initialization: " + artifact);
+            Check(File.ReadAllText(existing) == "Existing data must survive." && !File.Exists(root),
+                "initialization does not remove history: " + artifact);
+        }
+        foreach (string suffix in new[] { ".bak", ".legacy.bak" })
+        {
+            string root = Path.Combine(directory, "backup-" + Guid.NewGuid().ToString("N") + ".json");
+            File.WriteAllText(root + suffix, "Unrelated backup.");
+            Reject<IOException>(() => JournalProject.Create(root, State("10")), "existing baseline backup blocks New: " + suffix);
+            Check(File.ReadAllText(root + suffix) == "Unrelated backup." && !File.Exists(root),
+                "existing backup is never claimed or overwritten: " + suffix);
+        }
+        string changed = Path.Combine(directory, "changed-before-commit.json");
+        Reject<IOException>(() => JournalProject.Create(changed, State("10"), step => {
+            if (step == "baseline-commit") File.WriteAllText(changed, "External writer.");
+        }), "concurrent baseline creation blocks commit");
+        Check(File.ReadAllText(changed) == "External writer.", "failed initialization preserves the external destination");
+
+        string markerChanged = Path.Combine(directory, "marker-changed.json");
+        Reject<IOException>(() => JournalProject.Create(markerChanged, State("10"), step => {
+            if (step == "final-marker-commit") File.WriteAllText(MarkerPath(markerChanged), "External marker.");
+        }), "observed marker changes block finalization");
+        Check(File.ReadAllText(MarkerPath(markerChanged)) == "External marker." &&
+            TrackingStorage.Load(markerChanged).Document != null, "external marker and committed baseline both survive");
+
+        string backupChanged = Path.Combine(directory, "marker-backup-changed.json");
+        Reject<InvalidDataException>(() => JournalProject.Create(backupChanged, State("10"), step => {
+            if (step == "final-marker-commit") File.WriteAllText(MarkerPath(backupChanged) + ".bak", old);
+        }), "unrelated marker backup arriving before commit blocks replacement");
+        Check(File.ReadAllText(MarkerPath(backupChanged) + ".bak") == old,
+            "a newly observed foreign marker backup is not overwritten");
+
+        string mismatch = Path.Combine(directory, "mismatched-root.json");
+        Reject<IOException>(() => JournalProject.Create(mismatch, State("10"), step => {
+            if (step == "baseline-committed") throw new IOException("Interrupted after baseline.");
+        }), "fixture retains pending initialization after baseline commit");
+        TrackingDocument replacement = TrackingDocument.Create(State("11"), null); replacement.JournalVersion = 1;
+        File.WriteAllText(mismatch, Json.Write(replacement));
+        string mismatchHash = TrackingStorage.HashFile(mismatch), markerHash = TrackingStorage.HashFile(MarkerPath(mismatch));
+        Reject<InvalidDataException>(() => JournalProject.Open(mismatch), "unrelated baseline cannot complete a pending initialization");
+        Check(TrackingStorage.HashFile(mismatch) == mismatchHash && TrackingStorage.HashFile(MarkerPath(mismatch)) == markerHash,
+            "failed recovery preserves mismatched root and marker bytes");
+
+        string backupOnly = Path.Combine(directory, "unclaimed-marker-backup.json");
+        Directory.CreateDirectory(backupOnly + ".scribe");
+        File.WriteAllText(MarkerPath(backupOnly) + ".bak", old);
+        Reject<IOException>(() => JournalProject.Create(backupOnly, State("10")),
+            "a lone marker backup is not silently claimed as a failed attempt");
+        Check(File.ReadAllText(MarkerPath(backupOnly) + ".bak") == old && !File.Exists(backupOnly),
+            "unclaimed marker backup remains byte-identical");
+
+        string conversion = Path.Combine(directory, "conversion-backup-lost.json");
+        LegacyTrackingException legacy = Legacy(conversion);
+        Reject<IOException>(() => JournalProject.ConvertLegacy(conversion, State("12"), legacy, step => {
+            if (step == "baseline-committed") throw new IOException("Interrupted conversion.");
+        }), "legacy fixture stops after committing baseline");
+        string rootHash = TrackingStorage.HashFile(conversion), intentHash = TrackingStorage.HashFile(MarkerPath(conversion));
+        File.Move(conversion + ".legacy.bak", conversion + ".preserved.json");
+        Reject<IOException>(() => JournalProject.Open(conversion), "recovery requires the intact original legacy backup");
+        Check(TrackingStorage.HashFile(conversion) == rootHash && TrackingStorage.HashFile(MarkerPath(conversion)) == intentHash,
+            "missing legacy backup blocks finalization without changing baseline or marker");
+        File.Move(conversion + ".preserved.json", conversion + ".legacy.bak");
+        using (JournalProject.Open(conversion)) { }
+        Check(true, "restoring the exact legacy backup enables recovery");
+
+        string different = Path.Combine(directory, "changed-conversion-source.json");
+        legacy = Legacy(different);
+        Reject<IOException>(() => JournalProject.ConvertLegacy(different, State("12"), legacy, step => {
+            if (step == "baseline-write") throw new IOException("Uncommitted conversion.");
+        }), "legacy fixture retains an uncommitted source identity");
+        string originalBackup = TrackingStorage.HashFile(different + ".legacy.bak");
+        intentHash = TrackingStorage.HashFile(MarkerPath(different));
+        File.WriteAllText(different, Json.Write(new Tracker(State("9")).Export(State("11"))));
+        string externalHash = TrackingStorage.HashFile(different);
+        LegacyTrackingException external = null;
+        try { using (JournalProject.Open(different)) { } }
+        catch (LegacyTrackingException error) { external = error; }
+        Reject<IOException>(() => JournalProject.ConvertLegacy(different, State("14"), external),
+            "changed legacy source cannot claim another attempt's initialization");
+        Check(TrackingStorage.HashFile(different) == externalHash &&
+            TrackingStorage.HashFile(MarkerPath(different)) == intentHash &&
+            TrackingStorage.HashFile(different + ".legacy.bak") == originalBackup,
+            "source mismatch preserves external source, original legacy backup and pending marker");
     }
 
     private static void CheckRangeExports(string directory)

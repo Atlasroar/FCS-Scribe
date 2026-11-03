@@ -180,6 +180,43 @@ tracking/model/journal failures still pause it.
 
 ## Recovery and lifecycle
 
+### Failed project initialization (beta 8)
+
+New projects and approved legacy conversions use a pending initialization marker
+before committing the baseline. Ordinary errors retain recognizable pending
+state rather than leaving an unexplained "project already exists" blocker.
+
+1. Fix the reported write, permissions, sharing or destination-path problem.
+2. If a new project's baseline JSON **does not exist**, choose **Start tracking >
+   New** with the same filename. Only recognized pending metadata with no
+   history can be reused. This captures a fresh current-editor baseline; it does
+   not restore the failed attempt's in-memory snapshot.
+3. If the baseline JSON **exists**, choose **Resume existing JSON**. Resume
+   validates exact baseline bytes, project identity, empty initial history and
+   any required legacy backup before finalizing a pending marker. It does not
+   rewrite the committed baseline. Normal current-editor difference confirmation
+   still applies.
+4. If the file is still an original schema-1/2 AI packet, Resume offers the
+   ordinary explicit conversion again. Retry checks the same source hash and
+   intact `.legacy.bak`; after baseline replacement, use normal Resume instead.
+
+Initialization never claims preexisting session/journal/recovery data, a foreign
+marker, unrelated baseline/marker backups or a changed legacy source. Missing
+or changed required data fails explicitly. Restore the matching files from
+backup or choose a separate filename; preserve unrelated files before doing
+manual moves. Earlier beta markers without pending metadata cannot establish
+ownership, so they are not automatically deleted or repaired. A missing marker
+with only a backup also requires restoration, not automatic claiming.
+
+Do not delete the whole `.scribe` directory to get past an error. No recursive
+cleanup is part of recovery. Ordinary failed atomic writes remove only their
+own temporary file; forced termination may leave temporary files, which are
+not automatically swept. Source snapshots and backups may contain private data.
+This recovery covers initialization, not missing recorded history, mod
+restoration or arbitrary filesystem/power-loss guarantees.
+
+### Drafts, notes and tracking
+
 A deleted record cannot receive a new note: explicitly choose a surviving
 record to hold its documentation. Combine entries if they share a target.
 Stale drafts and repeat application of a batch to the same record are rejected.

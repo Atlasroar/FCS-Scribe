@@ -169,6 +169,23 @@ permanent clean flag. Failed or cancelled operations retain existing work.
 Restoring is not approval: current-state, evidence and existing-notes validation
 still gate every application. Explicit saving is not autosave or crash recovery.
 
+## Make baseline initialization recoverable (beta 8)
+
+The baseline JSON and adjacent marker cannot be committed together by one
+ordinary file replacement. A pending marker records the intended baseline hash
+and original source identity before baseline commit, then becomes the normal
+marker afterward. Retry before commit captures a new current baseline; Resume
+after commit validates and finalizes that exact root without rewriting it.
+
+Retaining recognizable pending metadata avoids rollback deleting a file that
+another writer created or changed. Preflight and commit-boundary checks reject
+history, foreign storage, mismatched sources and unrelated backups. Legacy
+backup bytes remain required. Normal markers omit pending fields, so ordinary
+stored contracts do not change. Unflagged older orphan markers cannot prove
+ownership and remain fail-closed rather than being guessed safe to delete.
+Scoped internal write/flush/commit checkpoints allow deterministic fault tests;
+production callers use the same atomic writes without injected faults.
+
 ## Separate future saved-data analysis
 
 OCS is useful complementary research, not a substitute for live-model access.
