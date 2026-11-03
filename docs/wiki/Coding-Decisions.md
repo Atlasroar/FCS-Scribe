@@ -1,0 +1,84 @@
+# Coding decisions
+
+These are project decisions, not claims that FCS exposes a stable supported
+editing SDK. See [References and knowledge credits](References-and-Knowledge-Credits)
+for authoritative sources and the distinction between documentation and local
+verification.
+
+## Integrate with FCS Extended, not a replacement editor
+
+The user wants to edit normally in FCS. FCS Extended supplies a real managed
+plugin entry point and already owns editor startup. A second desktop editor
+would duplicate that workflow and would not inherently see unsaved FCS state.
+
+## Guard and isolate reflection
+
+The upstream entry point supplies an assembly, not documented contracts for
+records, notes, or saves. The adapter therefore uses only inspected members
+of one exact executable hash. Unknown versions fail explicitly rather than
+trying similar member names. Reflection stays out of the reusable core.
+
+All editor operations stay on the WinForms thread. No background read mutates
+or traverses live editor collections concurrently, and no hook library is
+introduced as a speculative workaround.
+
+## Make the baseline explicit and immutable
+
+Comparison means "changed since Start tracking," not "different from vanilla."
+The baseline is copied so later caller/editor mutation cannot rewrite history.
+Only starting a new baseline advances it: applying notes or saving does not.
+Earlier edits are explicitly out of scope.
+
+Stable IDs define identity; renaming a display name must not create a fictitious
+deletion/addition. Changing an actual stable ID remains a different identity.
+
+## Preserve typed and layered evidence
+
+Values retain type information and invariant/round-trip numeric text. Missing,
+null, empty, zero, false, inherited data, and removal markers are not silently
+collapsed. Paths escape structural delimiters.
+
+Stored active overrides and effective values can be two views of the same
+edit. Reference objects moved into FCS's removal collection retain one stable
+path. Instance presence/tombstones are explicit. Unsupported scalar types fail
+instead of becoming an untrustworthy textual approximation.
+
+Unresolved field-level dependency provenance is labeled unresolved, not
+reconstructed from an owner's name or guessed from the final merged value.
+
+## Use deterministic changes and streaming fingerprints
+
+Records and cells are compared in ordinal order. Fingerprints use a
+length-framed stream and SHA-256 rather than building one enormous joined
+string: actual vanilla-data testing exposed memory pressure in the 32-bit
+editor. Fingerprints detect stale captured state; they are not signatures or
+a claim to cover unextracted editor subsystems.
+
+Documentation batch identity follows the baseline plus change catalogue.
+Save-time dependency-header normalization must not silently create a fresh
+baseline or make identical documentation look like a different change batch.
+
+## Keep AI external and untrusted by default
+
+Manual JSON handoff avoids provider/account/network prerequisites. Packet
+instructions constrain drafts to evidence IDs, exact quantities, and visible
+uncertainty. Mod text is data, never trusted instructions. Response validation
+does not prove prose correctness; human review and approval remain mandatory.
+
+## Append through FCS and leave Save to the user
+
+FCS's verified Notes/TODO method preserves active and inherited text. The
+existing-note append branch needs an explicit dirty flag. Existing TODO
+categories are preserved rather than repurposed.
+
+There is no custom binary writer, silent save, or attempt to embed the sidecar
+format into a `.mod`. The notes interface has no verified transaction contract;
+multi-target errors report possible partial in-memory application.
+
+## Separate future saved-data analysis
+
+OCS is useful complementary research, not a substitute for live-model access.
+Its current .NET 9 target does not directly fit this Framework 4.8 plugin.
+An optional process boundary is the proposed direction, pending the
+[design checklist](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/plan.md).
+No OCS dependency or writer ships in the initial plugin.
