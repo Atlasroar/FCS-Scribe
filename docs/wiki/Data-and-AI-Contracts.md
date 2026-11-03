@@ -1,8 +1,9 @@
 # Data and AI contracts
 
-New AI packets use `SchemaVersion = 2`, adding `Context.Workshop` to the initial
-schema-1 contract. Schema-1 packets remain readable without that optional
-context; no old fingerprint is reinterpreted as covering Workshop data.
+Beta 5 AI range exports use `SchemaVersion = 3`. Original recorded packets
+remain schema 2, which added `Context.Workshop` to the initial schema-1
+contract. Schema-1 packets remain readable without that optional context;
+no old fingerprint is reinterpreted as covering Workshop data.
 The standalone Workshop-only export has its own `SchemaVersion = 1` contract
 with `ModFileName`, `ExportedUtc`, and `Workshop`. The implementation is in
 `src\Core.cs`; the actual serialized response template is the authority for
@@ -83,6 +84,47 @@ In beta 4, `ChangeIds` across all entries must cover every exported change
 exactly once. Combining several records' evidence on one surviving target is
 allowed; omitting or duplicating evidence is not.
 
+## Recording-range packets (beta 5)
+
+Schema 3 adds `ProjectId` and ordered `Recordings` alongside the existing
+packet fields. Each recording has `EntryId`, nullable `SessionId`, UTC
+`RecordedUtc`, `Kind` and its unchanged original `Packet`. Kinds are
+`recorded` (durable session entry), `pending` (current unrecorded edits),
+`checkpoint` (older full-state history) and `imported` (converted legacy
+evidence). These are selected in recorded/history order, not re-sorted by
+wall-clock timestamps. Only a final pending entry is allowed.
+
+The outer `Changes` concatenates the selected original change catalogues,
+replacing only each copied ID with `EntryId:original-change-ID`. Original
+batch IDs, change IDs and packets remain intact inside `Recordings`.
+Context-only recordings contribute no change IDs. Repeated edits, reversals
+and distinct stored/effective observations are not collapsed into a net diff.
+An all-context range cannot be exported as record-change documentation.
+
+Range baseline identity hashes a versioned prefix, project ID and ordered
+entry/batch identities. The outer batch hash uses that identity and the
+qualified change catalogue. Identical selections retain identity across
+compilation and resume. Pending identities also bind to the durable head
+and pending state fingerprint; repeated same-state exports remain stable.
+Validation checks original schema-1/2 packets, unique entry identities, project
+compatibility, exact original-to-qualified evidence correspondence and the
+outer template's complete coverage. Nested schema-3 ranges are rejected.
+
+Use **only the outer `ResponseTemplate`** and qualified IDs for a response.
+It groups evidence onto unique current surviving targets; a historical target
+that no longer exists is blank until the user chooses a survivor. The outer
+`SourceFingerprint` and `Context` describe the current editor state at export,
+not the last selected observation. `BaselineCapturedUtc` comes from the first
+selected packet's original baseline time; recording times live in `Recordings`.
+Warnings in original contexts remain visible and relevant.
+
+Selecting/exporting does not append entries, advance the durable head, compile
+sessions or rewrite any saved packet/hash. It checks the source files against
+their observed hashes. Schema 3 is an AI-only handoff, not a resumable baseline:
+Start tracking rejects it with instructions to use the original project JSON.
+The tracking/session schemas, schema-1/2 serialization and note format are
+unchanged. These integrity checks are not signatures or proof of authenticity.
+
 ## Validation and approval
 
 Drafts must match the exported batch and source fingerprint, cite known change
@@ -96,8 +138,9 @@ for this batch, including the original text and ordered change IDs. Line
 endings are normalized for comparison; conflicting/incomplete blocks and
 multiple same-batch markers are rejected. Only remaining targets are appended.
 An entirely applied draft is still rejected as a duplicate. The append format
-and packet/tracking schema versions are unchanged; older drafts must also meet
-the complete-coverage rule. Restart persistence remains outside this fix.
+was unchanged by beta 4; older drafts must also meet the complete-coverage rule.
+Beta 5 adds range packet schema 3 without changing the draft/notes format.
+Restart persistence remains outside these fixes.
 
 These checks do **not** establish that the assistant interpreted evidence
 correctly. The user must verify names, quantities, conditions, and wording
@@ -142,8 +185,10 @@ by identity and hash. Compiled session files are redundant; uncompiled files
 remain required. Sessions are not automatically deleted.
 
 Same-state reviews do not append duplicate history. Current drafts/export associations are not stored.
-The latest matching batch can still supply a compact manual AI export after
-the baseline advances; older packets remain in history.
+Beta 5 exposes recorded history through inclusive range selection. Compiled
+session duplicates appear once; archived compiled sessions remain available
+from the main journal. Earlier gameplay evidence remains selectable after
+context-only updates. No history is advanced merely by exporting.
 
 An incomplete final JSONL line is uncommitted. Recovery requires approval,
 preserves its original bytes under `recovery`, then removes only that tail.
@@ -155,6 +200,8 @@ external editors. Timestamps are not entry identities or proof of authenticity.
 Legacy schema-1/2 AI exports contain no complete baseline. Explicit conversion
 preserves exact bytes in `.legacy.bak` and the packet in `ImportedEvidence`,
 then starts from the current editor state. It does not reconstruct old state.
+Schema-3 recording-range exports are rejected as baseline inputs rather than
+silently converting the selected history into a new tracking project.
 
 **Do not share tracking JSONs or backups with AI or Workshop:** `State` includes
 the full captured loaded model, not just relevant edits. Use the compact

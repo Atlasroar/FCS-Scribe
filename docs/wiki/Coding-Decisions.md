@@ -105,6 +105,22 @@ Documentation batch identity follows the baseline plus change catalogue.
 Save-time dependency-header normalization must not silently create a fresh
 baseline or make identical documentation look like a different change batch.
 
+## Export selected history without changing it
+
+Beta 5 exposes an inclusive range of existing observations instead of only the
+latest compatible batch. Original schema-1/2 packets remain intact in schema-3
+range exports. Qualifying copied change IDs with stable entry identities avoids
+collisions between per-batch `change-000001` IDs, while preserving the original
+packets and hashes in tracking storage.
+
+This is deliberately not a fresh diff from the first to last state: a net diff
+would erase recorded reversals and intermediate evidence. Selected observations
+remain ordered and labelled, including context-only entries and explicitly
+unrecorded current edits. The outer fingerprint describes current editor state,
+so selecting an older period does not bypass stale-draft validation.
+Selection/export never records, compiles or advances history. Overlap between
+different range batches is not automatic evidence-level deduplication.
+
 ## Keep AI external and untrusted by default
 
 Manual JSON handoff avoids provider/account/network prerequisites. Packet

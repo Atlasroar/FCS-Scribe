@@ -34,7 +34,7 @@ reusable for saved-data analysis and eventual wiki generation.
 | MVP | Safe notes insertion | Copy-based runtime checks pass; real FCS Extended approval/save workflow remains |
 | Requested follow-up | Workshop metadata and preview archive | Implemented and copy-tested; cached/local provenance explicit; interactive acceptance remains |
 | Requested follow-up | Embedded window and contextual help | Native MDI child and per-button bottom help implemented; construction/event checks pass; interactive acceptance remains |
-| Beta 2 | Resumable tracking and session journals | Full initial baseline, timestamped delta logs and durable replay implemented; history UI/draft persistence remain planned |
+| Beta 2 | Resumable tracking and session journals | Full initial baseline, timestamped delta logs and durable replay implemented; beta 5 adds range selection for AI export, while broader history UI/draft persistence remain planned |
 | Beta 2 | Recording, compilation and export settings | Manual/30/60/300/600-second recording, explicit/30-minute compilation and active-mod defaults implemented |
 | Beta 3 stabilization | Grouped window menus | Core, Workshop and Draft dropdowns with standalone approval/settings implemented and disposable-copy checked; real FCS Extended UI acceptance remains |
 | Next | Markdown export | Planned; use the existing verified catalogue rather than a second diff engine |
@@ -85,13 +85,26 @@ S01 is addressed in beta 4. Safe retry is not transactional rollback or draft
 persistence; broader S04/S15 work and real FCS Extended acceptance remain open.
 Recorded checks: 157 core, 141 disposable vanilla FCS and 140 representative-mod
 FCS checks passed. The representative mod has no instances; vanilla covers that
-mutation. S02 is the next open stabilization issue.
+mutation. S02 was addressed separately in beta 5 below.
 
 ### S02. High: AI handoff can omit accumulated recordings
 
-- [ ] Provide an explicit, reviewable way to document accumulated recordings instead of only pending changes or the latest matching saved batch.
-- [ ] Preserve batch/evidence identity and current-state validation; handle a Workshop/context-only recording making the previous gameplay batch ineligible.
-- [ ] Cover several automatic ticks, multiple sessions, context-only changes, unchanged reviews and restart without advancing or rewriting history merely to export.
+The user selected **choosing a recording range before export**, not automatic
+whole-history export on every handoff.
+
+- [x] Provide an explicit, reviewable way to document accumulated recordings instead of only pending changes or the latest matching saved batch.
+- [x] Preserve batch/evidence identity and current-state validation; handle a Workshop/context-only recording making the previous gameplay batch ineligible.
+- [x] Cover several automatic ticks, multiple sessions, context-only changes, unchanged reviews and restart without advancing or rewriting history merely to export.
+
+S02 is addressed in beta 5: inclusive first/last selection with evidence preview,
+original packets in schema-3 handoffs, unique qualified change IDs, historical
+context and explicit unrecorded entries. Drafts validate against the current
+editor, even for older ranges. Export does not record, compile or rewrite
+history; schema-1/2 packets and tracking/session storage remain unchanged.
+Recorded checks: 202 core, 153 disposable vanilla FCS and 152
+representative-mod FCS checks passed. Real-editor acceptance, broader history
+management, draft persistence, large-history profiling and cross-range
+documentation deduplication are not claimed. S03 is next.
 
 ### S03. High: Workshop failures can stop ordinary tracking
 
@@ -305,7 +318,7 @@ coverage includes it. These results do not replace interactive acceptance.
 - [x] Offer Manual (default), 30 seconds, 1 minute, 5 minutes and 10 minutes in persisted Plugin settings.
 - [x] Serialize automatic actions, skip hidden/busy windows, stop on close and keep all live FCS reads on its UI thread.
 - [x] Default JSON dialogs to the active mod's actual directory; support custom defaults/individual locations without moving the active tracking file.
-- [x] Keep compact AI export available for pending evidence or the latest matching saved batch, without resetting imported drafts on each tick.
+- [x] Keep compact AI export available without resetting imported drafts on each tick; beta 5 replaces latest-only export with explicit recording-range selection (S02).
 - [x] Warn that full-state tracking files are large/private and must not be used for AI handoff or Workshop distribution.
 - [x] Exercise background start/resume, actual timer dispatch, independent interval/30-minute deadlines, idempotent compilation, crash-tail recovery, missing storage/head, legacy compatibility, writer exclusion and copied-data defaults.
 - [ ] Manually exercise new/resume/conversion/settings dialogs, long-running validation/close, all intervals and restart recovery in FCS Extended.
@@ -360,7 +373,7 @@ Implementation follows the design decision and MVP acceptance gate.
 
 Remaining feature expansion follows the stabilization gate and MVP acceptance.
 The beta 2 checkpoint foundation is already implemented. History/export changes
-needed to resolve S02 are stabilization work; broader history UI, OCS and new
+that resolved S02 are stabilization work; broader history UI, OCS and new
 output formats remain deferred.
 
 ### Session history
@@ -368,7 +381,7 @@ output formats remain deferred.
 - [x] Persist the baseline, identities/timestamps, dependency context and evidence across editor restarts using an anchor plus durable session/main journals.
 - [x] Restore history only after verifying active mod/context identity; report restored checkpoints/pending changes and reject incompatible sessions.
 - [ ] Preserve duplicate detection and draft-to-export associations across restarts without resetting the baseline on save/apply.
-- [ ] Add history browsing, batch selection and retention controls beyond new/resume/review.
+- [ ] Add broader history browsing and retention controls beyond beta 5's inclusive AI-export range selector.
 - [x] Define versioned storage/legacy conversion, explicit corruption failures, rotating small-marker backup, permanent legacy/recovery backups and unpruned session/main history.
 - [ ] Test restart recovery, stale drafts, changed mods/dependencies, and notes-only changes.
 

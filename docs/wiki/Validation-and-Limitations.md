@@ -6,14 +6,14 @@ complete editor compatibility.
 
 ## Automated and disposable-copy evidence
 
-The recorded beta 4 checks passed. These retain the session-journal and
-grouped-menu checks and add full draft-coverage/safe-retry regressions:
+The recorded beta 5 checks passed. These retain session-journal, grouped-menu
+and complete-coverage/safe-retry checks and add recording-range regressions:
 
 | Check | Result | Boundary |
 | --- | --- | --- |
-| Dependency-free core checks | 157 passed | Adds omitted/duplicate evidence rejection, deleted-record coverage, matching completed-note detection, line-ending normalization, conflicting blocks, stale retries and unchanged note format |
-| Actual FCS methods on copied vanilla data | 141 passed | Adds rejection before notes/dirty-state mutation, duplicate evidence rejection and retry of a real FCS-completed note with save/reload; retains grouped-menu, background tracking and journal coverage |
-| Actual FCS methods on a representative copied mod | 140 passed | Same coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
+| Dependency-free core checks | 202 passed | Adds inclusive ranges across ticks/sessions, compiled/archived/restarted history, preserved original identities, qualified citations, reversals, context-only and pending entries, unchanged source files, schema-1/2 compatibility and range integrity/current-state checks |
+| Actual FCS methods on copied vanilla data | 153 passed | Adds range selector preview/bounds/context-only/cancellation, pending-state rejection, multiple real automatic ticks across resume and qualified range evidence through the FCS notes retry/save/reload workflow |
+| Actual FCS methods on a representative copied mod | 152 passed | Same coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
 
 The integration host initializes actual FCS forms without launching the complete
 interactive editor/mod-selector workflow. It exercises unsaved overrides,
@@ -32,6 +32,14 @@ upload blocking with offline capture preserved. Actual
 FCS MDI parenting and every menu action's hover/keyboard help are exercised
 under a generic WinForms message loop so async continuations stay on the UI
 thread. This does not launch FCS's complete startup/mod-selector workflow.
+Range checks use two real automatic gameplay ticks, preserving both active
+and effective name evidence after resume. The modal range selector is
+cancelled programmatically; native destination-file selection and the complete
+real-editor export/import interaction still require manual acceptance.
+A separate cross-version check created a baseline, compiled entry and
+uncompiled entry using the released beta 4 binary, then reopened/exported them
+with beta 5. Original packet serialization and all tracking-file hashes were
+unchanged. This is compatibility evidence, not a broader performance test.
 
 Original game/mod files are only copied; test saves go to a fresh ignored
 `build\integration-fixtures` directory. The Framework test host is explicitly
@@ -58,6 +66,8 @@ Also exercise the 30-minute schedule, discrepancy confirmation, recovery
 approval/cancellation, two editor instances and manual session archiving.
 Beta 3's grouped menus also require real-editor mouse/keyboard, small-window
 layout and MDI acceptance; disposable-copy results do not close this gate.
+Beta 5's range selection, preview scrolling, destination/cancellation and real
+manual AI handoff also remain part of that interactive pass.
 
 Broader dependency stacks, other extensions, unsupported/read-only modes, and
 visible failure handling also need the checks recorded in the
@@ -77,13 +87,20 @@ An experimental prerelease does not mark those checkboxes complete.
   Workshop release notes.
 - Multi-record note application has no verified transaction/rollback contract.
 - Saved baselines/history can be resumed, but drafts/export associations remain
-  window-local; there is no history browser or combined multi-batch AI export.
+  window-local. The recording-range selector is not a general history editor,
+  mod-restoration tool or persistent list of already documented evidence.
+- Range exports preserve observations rather than a net diff. Overlapping
+  ranges can document the same evidence under different batch markers; review
+  citations and existing notes. Original and qualified catalogues both ship in
+  the packet, so long selections are larger than a single-batch export.
 - Capture runs synchronously on the editor thread; large stacks can pause UI.
 - Interval sampling misses changes reverted between ticks. Record deltas still
   contain complete changed records; they are not a full editor event stream.
-- History is unpruned and replay validation grows with it. Manual AI export
-  still compares on the UI thread. Very large stacks/histories remain a
-  32-bit memory/latency risk despite fewer copies and smaller disk writes.
+- History is unpruned and replay validation grows with it. Export source
+  validation/range building uses workers, but live capture/fingerprinting and
+  range previews still run on the UI thread. Holding/serializing original
+  packets plus qualified catalogues increases memory use for large histories;
+  32-bit memory/latency profiling remains S12, not a resolved performance claim.
 - Full-state tracking files/backups may be large and private; they are not AI
   handoffs or Workshop distribution files. Fingerprint/hash checks detect
   self-consistency and observed external edits, not cryptographic authorship or

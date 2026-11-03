@@ -50,10 +50,15 @@ anything or modify your game. Do not replace FCS Extended's own contract DLL.
 2. Edit normally and select **Review changes**. Read the warnings as well as
    the exact before/after evidence. Review flushes changed records/context to
    the current timestamped session log, then advances its baseline.
-3. **Export AI packet** to JSON. Inspect it before sharing mod content with
-   an external assistant; the plugin sends nothing itself.
+3. **Export AI packet**: in beta 5, select an inclusive first/last recording
+   range and inspect its preview before choosing the JSON destination.
+   Earlier sessions remain selectable after resume. Current unrecorded edits
+   are explicitly labelled; including them does not create a recording.
+   Inspect the packet before sharing it with an external assistant; the plugin
+   sends nothing itself.
 4. Ask the assistant to follow the packet instructions and return the response
-   template as JSON. Import or paste it into the editable draft.
+   **outer** template as JSON, using its qualified change IDs rather than
+   nested archival templates. Import or paste it into the editable draft.
 5. Verify target record IDs, quantities, conditions, and prose. In beta 4,
    cover every exported change ID exactly once across the complete draft.
    Select **Apply approved notes** and explicitly approve.
@@ -119,11 +124,19 @@ Loading a legacy AI packet requires conversion approval: retain original bytes a
 current-editor baseline** in that same JSON. Old packets cannot reconstruct
 their missing baseline. Detected external edits, corruption and incompatible
 mod context fail explicitly rather than being overwritten or truncated.
+Only original schema-1/2 AI packets support this conversion. A beta 5 schema-3
+recording-range handoff is not a baseline; resume the original tracking JSON
+with its `.scribe` folder instead.
 
 **Tracking JSONs/backups contain the full captured loaded model, may be large
 and private, and must not go to AI or Workshop.** Use the compact **Export AI
-packet** action, which exports pending evidence or the latest matching saved
-batch, not the entire checkpoint history.
+packet** action, which exports only the chosen recording range, original
+compact evidence and relevant context, not full loaded snapshots or deltas.
+The outer fingerprint describes the current editor at export even for an
+older range; subsequent captured changes make its draft stale. Exporting does
+not advance tracking or compile history. Ranges preserve repeated edits and
+reversals rather than calculating a net diff. Overlapping ranges may document
+the same observations again; check existing notes and citations before approval.
 
 ## Capture Workshop information and the preview
 

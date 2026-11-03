@@ -102,7 +102,7 @@ namespace FcsScribe
 
         public static void ValidatePacket(Packet packet)
         {
-            if (packet == null || (packet.SchemaVersion != 1 && packet.SchemaVersion != 2) ||
+            if (packet == null || (packet.SchemaVersion != 1 && packet.SchemaVersion != 2 && packet.SchemaVersion != 3) ||
                 packet.Context == null || packet.Changes == null || String.IsNullOrEmpty(packet.BaselineId) ||
                 !IsHash(packet.SourceFingerprint) || packet.ResponseTemplate == null)
                 throw new InvalidDataException("The exported AI packet is incomplete or unsupported.");
@@ -124,6 +124,9 @@ namespace FcsScribe
             var cited = packet.ResponseTemplate.Entries.SelectMany(x => x.ChangeIds).ToList();
             if (cited.Count != ids.Count || cited.Distinct(StringComparer.Ordinal).Count() != ids.Count)
                 throw new InvalidDataException("The response template does not cover each change exactly once.");
+            if (packet.SchemaVersion == 3) RangeExport.Validate(packet);
+            else if (packet.ProjectId != null || packet.Recordings != null)
+                throw new InvalidDataException("Recording ranges require AI packet schema 3.");
         }
 
         private static bool IsHash(string value)
@@ -165,6 +168,8 @@ namespace FcsScribe
                     stream.Position = 0;
                     result.Legacy = Json.ReadStream<Packet>(stream);
                     TrackingDocument.ValidatePacket(result.Legacy);
+                    if (result.Legacy.SchemaVersion == 3)
+                        throw new InvalidDataException("A recording-range AI export is not a tracking baseline. Resume the original tracking JSON with its .scribe folder.");
                 }
                 stream.Position = 0;
                 using (var sha = SHA256.Create())

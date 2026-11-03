@@ -30,6 +30,7 @@ internal static class JournalTests
         Directory.CreateDirectory(directory);
         try
         {
+            CheckRangeExports(directory);
             string invalid = Path.Combine(directory, "game.mod");
             Reject<InvalidDataException>(() => JournalProject.Create(invalid, State("10")), "mod targets rejected before creating session storage");
             Check(!Directory.Exists(invalid + ".scribe"), "invalid targets leave no storage next to game/mod files");
@@ -82,6 +83,8 @@ internal static class JournalTests
             {
                 Check(reopened.State.Fingerprint() == State("14").Fingerprint(),
                     "compiled sessions can be archived externally without losing journal recovery");
+                Check(reopened.ExportRecordings(reopened.State).Count == 4,
+                    "recording ranges recover original evidence from the journal after compiled sessions are archived");
                 reopened.BeginSession();
                 Snapshot metadata = State("14"); metadata.Dependencies.Add("saved-header.mod");
                 Packet packet = reopened.Record(metadata);
@@ -197,5 +200,169 @@ internal static class JournalTests
             return passed;
         }
         finally { Directory.Delete(directory, true); }
+    }
+
+    private static void CheckRangeExports(string directory)
+    {
+        string path = Path.Combine(directory, "range.json");
+        string originalPacket, originalEntry, firstSession;
+        Packet fullRange;
+        using (var project = JournalProject.Create(path, State("10")))
+        {
+            project.BeginSession(); firstSession = project.SessionId;
+            Check(project.ExportRecordings(State("10")).Count == 0, "empty tracking has no invented export evidence");
+            string head = project.HeadId;
+            var pending = project.ExportRecordings(State("11"));
+            Check(pending.Count == 1 && pending[0].Kind == "pending" && project.HeadId == head && project.EntryCount == 0,
+                "pending edits are selectable without being recorded");
+            Packet unsaved = RangeExport.Create(project.ProjectId, pending, 0, 0, State("11"));
+            Check(unsaved.SchemaVersion == 3 && unsaved.Changes.Single().Id == pending[0].EntryId + ":change-000001",
+                "range schema namespaces change IDs by stable entry identity");
+            Check(RangeExport.Create(project.ProjectId, project.ExportRecordings(State("11")), 0, 0, State("11")).BatchId == unsaved.BatchId,
+                "re-exporting unchanged pending edits preserves range identity");
+            string aiPath = Path.Combine(directory, "range-ai.json");
+            File.WriteAllText(aiPath, Json.Write(unsaved));
+            TrackingDocument.ValidatePacket(Json.Read<Packet>(File.ReadAllText(aiPath)));
+            Check(true, "schema-3 ranges round-trip and validate their original evidence");
+            Reject<InvalidDataException>(() => TrackingStorage.Load(aiPath), "range handoffs cannot be mistaken for tracking baselines");
+            Packet first = project.Record(State("11"));
+            originalPacket = Json.Write(first); originalEntry = project.HeadId;
+            Check(!originalPacket.Contains("\"Recordings\"") && !originalPacket.Contains("\"ProjectId\"") && first.SchemaVersion == 2,
+                "new optional range fields do not change schema-2 journal serialization");
+            project.Record(State("12"));
+            Check(project.Compile() == 2, "range fixture contains compiled ticks");
+            project.Record(State("10"));
+            Snapshot context = State("10"); context.Warnings.Add("Historical context warning.");
+            context.Workshop = new WorkshopMetadata { Author = "Context-only author" };
+            project.Record(context);
+            Check(project.LastEvidence.SourceFingerprint != context.Fingerprint(),
+                "context-only updates reproduce the former latest-batch export gap");
+            project.Record(context.Copy());
+            Check(project.EntryCount == 4, "unchanged reviews are absent from selectable history");
+            project.BeginSession();
+            Snapshot latest = context.Copy(); latest.Records[0].Cells[0].Value = Value.Of("Int32", "13");
+            project.Record(latest);
+            var choices = project.ExportRecordings(latest);
+            Check(choices.Count == 5 && choices[0].SessionId == firstSession && choices[4].SessionId != firstSession,
+                "range choices include several ticks and multiple sessions exactly once");
+            Check(choices[3].Packet.Changes.Count == 0 && Json.Write(choices[0].Packet) == originalPacket &&
+                choices[0].EntryId == originalEntry, "choices preserve original identities and context-only recordings");
+            string[] files = Directory.GetFiles(path + ".scribe", "*", SearchOption.AllDirectories)
+                .Where(x => Path.GetFileName(x) != "writer.lock").Concat(new[] { path }).ToArray();
+            var hashes = files.ToDictionary(x => x, TrackingStorage.HashFile);
+            head = project.HeadId; int count = project.PendingCount;
+            fullRange = RangeExport.Create(project.ProjectId, choices, 0, 4, latest);
+            Check(fullRange.Recordings.Count == 5 && fullRange.Changes.Count == 4 &&
+                fullRange.Changes.Select(x => x.Id).Distinct().Count() == 4,
+                "all ticks accumulate with no colliding per-batch change IDs or compiled/session duplicates");
+            Check(fullRange.Changes[2].Before.Text == "12" && fullRange.Changes[2].After.Text == "10",
+                "reversals are retained as chronological evidence, not collapsed to a net diff");
+            Packet historical = RangeExport.Create(project.ProjectId, choices, 0, 1, latest);
+            Check(historical.Changes.Count == 2 && historical.Recordings.Last().Packet.SourceFingerprint != historical.SourceFingerprint &&
+                historical.SourceFingerprint == latest.Fingerprint(), "historical ranges bind to current state rather than their old endpoint");
+            Packet afterContext = RangeExport.Create(project.ProjectId, choices, 0, 3, latest);
+            Check(afterContext.Changes.Count == 3 && afterContext.Recordings.Last().Packet.Changes.Count == 0,
+                "a context-only endpoint no longer strands earlier gameplay evidence");
+            Reject<InvalidOperationException>(() => RangeExport.Create(project.ProjectId, choices, 3, 3, latest),
+                "context-only ranges are explicitly rejected as record documentation");
+            Reject<InvalidDataException>(() => RangeExport.Create(project.ProjectId, choices, -1, 1, latest), "negative range rejected");
+            Reject<InvalidDataException>(() => RangeExport.Create(project.ProjectId, choices, 2, 1, latest), "reversed range rejected");
+            Reject<InvalidDataException>(() => RangeExport.Create(project.ProjectId, choices, 0, 5, latest), "out-of-bounds range rejected");
+            NoteDraft draft = Json.Read<NoteDraft>(Json.Write(historical.ResponseTemplate));
+            foreach (NoteEntry entry in draft.Entries) entry.Text = "Documented historical observations.";
+            DraftValidation.Check(historical, draft, latest, id => "");
+            Check(true, "complete historical evidence is valid against the current editor state");
+            draft.Entries[0].ChangeIds.RemoveAt(0);
+            Reject<InvalidDataException>(() => DraftValidation.Check(historical, draft, latest, id => ""),
+                "S01 full-coverage validation also applies to accumulated ranges");
+            draft = Json.Read<NoteDraft>(Json.Write(historical.ResponseTemplate));
+            foreach (NoteEntry entry in draft.Entries) entry.Text = "Documented historical observations.";
+            Reject<InvalidOperationException>(() => DraftValidation.Check(historical, draft, context, id => ""),
+                "gameplay changes stale historical-range drafts");
+            Snapshot changedContext = latest.Copy(); changedContext.Workshop.Author = "Later author";
+            Reject<InvalidOperationException>(() => DraftValidation.Check(historical, draft, changedContext, id => ""),
+                "Workshop-only changes still stale range drafts");
+            Check(hashes.All(x => TrackingStorage.HashFile(x.Key) == x.Value) && project.HeadId == head &&
+                project.PendingCount == count, "range selection/building never advances, compiles or rewrites any history");
+            Check(Json.Write(choices[0].Packet) == originalPacket && Json.Write(first) == originalPacket,
+                "qualified range citations never rewrite original batch IDs or evidence");
+            Snapshot removed = latest.Copy(); removed.Records.RemoveAt(0);
+            Packet deletionTarget = RangeExport.Create(project.ProjectId, choices, 0, 1, removed);
+            Check(deletionTarget.ResponseTemplate.Entries.Single().TargetRecordId == "",
+                "historical targets deleted before export require an explicit surviving note target");
+            Snapshot laterPending = latest.Copy(); laterPending.Records[0].Name += " later";
+            var laterChoices = project.ExportRecordings(laterPending);
+            Reject<InvalidDataException>(() => RangeExport.Create(project.ProjectId, laterChoices, 0, laterChoices.Count - 1, latest),
+                "a selected unrecorded observation must still match export-time state");
+            Packet mixed = RangeExport.Create(project.ProjectId, laterChoices, 2, laterChoices.Count - 1, laterPending);
+            Check(mixed.Recordings.Last().Kind == "pending" && project.HeadId == head,
+                "a range may include both saved recordings and explicitly unrecorded edits without advancing history");
+            Packet altered = Json.Read<Packet>(Json.Write(fullRange));
+            altered.Changes[0].After.Text = "invented";
+            altered.BatchId = Json.Hash(altered.BaselineId + ":" + Json.Write(altered.Changes));
+            altered.ResponseTemplate.BatchId = altered.BatchId;
+            Reject<InvalidDataException>(() => TrackingDocument.ValidatePacket(altered), "flattened evidence must match original recording packets");
+            altered = Json.Read<Packet>(Json.Write(fullRange)); altered.Recordings[0].Packet.BatchId = new string('0', 64);
+            Reject<InvalidDataException>(() => TrackingDocument.ValidatePacket(altered), "original batch identity is validated");
+            altered = Json.Read<Packet>(Json.Write(fullRange)); altered.Recordings[1].EntryId = altered.Recordings[0].EntryId;
+            Reject<InvalidDataException>(() => TrackingDocument.ValidatePacket(altered), "duplicate original entry IDs rejected");
+            altered = Json.Read<Packet>(Json.Write(fullRange)); altered.Recordings[0].Packet = fullRange;
+            Reject<InvalidDataException>(() => TrackingDocument.ValidatePacket(altered), "nested range packets are not recursively accepted");
+            altered = Json.Read<Packet>(Json.Write(fullRange)); altered.ProjectId = Guid.NewGuid().ToString("N");
+            Reject<InvalidDataException>(() => TrackingDocument.ValidatePacket(altered), "range identity binds to project and ordered recording selection");
+            altered = Json.Read<Packet>(Json.Write(fullRange)); altered.Recordings[0].SessionId = null;
+            Reject<InvalidDataException>(() => TrackingDocument.ValidatePacket(altered), "recorded evidence requires its original session identity");
+            altered = Json.Read<Packet>(Json.Write(fullRange)); altered.Recordings[0].Packet.Context.ModId = "other-project";
+            Reject<InvalidDataException>(() => TrackingDocument.ValidatePacket(altered), "recordings from another project cannot be mixed into a range");
+            Check(fullRange.Instructions.Contains("not a net diff") && fullRange.Instructions.Contains("CURRENT editor state"),
+                "AI instructions distinguish observations and present-state validation");
+            choices[0].Packet.Changes[0].After.Text = "outside mutation";
+            Check(Json.Write(project.ExportRecordings(latest)[0].Packet) == originalPacket,
+                "returned choices cannot mutate the project's validated history");
+            string sessionText = File.ReadAllText(project.SessionPath);
+            File.AppendAllText(project.SessionPath, "outside edit");
+            Reject<IOException>(() => project.ExportRecordings(latest), "exports reject sources changed outside Scribe");
+            File.WriteAllText(project.SessionPath, sessionText);
+        }
+        using (var reopened = JournalProject.Open(path))
+        {
+            reopened.BeginSession();
+            var choices = reopened.ExportRecordings(reopened.State);
+            Packet restored = RangeExport.Create(reopened.ProjectId, choices, 0, choices.Count - 1, reopened.State);
+            Check(choices.Count == 5 && restored.BatchId == fullRange.BatchId &&
+                Json.Write(restored.Changes) == Json.Write(fullRange.Changes),
+                "restart restores the same accumulated range identity and evidence without recording");
+            Check(Json.Write(choices[0].Packet) == originalPacket && choices[0].EntryId == originalEntry,
+                "original packet identities survive restart and compilation");
+            string compiledSession = Directory.GetFiles(Path.Combine(path + ".scribe", "sessions"), "*.jsonl")
+                .First(x => File.ReadAllLines(x).Length > 1);
+            Check(reopened.PendingCount == 3 && File.Exists(compiledSession), "range exports do not silently compile retained sessions");
+        }
+        string checkpoint = Path.Combine(directory, "range-checkpoint.json");
+        TrackingDocument document = TrackingDocument.Create(State("10"), null);
+        Packet oldPacket = document.ResumeTracker().Export(State("11"));
+        document = document.Next(State("11"), oldPacket);
+        TrackingStorage.Save(checkpoint, document, null);
+        using (var previous = JournalProject.Open(checkpoint))
+        {
+            previous.BeginSession(); previous.Record(State("12"));
+            var choices = previous.ExportRecordings(previous.State);
+            Packet packet = RangeExport.Create(previous.ProjectId, choices, 0, choices.Count - 1, previous.State);
+            Check(choices.Count == 2 && choices[0].Kind == "checkpoint" && Json.Write(choices[0].Packet) == Json.Write(oldPacket) &&
+                packet.Changes.Count == 2, "previous checkpoint histories remain selectable alongside new session recordings");
+        }
+        string legacyPath = Path.Combine(directory, "range-imported.json");
+        Packet legacyPacket = new Tracker(State("9")).Export(State("10"));
+        legacyPacket.SchemaVersion = 1;
+        File.WriteAllText(legacyPath, Json.Write(legacyPacket));
+        var legacy = new LegacyTrackingException(legacyPacket, TrackingStorage.HashFile(legacyPath));
+        using (var converted = JournalProject.ConvertLegacy(legacyPath, State("10"), legacy))
+        {
+            converted.BeginSession();
+            var choices = converted.ExportRecordings(converted.State);
+            Packet packet = RangeExport.Create(converted.ProjectId, choices, 0, 0, converted.State);
+            Check(choices.Single().Kind == "imported" && packet.Recordings[0].Packet.SchemaVersion == 1,
+                "converted legacy evidence is explicitly labelled and remains exportable");
+        }
     }
 }

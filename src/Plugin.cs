@@ -104,7 +104,7 @@ namespace FcsScribe
             AddAsyncAction(coreMenu.DropDownItems, "&Start tracking", "Create or resume a tracking project and begin a new timestamped session log. Replaces the editable draft; does not save or restore the mod.", Start);
             AddAsyncAction(coreMenu.DropDownItems, "&Review changes", "Record new changes since the last durable entry into this session log. Automatic intervals are available in Settings.", Review);
             AddAsyncAction(coreMenu.DropDownItems, "&Compile journal", "Consolidate durable session entries into the main journal without duplicates or deleting session files. Automatic mode also compiles every 30 minutes.", Compile);
-            AddAction(coreMenu.DropDownItems, "&Export AI packet", "Save change evidence, Workshop context and a blank AI response template as JSON. Replaces the editable draft; sends nothing online.", Export);
+            AddAsyncAction(coreMenu.DropDownItems, "&Export AI packet", "Choose and preview an inclusive range of recordings, including earlier sessions or unrecorded edits, then save an AI packet. Does not record, compile or send anything online. Replaces the editable draft.", Export);
             var workshopMenu = AddMenu("&Workshop", "Export local Workshop information or archive the original preview image.");
             AddAction(workshopMenu.DropDownItems, "&Export Workshop info", "Save current local Workshop information and preview-image details as JSON. No tracking baseline or record changes required.", ExportWorkshop);
             AddAction(workshopMenu.DropDownItems, "&Archive preview image", "Copy the local Workshop preview, byte-for-byte, to a new image file outside Kenshi. Does not download or change the original.", ArchivePreview);
@@ -262,14 +262,6 @@ namespace FcsScribe
             status.Text = "New session: " + project.SessionPath + ". " + ProjectStatus();
         }
 
-        private Packet Compare()
-        {
-            if (tracker == null) throw new InvalidOperationException("Select Start tracking first.");
-            // Moving focus out of the editor commits normal control validation before model capture.
-            adapter.EnsureReady();
-            return tracker.Export(adapter.Capture());
-        }
-
         private async Task Review()
         {
             if (tracker == null) throw new InvalidOperationException("Select Start tracking first.");
@@ -307,18 +299,32 @@ namespace FcsScribe
         private void ShowChanges(Packet packet)
         {
             var text = new StringBuilder("PARTIAL EXTRACTION - review all warnings.\r\n");
+            if (packet.Recordings != null)
+            {
+                text.AppendLine("RECORDING RANGE - chronological observations, not a net diff. Current-state validation is from export time.");
+                foreach (RecordingEvidence recording in packet.Recordings)
+                    text.AppendLine(recording.EntryId + " | " + recording.RecordedUtc + " | " + recording.Kind +
+                        " | session " + (recording.SessionId ?? "(legacy)") + " | original batch " + recording.Packet.BatchId);
+                foreach (string warning in packet.Recordings.SelectMany(x => x.Packet.Context.Warnings).Distinct(StringComparer.Ordinal))
+                    text.AppendLine("RECORDING WARNING: " + warning);
+            }
             foreach (string warning in packet.Context.Warnings) text.AppendLine("WARNING: " + warning);
             text.AppendLine();
-            foreach (Change change in packet.Changes)
+            AppendChanges(text, packet.Changes);
+            review.Text = text.ToString();
+            workshop.Text = Json.Pretty(Json.Write(packet.Context.Workshop));
+            status.Text = packet.Changes.Count + " change entries (stored and effective entries may describe the same edit). " +
+                "Baseline unchanged.";
+        }
+
+        internal static void AppendChanges(StringBuilder text, System.Collections.Generic.IEnumerable<Change> changes)
+        {
+            foreach (Change change in changes)
                 text.AppendLine(change.Id + " | " + change.RecordType + " | " + change.RecordId +
                     " | " + change.DisplayName + "\r\n  " + change.Operation + " " + change.Layer +
                     " " + change.Path + "\r\n  " + Json.Write(change.Before) + " -> " + Json.Write(change.After) +
                     (change.ReferencedId == null ? "" : "\r\n  Reference: " + change.ReferencedId +
                     " (" + (change.ReferencedName ?? "UNRESOLVED") + ")"));
-            review.Text = text.ToString();
-            workshop.Text = Json.Pretty(Json.Write(packet.Context.Workshop));
-            status.Text = packet.Changes.Count + " change entries (stored and effective entries may describe the same edit). " +
-                "Baseline unchanged.";
         }
 
         private void ExportWorkshop()
@@ -355,12 +361,22 @@ namespace FcsScribe
             }
         }
 
-        private void Export()
+        private async Task Export()
         {
-            Packet packet = Compare();
-            if (packet.Changes.Count == 0 && project.LastEvidence != null &&
-                project.LastEvidence.SourceFingerprint == packet.SourceFingerprint) packet = project.LastEvidence;
-            if (packet.Changes.Count == 0) throw new InvalidOperationException("No captured changes to document.");
+            if (tracker == null) throw new InvalidOperationException("Select Start tracking first.");
+            Snapshot current = adapter.Capture();
+            status.Text = "Validating recording sources for range selection. No history is being changed.";
+            var recordings = await Task.Run(() => project.ExportRecordings(current));
+            if (closing) return;
+            if (recordings.Count == 0) throw new InvalidOperationException("No recorded or pending changes to document.");
+            Packet packet;
+            using (var selection = new RecordingRangeDialog(recordings))
+            {
+                if (selection.ShowDialog(this) != DialogResult.OK) return;
+                int first = selection.First, last = selection.Last;
+                packet = await Task.Run(() => RangeExport.Create(project.ProjectId, recordings, first, last, current));
+            }
+            if (closing) return;
             if (exported != null && !String.IsNullOrWhiteSpace(draft.Text) &&
                 MessageBox.Show(this, "Exporting replaces the editable draft with a blank response template. Continue?",
                     "Replace draft", MessageBoxButtons.OKCancel) != DialogResult.OK) return;
@@ -371,12 +387,15 @@ namespace FcsScribe
                 if (!String.Equals(Path.GetExtension(dialog.FileName), ".json", StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException("Export requires a .json filename; mod files are never export targets.");
                 ProtectTrackingFile(dialog.FileName);
+                if (adapter.Capture().Fingerprint() != packet.SourceFingerprint)
+                    throw new InvalidOperationException("The editor changed while selecting the range. Export again to review the current recordings and pending edits.");
                 File.WriteAllText(dialog.FileName, Json.Pretty(Json.Write(packet)), new UTF8Encoding(false));
             }
             exported = packet;
             draft.Text = Json.Pretty(Json.Write(packet.ResponseTemplate));
             ShowChanges(packet);
-            status.Text = "Packet exported. Share it manually with AI, then import/paste its JSON response. " +
+            status.Text = packet.Recordings.Count + " selected recordings exported; no history advanced or compiled. " +
+                "Share manually with AI, then import/paste its JSON response. " +
                 "Mod text may be private; inspect the packet before sharing.";
         }
 

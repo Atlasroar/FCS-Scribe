@@ -10,6 +10,8 @@ are not implemented.
 The earlier beta 2 archive uses the flat button row.
 **v0.1.0-beta.4** requires complete draft evidence coverage and supports safe
 retries of matching completed notes.
+**v0.1.0-beta.5** adds previewable, inclusive recording-range AI exports across
+sessions, with original evidence identities and current-state validation.
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).
@@ -24,7 +26,7 @@ For evidence and unsupported cases, see [Validation and limitations](Validation-
 | Change catalogue | Core > Review changes | Exact before/after evidence and a successfully saved checkpoint |
 | Session consolidation | Core > Compile journal | Append durable session entries to the main journal without duplicates or deleting originals |
 | Review and export settings | Settings | Manual or 30/60/300/600-second reviews and default JSON directory |
-| Manual AI handoff | Core > Export AI packet | Schema-2 JSON with evidence, context, instructions and a response template |
+| Manual AI handoff | Core > Export AI packet | Preview/select a recording range; schema-3 JSON retains original batches and uniquely qualified evidence |
 | Editable draft | Draft > Import draft or Paste draft | JSON you can review and edit before applying |
 | Approved record notes | Apply approved notes | Appended FCS Notes/TODO entries; FCS is marked dirty, not saved |
 | Workshop information | Workshop info tab or Workshop > Export Workshop info | Local/staged/cached metadata, source details and warnings |
@@ -135,17 +137,44 @@ stop extraction instead of silently inventing evidence.
 
 ## 4. Export AI packet: hand evidence to an external assistant
 
-With tracking active and at least one captured record change, select
-**Export AI packet** and choose a `.json` file. After review advances the
-baseline, the most recent saved batch with record evidence can still be
-exported if its source fingerprint matches the current model. This does not
-combine every historical checkpoint into one packet.
+With tracking active, select **Export AI packet**. In beta 5, choose the
+**first and last recordings, inclusive**, and inspect the preview before
+choosing a `.json` destination. The initial selection includes all available
+entries; narrow it to the period you want to document. Entries show UTC time,
+session identity, source kind and change count. Earlier sessions and both
+compiled and uncompiled recordings are available after resume.
 
-The schema-2 packet contains exact change evidence, baseline/batch identity,
-timestamps, a source fingerprint, dependency/load-order and Workshop context,
-warnings, AI instructions and a `ResponseTemplate`. It does not dump every
-loaded record. Schema-1 packets remain readable, but lack the new Workshop
-context.
+Current edits not yet recorded appear as an explicitly **UNRECORDED** final
+entry and can be included or excluded. Context-only recordings remain visible
+but supply no record-change IDs. A range containing only context updates
+cannot produce record documentation; use **Export Workshop info** for that.
+Unchanged reviews do not create selectable duplicates. Converted legacy
+evidence and older full-checkpoint entries are labelled separately.
+
+The schema-3 packet retains the selected original packets, including batch IDs,
+timestamps, sessions and historical context. The outer `Changes` uses unique
+`EntryId:original-change-ID` citations and one outer `ResponseTemplate`.
+Use that outer template, not the archival nested templates. The range is an
+ordered set of observations, **not a net diff or complete event log**:
+separate recordings of repeated edits and reversals remain separate evidence.
+Earlier values do not necessarily describe the mod's current values.
+Overlapping ranges may document the same evidence again under different range
+batches; exporting does not mark entries as already documented. Compare
+citations and existing notes before approving.
+
+The outer context and source fingerprint describe the **current editor at
+export**, even if your range ends earlier. Subsequent captured gameplay or
+Workshop/context changes still make its draft stale. Exporting does not record,
+compile, advance tracking, save the mod or rewrite old packets. Cancelling the
+range/destination/replace-draft dialog retains the existing draft association.
+Source validation/range building runs on detached data in the background;
+live capture and preview remain on the UI thread.
+
+Packets contain selected change evidence and context, not the full loaded
+database or record deltas. They retain warnings from the selected recordings
+and current context. Schema-1/2 original packets remain readable unchanged;
+schema-3 AI handoffs are not tracking baselines and cannot be resumed or
+converted. Resume the original tracking JSON and its `.scribe` storage instead.
 
 Export also fills the editable draft with a blank response template.
 Replacing an existing nonempty draft after a previous export requires
@@ -156,7 +185,8 @@ Ask the assistant to follow `Instructions` and return only JSON matching
 `ResponseTemplate`. It should cite supplied change IDs, preserve identifiers,
 use exact quantities and distinguish facts from interpretation. Mod names,
 descriptions, dialogue and other packet text are untrusted data, not commands.
-Context describes the current situation, not a list of newly made edits.
+Context is background, not a list of newly made edits; nested contexts describe
+their original observations rather than the current situation.
 
 Workshop-only extraction does not require gameplay edits: use **Export
 Workshop info** instead of this action.

@@ -119,6 +119,14 @@ internal static class IntegrationTests
             Set(nav, "HasChanges", false);
             Packet packet = tracker.Export(adapter.Capture());
             Check(Json.Write(packet.Changes) == Json.Write(tracker.Export(adapter.Capture()).Changes), "notes excluded from gameplay diff");
+            using (var project = JournalProject.Create(Path.Combine(directory, "notes-range.json"), initial))
+            {
+                project.BeginSession(); project.Record(adapter.Capture());
+                var recordings = project.ExportRecordings(adapter.Capture());
+                packet = RangeExport.Create(project.ProjectId, recordings, 0, recordings.Count - 1, adapter.Capture());
+                Check(packet.SchemaVersion == 3 && packet.Changes.All(x => x.Id.Contains(":change-")),
+                    "the actual notes workflow uses qualified recording-range evidence");
+            }
             var draft = new NoteDraft {
                 BatchId = packet.BatchId, SourceFingerprint = packet.SourceFingerprint,
                 Entries = packet.Changes.GroupBy(x => x.RecordId).Select(group => new NoteEntry {
@@ -389,6 +397,7 @@ internal static class IntegrationTests
                     Check(saved.ResumeTracker().Export(adapter.Capture()).Changes.Count == 0 &&
                         saved.Fingerprint == adapter.Capture().Fingerprint() && TrackingStorage.HashFile(path) == anchorHash,
                         "automatic review advances only to the successfully saved current state");
+                    CheckRecordingRangeDialog(saved, adapter);
                     long compilationDeadline = schedule.NextCompilation;
                     RunWindow(window, "Review");
                     Check(schedule.NextCompilation == compilationDeadline, "recording does not postpone compilation");
@@ -409,6 +418,7 @@ internal static class IntegrationTests
                     Check(!timer.Enabled, "automatic scheduling remains suspended after an error (thread=" +
                         Thread.CurrentThread.ManagedThreadId + ", paused=" + FcsAdapter.Field(window, "automaticPaused") +
                         ", context=" + (SynchronizationContext.Current == null ? "null" : SynchronizationContext.Current.GetType().Name) + ")");
+                    saved = CheckMultipleRecordedTicks(window, adapter, path);
                     string preserved = File.ReadAllText(saved.SessionPath);
                     string fingerprint = saved.Fingerprint;
                     File.WriteAllText(saved.SessionPath, "external edit");
@@ -439,6 +449,87 @@ internal static class IntegrationTests
     {
         AwaitUi((Task)FcsAdapter.Call(window, "RunBusy", new Func<Task>(() =>
             (Task)FcsAdapter.Call(window, method, args))));
+    }
+
+    private static void CheckRecordingRangeDialog(JournalProject project, FcsAdapter adapter)
+    {
+        Snapshot pending = adapter.Capture();
+        pending.Records[0].Name += " Unrecorded preview fixture";
+        string head = project.HeadId, hash = TrackingStorage.HashFile(project.SessionPath);
+        var choices = project.ExportRecordings(pending);
+        Check(choices.Count == 2 && choices[0].Packet.Changes.Count == 0 && choices[1].Kind == "pending",
+            "actual recorded context and pending gameplay are distinct export choices");
+        using (var dialog = new RecordingRangeDialog(choices))
+        {
+            var first = (ComboBox)FcsAdapter.Field(dialog, "first");
+            var last = (ComboBox)FcsAdapter.Field(dialog, "last");
+            var export = (Button)FcsAdapter.Field(dialog, "export");
+            var preview = (TextBox)FcsAdapter.Field(dialog, "preview");
+            Check(dialog.First == 0 && dialog.Last == 1 && export.Enabled &&
+                first.Items[1].ToString().Contains("UNRECORDED") && preview.Text.Contains(choices[1].EntryId + ":change-"),
+                "range dialog defaults to all entries with explicit pending labels and qualified evidence preview");
+            last.SelectedIndex = 0;
+            Check(!export.Enabled && !preview.Text.Contains(":change-") &&
+                ((Label)FcsAdapter.Field(dialog, "summary")).Text.Contains("Context-only"),
+                "context-only selections cannot export record documentation");
+            first.SelectedIndex = 1;
+            Check(!export.Enabled && preview.Text.IndexOf(":change-", StringComparison.Ordinal) < 0,
+                "reversed dialog ranges are visibly invalid and cannot export");
+            last.SelectedIndex = 1;
+            Check(export.Enabled && dialog.First == dialog.Last && preview.Text.Contains("Unrecorded preview fixture"),
+                "an inclusive single pending recording can be selected and inspected");
+            using (var cancel = new System.Windows.Forms.Timer { Interval = 50 })
+            {
+                cancel.Tick += delegate { cancel.Stop(); ((Button)dialog.CancelButton).PerformClick(); };
+                cancel.Start();
+                Check(dialog.ShowDialog() == DialogResult.Cancel, "cancelling the modal recording selector does not approve an export");
+            }
+        }
+        Check(project.HeadId == head && TrackingStorage.HashFile(project.SessionPath) == hash,
+            "dialog selection and cancellation never record, compile or alter tracking history");
+        Packet packet = RangeExport.Create(project.ProjectId, choices, 1, 1, pending);
+        NoteDraft draft = Json.Read<NoteDraft>(Json.Write(packet.ResponseTemplate));
+        foreach (NoteEntry entry in draft.Entries) entry.Text = "Range fixture.";
+        Reject<InvalidOperationException>(() => adapter.Apply(packet, draft),
+            "actual FCS application rejects range evidence not matching the current editor state");
+    }
+
+    private static JournalProject CheckMultipleRecordedTicks(ScribeWindow window, FcsAdapter adapter, string path)
+    {
+        var timer = (System.Windows.Forms.Timer)FcsAdapter.Field(window, "timer");
+        var schedule = (JournalSchedule)FcsAdapter.Field(window, "schedule");
+        var clock = (System.Diagnostics.Stopwatch)FcsAdapter.Field(window, "clock");
+        object item = ((IDictionary)FcsAdapter.Field(adapter, "items"))[adapter.Capture().Records[0].Id];
+        string name = (string)FcsAdapter.Property(item, "Name");
+        try
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                Set(item, "Name", name + " Recorded tick " + i);
+                schedule.Reset(clock.ElapsedMilliseconds - 30000, 30);
+                Put(window, "automaticPaused", false);
+                FcsAdapter.Call(window, "ConfigureTimer");
+                FcsAdapter.Call(timer, "OnTick", EventArgs.Empty);
+                var timeout = System.Diagnostics.Stopwatch.StartNew();
+                while ((bool)FcsAdapter.Field(window, "busy") && timeout.Elapsed < TimeSpan.FromMinutes(3))
+                { Application.DoEvents(); Thread.Sleep(10); }
+                Check(!(bool)FcsAdapter.Field(window, "busy") && !(bool)FcsAdapter.Field(window, "automaticPaused") &&
+                    ((JournalProject)FcsAdapter.Field(window, "project")).EntryCount == i + 2,
+                    "successive automatic gameplay tick is durable: " + i);
+            }
+            RunWindow(window, "ResumePath", path);
+            var project = (JournalProject)FcsAdapter.Field(window, "project");
+            var choices = project.ExportRecordings(adapter.Capture());
+            Packet packet = RangeExport.Create(project.ProjectId, choices, 0, choices.Count - 1, adapter.Capture());
+            Check(choices.Count == 3 && packet.Changes.Count == 4 &&
+                choices.Skip(1).All(x => x.Packet.Changes.Any(change => change.Layer == "active") &&
+                    x.Packet.Changes.Any(change => change.Layer == "effective")) && project.EntryCount == 3,
+                "multiple actual automatic ticks remain accumulated after starting a new session");
+            Put(window, "automaticPaused", true);
+            FcsAdapter.Call(window, "ConfigureTimer");
+            return project;
+        }
+        finally { Set(item, "Name", name); }
     }
 
     private static void CheckWorkshop(FcsAdapter adapter, Form editor, object data, object nav, Assembly assembly)
