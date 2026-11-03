@@ -196,10 +196,98 @@ internal static class CoreTests
             "AI instructions forbid interpreting unavailable values as verified defaults");
     }
 
+    private static void CheckDraftWorkspace()
+    {
+        Snapshot before = State(), current = State();
+        current.Records[0].Name = "Workspace edit";
+        Packet packet = new Tracker(before).Export(current);
+        string original = Json.Write(packet);
+        string text = " \r\n" + Json.Pretty(Json.Write(Draft(packet))) + "\r\n ";
+        DraftWorkspace workspace = DraftWorkspace.Create(packet, text);
+        DraftWorkspace restored = Json.Read<DraftWorkspace>(Json.Write(workspace));
+        restored.Validate();
+        Check(restored.DraftText == text && Json.Write(restored.Packet) == original,
+            "workspace round-trip retains exact text and original packet");
+        Check(restored.Review(current, id => "").Contains("pass evidence/current-state checks"),
+            "restored workspace validates its complete draft against original evidence");
+        Check(restored.Review(before, id => "").Contains("stale"),
+            "restored draft cannot bypass current-state validation");
+        restored.DraftText = "{ unfinished";
+        Check(restored.Review(current, id => "").Contains("invalid JSON"),
+            "unfinished JSON is preserved but cannot be applied");
+        restored.Validate();
+        restored.DraftText = "";
+        restored.Validate();
+        Check(restored.DraftText == "", "empty draft text remains recoverable");
+        restored.DraftText = Json.Write(new NoteDraft { BatchId = "other", SourceFingerprint = packet.SourceFingerprint });
+        Check(restored.Review(current, id => "").Contains("does not match"),
+            "mismatched restored response is reported without rebinding evidence");
+        restored.DraftText = text;
+        restored.Packet.Instructions += " changed";
+        Reject(restored.Validate, "changed original packet rejected by workspace integrity hash");
+        restored = Json.Read<DraftWorkspace>(Json.Write(workspace));
+        restored.Packet = null;
+        Reject(restored.Validate, "missing associated packet rejected");
+        restored = Json.Read<DraftWorkspace>(Json.Write(workspace));
+        restored.PacketHash = null;
+        Reject(restored.Validate, "missing original-packet hash rejected");
+        restored = Json.Read<DraftWorkspace>(Json.Write(workspace));
+        restored.SchemaVersion++;
+        Reject(restored.Validate, "unknown workspace version rejected");
+        Reject(() => DraftWorkspace.Create(packet, null), "missing raw draft text rejected");
+        restored = DraftWorkspace.Create(null, "unassociated unfinished text");
+        restored.Validate();
+        Check(restored.Review(current, id => "").Contains("no associated AI packet"),
+            "text-only recovery never invents evidence");
+        Packet range = RangeExport.Create(Guid.NewGuid().ToString("N"),
+            new[] { new RecordingEvidence { EntryId = "checkpoint-test", Kind = "checkpoint",
+                RecordedUtc = packet.ExportedUtc, Packet = packet } }, 0, 0, current);
+        DraftWorkspace ranged = DraftWorkspace.Create(range, Json.Write(range.ResponseTemplate));
+        DraftWorkspace rangedCopy = Json.Read<DraftWorkspace>(Json.Write(ranged));
+        rangedCopy.Validate();
+        Check(Json.Write(rangedCopy.Packet) == Json.Write(range) &&
+            Json.Write(rangedCopy.Packet.Recordings[0].Packet) == original,
+            "schema-3 workspace preserves qualified and original archival evidence");
+        rangedCopy.Packet.Recordings[0].Packet.Changes[0].Id += "-tampered";
+        rangedCopy.PacketHash = Json.StreamHash(rangedCopy.Packet);
+        Reject(rangedCopy.Validate, "rehashed range with inconsistent original evidence rejected");
+        Packet legacy = Json.Read<Packet>(original);
+        legacy.SchemaVersion = 1;
+        DraftWorkspace.Create(legacy, text).Validate();
+        Check(Json.Write(legacy).Contains("\"SchemaVersion\":1"), "schema-1 packets remain supported in workspaces");
+        string directory = Path.Combine(Path.GetTempPath(), "scribe-workspace-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        string path = Path.Combine(directory, "workspace.json");
+        try
+        {
+            string hash = TrackingStorage.WriteAtomic(path, workspace, null);
+            restored = DraftWorkspace.Load(path);
+            Check(restored.FileHash == hash && restored.DraftText == text && Json.Write(restored.Packet) == original,
+                "saved workspace reopens independently of the original packet file");
+            restored.DraftText = "later unfinished work";
+            string nextHash = TrackingStorage.WriteAtomic(path, restored, restored.FileHash);
+            Check(nextHash != hash && Json.Read<DraftWorkspace>(File.ReadAllText(path + ".bak")).DraftText == text,
+                "workspace replacement retains the previous file as a backup");
+            File.AppendAllText(path, " ");
+            bool conflict = false;
+            try { TrackingStorage.WriteAtomic(path, workspace, nextHash); }
+            catch (IOException) { conflict = true; }
+            Check(conflict && File.ReadAllText(path).EndsWith(" "),
+                "observed external workspace edits are not overwritten");
+            string packetPath = Path.Combine(directory, "packet.json");
+            File.WriteAllText(packetPath, original);
+            Reject(() => DraftWorkspace.Load(packetPath), "ordinary packet cannot masquerade as a workspace");
+            File.WriteAllText(packetPath, "null");
+            Reject(() => DraftWorkspace.Load(packetPath), "null workspace rejected");
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+
     public static int Main()
     {
         try
         {
+            CheckDraftWorkspace();
             Snapshot baseline = State();
             var tracker = new Tracker(baseline);
             Check(tracker.Export(State()).Changes.Count == 0, "unchanged");

@@ -39,7 +39,7 @@ release decisions, and AI-generated record notes require human approval.
 
 ## Current status
 
-The current [v0.1.0-beta.6 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.6)
+The current [v0.1.0-beta.7 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.7)
 remains experimental and restricted to the inspected Steam FCS 2.14.2 executable
 hash. It includes local Workshop metadata, preview-image archiving, embedded
 MDI hosting and contextual action help alongside change documentation.
@@ -69,7 +69,11 @@ upload/refresh states report explicit partial availability without stopping
 ordinary gameplay recording. Known fields/readable components remain available;
 availability changes still affect stale-draft checks. Workshop-only action
 errors do not pause gameplay automation or clear an existing pause.
-S04-S16 remain open; these fixes do not close full interactive acceptance.
+Beta 7 closes S04 with portable draft workspaces: save exact unfinished text
+and its original packet, reopen after restart, and protect close/replacement
+with Save/Discard/Cancel. Restored work still needs current-state validation
+and approval; a workspace never saves the mod.
+S05-S16 remain open; these fixes do not close full interactive acceptance.
 
 **FCS notes are per-record editor-side annotations**, stored in
 `data\__TODO__<user>.txt`, not inside the mod file. Distributing only a `.mod`

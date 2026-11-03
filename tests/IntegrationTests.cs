@@ -89,6 +89,7 @@ internal static class IntegrationTests
             var adapter = new FcsAdapter(assembly, editor);
             CheckWorkshop(adapter, editor, data, nav, assembly);
             CheckScribeWindow(adapter, editor);
+            CheckDraftWorkspaceWindow(adapter, editor);
             CheckTrackingWindow(adapter, editor);
             Snapshot initial = adapter.Capture();
             Check(initial.Records.Count > 0, "capture real loaded records");
@@ -238,14 +239,14 @@ internal static class IntegrationTests
             string[][] groups = {
                 new[] { "Start tracking", "Review changes", "Compile journal", "Export AI packet" },
                 new[] { "Export Workshop info", "Archive preview image" },
-                new[] { "Import draft", "Paste draft" }
+                new[] { "Import draft", "Paste draft", "Save workspace", "Open workspace" }
             };
             for (int i = 0; i < groups.Length; i++)
                 Check(menus[i].DropDownItems.Cast<ToolStripMenuItem>().Select(x => x.Text.Replace("&", "")).SequenceEqual(groups[i]),
                     menus[i].Text + " contains the requested actions in order");
             var commands = menus.SelectMany(x => x.HasDropDownItems ?
                 x.DropDownItems.Cast<ToolStripMenuItem>() : new[] { x }).ToList();
-            Check(commands.Count == 10, "all ten original actions remain available");
+            Check(commands.Count == 12, "all ten original actions plus two workspace actions remain available");
             foreach (ToolStripMenuItem item in menus.Take(3).Concat(commands))
             {
                 typeof(ToolStripItem).GetMethod("HandleMouseEnter", Flags).Invoke(item, new object[] { EventArgs.Empty });
@@ -306,6 +307,137 @@ internal static class IntegrationTests
         }
         if (!task.IsCompleted) throw new TimeoutException("Background tracking operation did not complete.");
         task.GetAwaiter().GetResult();
+    }
+
+    private static void CheckDraftWorkspaceWindow(FcsAdapter adapter, Form editor)
+    {
+        string directory = Directory.GetCurrentDirectory();
+        string settings = Path.Combine(directory, "draft-settings.json");
+        string path = Path.Combine(directory, "mods", "draft-workspace.json");
+        Snapshot before = adapter.Capture();
+        object nav = FcsAdapter.Field(editor, "nav");
+        IDictionary records = (IDictionary)FcsAdapter.Field(FcsAdapter.Field(FcsAdapter.Field(nav, "ou"), "gameData"), "items");
+        object item = records.Values.Cast<object>().First();
+        string name = (string)FcsAdapter.Property(item, "Name");
+        try
+        {
+            Set(item, "Name", name + " Workspace fixture");
+            Snapshot current = adapter.Capture();
+            Packet packet = new Tracker(before).Export(current);
+            NoteDraft response = Json.Read<NoteDraft>(Json.Write(packet.ResponseTemplate));
+            foreach (NoteEntry entry in response.Entries) entry.Text = "Workspace fixture documentation.";
+            string text = " \r\n" + Json.Pretty(Json.Write(response)) + "\r\n";
+            using (var window = new ScribeWindow(adapter, editor, settings))
+            {
+                window.CreateControl();
+                var draft = (TextBox)FcsAdapter.Field(window, "draft");
+                FcsAdapter.Call(window, "AdoptWorkspace", packet, text, null, null);
+                Check((bool)FcsAdapter.Property(window, "DraftNeedsSave") && window.Text.Contains("* unsaved"),
+                    "new draft/packet association is visibly unsaved");
+                RunWindow(window, "SaveWorkspacePath", path);
+                Check(!(bool)FcsAdapter.Property(window, "DraftNeedsSave") && !window.Text.Contains("* unsaved"),
+                    "saving the complete workspace clears the unsaved indicator");
+                draft.Text += " ";
+                Check((bool)FcsAdapter.Property(window, "DraftNeedsSave"),
+                    "editing a saved draft marks it unsaved");
+                Put(window, "draftDecision", new Func<string, DialogResult>(operation => DialogResult.Cancel));
+                RunWindow(window, "StartPath", Path.Combine(directory, "mods", "cancelled-draft-tracking.json"));
+                Check(draft.Text == text + " " && Object.ReferenceEquals(FcsAdapter.Field(window, "exported"), packet) &&
+                    !File.Exists(Path.Combine(directory, "mods", "cancelled-draft-tracking.json")),
+                    "cancelled Start retains exact draft, original association and filesystem");
+                RunWindow(window, "OpenWorkspacePath", path);
+                Check(draft.Text == text + " ", "cancelled Open retains unsaved edits");
+                RunWindow(window, "ResumePath", Path.Combine(directory, "mods", "missing-cancelled-resume.json"));
+                Check(draft.Text == text + " " && Object.ReferenceEquals(FcsAdapter.Field(window, "exported"), packet),
+                    "cancelled Resume does not read a missing project or lose draft associations");
+                Put(window, "draftDecision", new Func<string, DialogResult>(operation => DialogResult.No));
+                RunWindow(window, "OpenWorkspacePath", path);
+                Check(draft.Text == text && !(bool)FcsAdapter.Property(window, "DraftNeedsSave"),
+                    "explicit discard permits reopening a saved workspace");
+                Packet originalPacket = (Packet)FcsAdapter.Field(window, "exported");
+                RunWindow(window, "SaveWorkspacePath", path);
+                draft.Text = "{ unfinished editor text";
+                Task saving = (Task)FcsAdapter.Call(window, "SaveWorkspacePath", path);
+                draft.Text += " typed during background save";
+                AwaitUi(saving);
+                Check(draft.Text.EndsWith("typed during background save") &&
+                    (bool)FcsAdapter.Property(window, "DraftNeedsSave") &&
+                    DraftWorkspace.Load(path).DraftText == "{ unfinished editor text",
+                    "background saving retains late edits and leaves them visibly unsaved");
+                Task opening = (Task)FcsAdapter.Call(window, "OpenWorkspacePath", path);
+                draft.Text += " typed during background load";
+                AwaitUi(opening);
+                Check(draft.Text.EndsWith("typed during background load") &&
+                    Object.ReferenceEquals(FcsAdapter.Field(window, "exported"), originalPacket),
+                    "background loading cancels replacement if new edits arrive");
+                string lateText = draft.Text;
+                var candidate = JournalProject.Create(Path.Combine(directory, "mods", "draft-race-tracking.json"), current);
+                long revision = (long)FcsAdapter.Field(window, "draftRevision");
+                Task beginning = (Task)FcsAdapter.Call(window, "Begin", candidate, null, revision);
+                draft.Text += " typed during background session start";
+                AwaitUi(beginning);
+                Check(draft.Text.StartsWith(lateText) && FcsAdapter.Field(window, "project") == null,
+                    "late edits prevent session adoption from clearing the draft");
+                var closing = new FormClosingEventArgs(CloseReason.UserClosing, false);
+                Put(window, "busy", true);
+                FcsAdapter.Call(window, "OnFormClosing", closing);
+                Put(window, "busy", false);
+                Check(closing.Cancel && !(bool)FcsAdapter.Field(window, "closing"),
+                    "closing during background work is cancelled without disposing state");
+                Put(window, "draftDecision", new Func<string, DialogResult>(operation => DialogResult.Cancel));
+                closing = new FormClosingEventArgs(CloseReason.UserClosing, false);
+                FcsAdapter.Call(window, "OnFormClosing", closing);
+                Check(closing.Cancel && !(bool)FcsAdapter.Field(window, "closing") && draft.Text.Contains("session start"),
+                    "cancelled close keeps the latest draft and window alive");
+                string beforeFailedOpen = draft.Text;
+                string loadedHash = TrackingStorage.HashFile(path);
+                Put(window, "draftDecision", new Func<string, DialogResult>(operation => {
+                    File.AppendAllText(path, " ");
+                    return DialogResult.No;
+                }));
+                bool changedDuringOpen = false;
+                try { RunWindow(window, "OpenWorkspacePath", path); }
+                catch (IOException) { changedDuringOpen = true; }
+                Check(changedDuringOpen && draft.Text == beforeFailedOpen &&
+                    TrackingStorage.HashFile(path) != loadedHash,
+                    "workspace changes during the replacement prompt cancel adoption of old bytes");
+                string external = File.ReadAllText(path) + " ";
+                File.WriteAllText(path, external);
+                bool rejected = false;
+                try { RunWindow(window, "SaveWorkspacePath", path); }
+                catch (IOException) { rejected = true; }
+                Check(rejected && File.ReadAllText(path) == external && (bool)FcsAdapter.Property(window, "DraftNeedsSave"),
+                    "external workspace changes block saving without losing edits");
+                string ordinary = Path.Combine(directory, "mods", "not-a-workspace.json");
+                File.WriteAllText(ordinary, Json.Write(packet));
+                rejected = false;
+                try { RunWindow(window, "SaveWorkspacePath", ordinary); }
+                catch (InvalidDataException) { rejected = true; }
+                Check(rejected && File.ReadAllText(ordinary) == Json.Write(packet),
+                    "workspace Save cannot overwrite an ordinary AI packet");
+            }
+            using (var reopened = new ScribeWindow(adapter, editor, settings))
+            {
+                RunWindow(reopened, "OpenWorkspacePath", path);
+                Check(((TextBox)FcsAdapter.Field(reopened, "draft")).Text == "{ unfinished editor text" &&
+                    ((Label)FcsAdapter.Field(reopened, "status")).Text.Contains("invalid JSON"),
+                    "new window restores unfinished work and explicitly reports validation failure");
+                DraftWorkspace saved = DraftWorkspace.Create(packet, text);
+                string complete = Path.Combine(directory, "mods", "complete-workspace.json");
+                TrackingStorage.WriteAtomic(complete, saved, null);
+                RunWindow(reopened, "OpenWorkspacePath", complete);
+                Check(((Label)FcsAdapter.Field(reopened, "status")).Text.Contains("pass evidence/current-state checks") &&
+                    FcsAdapter.Field(reopened, "tracker") == null,
+                    "restored complete workspace needs no tracking session and is not automatically applied");
+                Set(item, "Name", name);
+                RunWindow(reopened, "OpenWorkspacePath", complete);
+                Check(((Label)FcsAdapter.Field(reopened, "status")).Text.Contains("stale"),
+                    "reopening a stale workspace preserves text for review without permitting application");
+                Reject<InvalidOperationException>(() => adapter.Apply(saved.Packet, response),
+                    "restored stale packet cannot bypass adapter application checks");
+            }
+        }
+        finally { Set(item, "Name", name); }
     }
 
     private static void CheckTrackingWindow(FcsAdapter adapter, Form editor)

@@ -9,10 +9,11 @@ It does not replace FCS or load an AI provider.
 | `src\Tracking.cs` | Resumable documents, structural/history integrity checks, atomic checkpoint storage and settings | Read live FCS objects from worker threads or claim that legacy packets restore a full baseline |
 | `src\Journal.cs` | Replayable record deltas, timestamped session logs, durable-head marker, writer lease, idempotent compilation, explicit tail recovery and independent deadlines | Rewrite a full baseline each tick, discard uncompiled history or restore mod binaries |
 | `src\RangeExport.cs` | Selected original packets, stable range identity and collision-free qualified evidence in schema-3 AI handoffs | Rewrite saved batches, collapse observed reversals or treat a range as a resumable baseline |
+| `src\DraftWorkspace.cs` | Versioned portable original-packet/exact-text bundles, integrity validation and restored-draft readiness reporting | Invent missing evidence, approve restored text, save mods or treat draft text as tracking history |
 | `src\SettingsDialog.cs` | New/resume choice, recording-range preview and manual/automatic review/export-directory settings | Automatically convert legacy evidence or export a range without confirmation |
 | `src\FcsAdapter.cs` | Guard the FCS executable and read/update verified editor objects on the UI thread | Guess APIs, silently omit unsupported values, or write binary mods |
 | `src\WorkshopArchive.cs` | Known-field XML cache contract and bounded, lossless local preview archiving | Contact Steam, overwrite prior archives, or re-encode/replace source images |
-| `src\Plugin.cs` | Implement the upstream plugin interface, attach a toolbar action, and present review/import/approval UI | Automatically trust/apply AI text or save the mod |
+| `src\Plugin.cs` | Implement the upstream plugin interface, attach a toolbar action, present review/import/approval UI, and guard draft replacement/closing with revision-aware save/discard protection | Automatically trust/apply AI text or save the mod |
 | `scripts` and `tests` | Build/package artifacts, inspect metadata, and exercise core/disposable-FCS behavior | Change the live installation during validation |
 
 ## Startup

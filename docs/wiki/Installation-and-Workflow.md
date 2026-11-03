@@ -184,9 +184,21 @@ A deleted record cannot receive a new note: explicitly choose a surviving
 record to hold its documentation. Combine entries if they share a target.
 Stale drafts and repeat application of a batch to the same record are rejected.
 
-Closing the plugin window/editor loses editable drafts/export associations,
-not the saved checkpoint. Resume its JSON after reopening; copy unfinished
-draft text elsewhere before restarting. A changed active mod
+In beta 7, **Draft > Save workspace** preserves exact unfinished text with its
+original packet. **Open workspace** restores it after restart, independently
+of tracking; it reports stale/invalid responses and never applies them.
+Unsaved work is protected before close, Start/resume, Export, Import, Paste and
+Open with Yes (save), No (discard), or Cancel. A failed/cancelled save retains
+the current draft. Later edits during saving remain unsaved; edits during
+background Open/Start cancel replacement. Closing during work must be retried
+when it finishes. Save explicitly before quitting: forced termination is not
+covered by these prompts or an autosave system.
+
+Workspaces are separate JSON documents, not tracking baselines or AI responses.
+They include private evidence/prose and keep a previous-file `.bak` on replacement.
+Observed external edits block overwrite; save to a new filename instead.
+Neither tracking journals nor a workspace restore the mod or confer approval.
+Resume tracking separately using its JSON after reopening. A changed active mod
 or actual loaded/locked-mod context requires a new baseline. Normal saving does
 not reset tracking, although dependency-header refreshes may require re-export
 before applying an older draft.
@@ -203,4 +215,5 @@ Beta 4 retries require the original complete draft and unchanged captured
 state. Matching completed notes are skipped; only pending targets are appended.
 Conflicting text/evidence, partial blocks or multiple same-batch markers stop
 the operation for inspection. Do not delete completed entries from the draft.
-Draft/export associations still do not survive closing Scribe.
+In beta 7, reopen the saved workspace containing the original complete draft
+and packet for a retry; fresh current-state/existing-notes checks still apply.

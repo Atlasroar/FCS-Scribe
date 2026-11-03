@@ -174,7 +174,7 @@ multiple same-batch markers are rejected. Only remaining targets are appended.
 An entirely applied draft is still rejected as a duplicate. The append format
 was unchanged by beta 4; older drafts must also meet the complete-coverage rule.
 Beta 5 adds range packet schema 3 without changing the draft/notes format.
-Restart persistence remains outside these fixes.
+Beta 7 adds explicit workspace persistence without changing this notes contract.
 
 These checks do **not** establish that the assistant interpreted evidence
 correctly. The user must verify names, quantities, conditions, and wording
@@ -183,6 +183,35 @@ as a fact.
 
 The plugin appends a visible batch marker and evidence IDs with the approved
 text, marks FCS dirty, and leaves saving to the normal editor workflow.
+
+## Portable draft workspace contract (beta 7)
+
+A separate JSON uses `Format: "FCS-Scribe draft workspace"` and
+`SchemaVersion: 1`. It embeds `Packet`, `PacketHash` (the stream SHA-256 of
+that packet's serialized contract), and exact `DraftText`. Packet schemas
+1/2/3 are retained, including schema-3 originals and qualified evidence.
+An explicitly text-only workspace has both packet fields null and cannot
+apply notes. A missing packet with a declared hash, changed/malformed packet,
+unknown format/version or missing text fails loading before UI replacement.
+Hashes establish self-consistency, not authenticity or protection against a
+deliberate edit that recomputes them.
+
+Draft text is intentionally opaque on disk: invalid/incomplete JSON and
+mismatched responses are recoverable without rebinding to a different export.
+Open validates the bundle, then reports draft validation against original
+evidence, current editor state and existing notes. It does not apply or approve
+anything. Apply repeats the ordinary complete-coverage/current-state/retry
+checks; saved validation results never confer later permission.
+
+Saves reuse flushed atomic JSON replacement and an observed-file hash; the
+previous workspace is retained at `.bak`. Replacing a different existing
+destination requires it to be a valid workspace, not a tracking root or packet.
+Save/Open dialogs default to the active-mod/settings folder. Tracking storage
+does not include these documents, and opening one does not resume a journal.
+Unchanged saved text/association is clean; new exports and subsequent edits
+are unsaved. Revision guards prevent asynchronous replacement from erasing
+late edits; a saved snapshot excludes later edits, which remain dirty.
+This is explicit Save/Open, not autosave, an event log, or mod recovery.
 
 ## Resumable tracking contract (beta 2)
 
@@ -218,7 +247,8 @@ The main `journal.jsonl` receives missing entries at compilation, deduplicated
 by identity and hash. Compiled session files are redundant; uncompiled files
 remain required. Sessions are not automatically deleted.
 
-Same-state reviews do not append duplicate history. Current drafts/export associations are not stored.
+Same-state reviews do not append duplicate history. Tracking storage does not
+contain drafts/export associations; beta 7 stores those in separate workspaces.
 Beta 5 exposes recorded history through inclusive range selection. Compiled
 session duplicates appear once; archived compiled sessions remain available
 from the main journal. Earlier gameplay evidence remains selectable after

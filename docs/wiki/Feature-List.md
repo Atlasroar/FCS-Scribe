@@ -14,6 +14,8 @@ retries of matching completed notes.
 sessions, with original evidence identities and current-state validation.
 **v0.1.0-beta.6** keeps ordinary tracking available through known optional
 Workshop/cache/preview failures, with explicit partial-capture reasons.
+**v0.1.0-beta.7** adds portable draft workspaces and save/discard protection
+for draft text and its original AI-packet association.
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).
@@ -30,6 +32,7 @@ For evidence and unsupported cases, see [Validation and limitations](Validation-
 | Review and export settings | Settings | Manual or 30/60/300/600-second reviews and default JSON directory |
 | Manual AI handoff | Core > Export AI packet | Preview/select a recording range; schema-3 JSON retains original batches and uniquely qualified evidence |
 | Editable draft | Draft > Import draft or Paste draft | JSON you can review and edit before applying |
+| Portable draft workspace | Draft > Save workspace or Open workspace | Exact unfinished text plus its original packet, independently reopenable after restart |
 | Approved record notes | Apply approved notes | Appended FCS Notes/TODO entries; FCS is marked dirty, not saved |
 | Workshop information | Workshop info tab or Workshop > Export Workshop info | Local/staged/cached metadata, source details and warnings |
 | Preview-image archive | Workshop > Archive preview image | A new, byte-identical copy of the local PNG/JPEG/GIF preview |
@@ -45,11 +48,11 @@ Beta 3 uses five top-level entries inside Scribe:
 
 - **Core:** Start tracking, Review changes, Compile journal and Export AI packet.
 - **Workshop:** Export Workshop info and Archive preview image.
-- **Draft:** Import draft and Paste draft.
+- **Draft:** Import draft, Paste draft, and, since beta 7, Save workspace and Open workspace.
 - **Apply approved notes:** a separate approval action.
 - **Settings:** a separate configuration action, called Plugin settings in beta 2.
 
-All ten actions remain available. Hover over a menu action or select it with
+The original ten actions and two beta 7 workspace actions remain available. Hover over a menu action or select it with
 keyboard navigation to read its explanation in the bottom help area. Menus are
 disabled while an action is running and do not merge into the parent FCS menu.
 Narrow windows keep remaining entries accessible through an overflow menu.
@@ -86,8 +89,9 @@ then replaces that JSON with a fresh **current-editor-state** checkpoint.
 It cannot reconstruct earlier state.
 
 Starting/resuming replaces the in-window export association and clears the
-draft. Copy unfinished draft text elsewhere first. Saved baselines/history
-survive closing; drafts/export associations do not. Changing active mod,
+draft only after beta 7's save/discard protection. Save a draft workspace to
+retain that independent association; tracking history does not contain draft text.
+Saved baselines/history survive closing. Changing active mod,
 actual load order or locked-mod context requires a new baseline.
 Nothing is saved to the `.mod`.
 
@@ -179,8 +183,8 @@ schema-3 AI handoffs are not tracking baselines and cannot be resumed or
 converted. Resume the original tracking JSON and its `.scribe` storage instead.
 
 Export also fills the editable draft with a blank response template.
-Replacing an existing nonempty draft after a previous export requires
-confirmation. Inspect the packet for private content before sharing it
+In beta 7, unsaved draft text or a new export association requires
+Save/Discard/Cancel before replacement. Inspect the packet for private content before sharing it
 manually; the plugin sends nothing to an AI service.
 
 Ask the assistant to follow `Instructions` and return only JSON matching
@@ -195,7 +199,8 @@ Workshop info** instead of this action.
 
 ## 5. Import draft and Paste draft: review before applying
 
-**Import draft** requires an exported batch in the current Scribe session.
+**Import draft** requires an exported batch, either newly exported or restored
+from a beta 7 workspace.
 It reads a JSON response into **Editable draft JSON**, without applying it.
 **Paste draft** replaces that editor's contents with clipboard text; pasting
 alone does not validate or apply the result.
@@ -218,6 +223,43 @@ without dropping its citations. This closes S01 in the
 No evidence-ID check can establish that the assistant's prose is correct.
 Review its claims, quantities, conditions and interpretation yourself.
 See [Data and AI contracts](Data-and-AI-Contracts) for the exact draft shape.
+
+### Portable draft workspaces (beta 7)
+
+**Draft > Save workspace** writes one JSON containing the exact editable text
+and its original AI packet, including schema-3 recording evidence. Unfinished,
+invalid or empty draft JSON can be saved without inventing evidence or approving
+notes. The window title marks unsaved work. **Open workspace** validates the
+bundle and restores both pieces after restarting FCS; it does not need the
+original export file or an active tracking session.
+
+Opening reports stale state, mismatched batches, incomplete/invalid responses,
+or already-applied notes. Such text remains available for review; Apply always
+recaptures the editor, validates evidence/current state, and asks for approval.
+A corrupt/missing associated packet or unsupported workspace fails before
+replacing the current work. Text entered without an export can be saved as an
+explicit text-only workspace, but cannot be applied without associated evidence.
+Do not edit identifiers to associate old prose with a different export.
+
+Close, Start/resume, new export, Import, Paste and Open all protect unsaved work:
+**Yes** saves a workspace, **No** explicitly discards, and **Cancel** retains it.
+Cancelling the subsequent file dialog or failing validation/writing retains the
+old text and association. Opening/starting in the background cancels replacement
+if you edit in the meantime. Saving captures a snapshot; later edits remain
+unsaved. Closing while an operation is pending waits for you to close again
+after it finishes. FCS parent-close may likewise need to be retried.
+
+Saves use a flushed temporary file and atomic replacement with a `.bak` of the
+previous workspace. Observed external file changes block overwriting; Save to
+a new filename to retain your local work. Existing tracking files, AI packets
+and unrelated JSON cannot be replaced by workspace Save. Defaults follow the
+active-mod/settings folder. Workspaces contain private evidence and prose:
+inspect before sharing and do not upload them as tracking or Workshop data.
+
+This is explicit Save/Open, not autosave or crash recovery. Save before quitting;
+forced termination can still lose later unsaved edits. Tracking sessions never
+back up draft text, and workspaces never save/restore a mod, resume tracking,
+remember blanket approval or mark evidence as globally documented.
 
 ## 6. Apply approved notes: append through FCS
 
@@ -374,7 +416,7 @@ There is no automatic pruning or history-management UI yet.
 
 | Planned feature | Intended direction |
 | --- | --- |
-| History browser and draft persistence | Inspect/select multiple saved batches and restore unfinished draft/export associations |
+| General history-management UI | Inspect/manage saved history beyond the existing AI recording-range selector; draft workspaces are implemented in beta 7 |
 | Markdown changelogs | Reuse verified change evidence for human-readable exports |
 | Optional OpenConstructionSet helper | Read saved data out of process, without replacing unsaved-model access or writing open mods |
 | Dependency-resolved wiki-ready exports | Produce linked documentation only after dependency/provenance validation |

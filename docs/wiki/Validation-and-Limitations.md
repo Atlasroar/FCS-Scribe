@@ -6,15 +6,15 @@ complete editor compatibility.
 
 ## Automated and disposable-copy evidence
 
-The recorded beta 6 checks passed. These retain session-journal, grouped-menu,
-complete-coverage/safe-retry and recording-range checks while adding optional
-Workshop failure isolation:
+The recorded beta 7 checks passed. These retain session-journal, grouped-menu,
+complete-coverage/safe-retry, recording-range and optional Workshop isolation
+checks while adding portable draft lifecycle protection:
 
 | Check | Result | Boundary |
 | --- | --- | --- |
-| Dependency-free core checks | 215 passed | Adds optional-field serialization, stable partial availability/reason fingerprints, known-field/gameplay/recovery stale checks, range preservation and AI unknown-value instructions |
-| Actual FCS methods on copied vanilla data | 235 passed | Adds durable recording through busy upload/refresh, malformed/mismatched/locked cache, invalid/unsupported/oversized/locked preview, simultaneous failures, independent readable components, replay/export, visible UI warnings, automatic recording/recovery and separate action-error pause policies |
-| Actual FCS methods on a representative copied mod | 234 passed | Same coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
+| Dependency-free core checks | 235 passed | Adds exact workspace text/packet serialization, schema-1/2/3 evidence, unfinished/mismatched/stale responses, missing/corrupt evidence, atomic backup and observed-file conflict checks |
+| Actual FCS methods on copied vanilla data | 260 passed | Adds visible dirty state, Save/Open across new windows, cancelled Start/Resume/Open/close, late edits during save/load/session start, close while busy, corrupt/unrelated destinations, external changes during Open, and restored current/stale validation without implicit apply |
+| Actual FCS methods on a representative copied mod | 259 passed | Same coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
 
 The integration host initializes actual FCS forms without launching the complete
 interactive editor/mod-selector workflow. It exercises unsaved overrides,
@@ -60,6 +60,13 @@ interactive Steam upload/refresh.
 Original game/mod files are only copied; test saves go to a fresh ignored
 `build\integration-fixtures` directory. The Framework test host is explicitly
 32-bit like this FCS build. Generated fixtures can be inspected and deleted.
+
+Draft protection tests inject Discard/Cancel decisions into the window's
+decision boundary and exercise actual Save/Open path helpers, background
+storage/adoption and closing handlers. They do not operate every native
+Save/Open/overwrite/approval dialog
+through the full FCS Extended application; those interactions remain S09.
+Explicit workspace persistence is not an autosave or forced-shutdown guarantee.
 
 ## Reproduce
 
@@ -108,8 +115,9 @@ An experimental prerelease does not mark those checkboxes complete.
 - Notes are shared editor-side record annotations, not `.mod` content or
   Workshop release notes.
 - Multi-record note application has no verified transaction/rollback contract.
-- Saved baselines/history can be resumed, but drafts/export associations remain
-  window-local. The recording-range selector is not a general history editor,
+- Saved baselines/history can be resumed; beta 7's explicit draft workspaces
+  retain text/packet associations independently. They are not autosave or crash
+  recovery: unsaved edits can be lost on forced termination. The recording-range selector is not a general history editor,
   mod-restoration tool or persistent list of already documented evidence.
 - Range exports preserve observations rather than a net diff. Overlapping
   ranges can document the same evidence under different batch markers; review
