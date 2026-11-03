@@ -73,6 +73,7 @@ namespace FcsScribe
         private readonly string settingsPath;
         private string settingsHash;
         private PluginSettings settings;
+        private Exception settingsError;
         private bool busy, closing, automaticPaused;
         private readonly Timer timer = new Timer();
         private readonly MenuStrip actions = new MenuStrip { Dock = DockStyle.Top, AutoSize = true,
@@ -87,6 +88,8 @@ namespace FcsScribe
         private readonly TextBox draft = TextArea(false);
         private readonly TextBox workshop = TextArea(true);
         private readonly Label status = new Label { Dock = DockStyle.Bottom, Height = 48 };
+        private readonly Label settingsNotice = new Label { Dock = DockStyle.Top, AutoSize = true,
+            BorderStyle = BorderStyle.FixedSingle, MaximumSize = new System.Drawing.Size(1040, 0) };
         private const string HelpHint = "Hover over a menu action, or select it with the keyboard, to see what it does.";
         private readonly Label help = new Label { Dock = DockStyle.Bottom, Height = 48, Text = HelpHint,
             BorderStyle = BorderStyle.FixedSingle };
@@ -103,8 +106,7 @@ namespace FcsScribe
                 "Tracking journals do not back up draft text. A saved workspace never saves the mod.",
                 "Unsaved draft workspace", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
             settingsPath = settingsFile;
-            settings = PluginSettings.Load(settingsPath);
-            settingsHash = File.Exists(settingsPath) ? TrackingStorage.HashFile(settingsPath) : null;
+            AdoptSettings(SettingsStorage.Load(settingsPath));
             if (!editor.IsMdiContainer) throw new NotSupportedException("The FCS main window is not an MDI container.");
             MdiParent = editor;
             Text = "FCS-Scribe - experimental documentation";
@@ -124,7 +126,7 @@ namespace FcsScribe
             AddAsyncAction(draftMenu.DropDownItems, "&Save workspace", "Atomically save exact editable text, even unfinished JSON, together with its original AI packet. This is separate from tracking and does not save the mod.", SaveWorkspaceAction);
             AddAsyncAction(draftMenu.DropDownItems, "&Open workspace", "Restore draft text and its original packet after restart. Validate the bundle, report stale/invalid drafts, and require fresh validation and approval before applying.", OpenWorkspace);
             AddAction(actions.Items, "&Apply approved notes", "Validate the draft and ask for approval, then append record Notes/TODO entries and mark FCS dirty. Does not save or edit Workshop notes.", Apply);
-            AddAsyncAction(actions.Items, "&Settings", "Choose manual or automatic review (30 seconds, 1, 5 or 10 minutes) and the default JSON export folder. Existing tracking files stay at their chosen location.", Settings);
+            AddAsyncAction(actions.Items, "&Settings", "Choose recording/export defaults, reload changed settings or explicitly repair unreadable/invalid settings with an original-byte backup. Existing tracking files stay at their chosen location.", Settings);
             MainMenuStrip = actions;
             actions.OverflowButton.AccessibleDescription = "Show menu actions that do not fit in the window.";
             actions.OverflowButton.MouseEnter += delegate { help.Text = actions.OverflowButton.AccessibleDescription; };
@@ -153,12 +155,17 @@ namespace FcsScribe
                 catch (Exception error) { workshop.Clear(); Plugin.ShowError(error); }
             };
             Controls.Add(tabs);
+            Controls.Add(settingsNotice);
             Controls.Add(actions);
             Controls.Add(help);
             Controls.Add(status);
+            ClientSizeChanged += delegate {
+                settingsNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
+            };
+            settingsNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
             status.Text = "Start or resume a project. Recordings go to timestamped session logs; compiling never saves the mod.";
             timer.Tick += async delegate {
-                if (busy || closing || automaticPaused || !Visible || tracker == null ||
+                if (busy || closing || automaticPaused || settingsError != null || !Visible || tracker == null ||
                     WindowState == FormWindowState.Minimized ||
                     (MdiParent != null && MdiParent.WindowState == FormWindowState.Minimized) ||
                     actions.OverflowButton.DropDown.Visible ||
@@ -334,6 +341,7 @@ namespace FcsScribe
 
         private async Task AutomaticTick()
         {
+            if (settingsError != null) return;
             if (schedule.ReviewDue(clock.ElapsedMilliseconds)) await Review();
             if (!closing && schedule.CompilationDue(clock.ElapsedMilliseconds)) await Compile();
         }
@@ -623,23 +631,59 @@ namespace FcsScribe
 
         private async Task Settings()
         {
-            using (var dialog = new SettingsDialog(settings))
+            using (var dialog = new SettingsDialog(settings, settingsPath, settingsError))
             {
-                if (dialog.ShowDialog(this) != DialogResult.OK) return;
-                PluginSettings next = dialog.Value;
-                string hash = await Task.Run(() => {
-                    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(settingsPath)));
-                    return TrackingStorage.WriteAtomic(settingsPath, next, settingsHash);
-                });
-                if (closing) return;
-                settings = next; settingsHash = hash; automaticPaused = false;
-                schedule.Reset(clock.ElapsedMilliseconds, settings.ReviewSeconds);
-                status.Text = "Settings saved. Existing tracking files are not moved. " + ScheduleText();
+                DialogResult result = dialog.ShowDialog(this);
+                if (result == DialogResult.Retry) await ReloadSettings();
+                else if (result == DialogResult.OK) await SaveSettings(dialog.Value);
             }
+        }
+
+        private void AdoptSettings(LoadedSettings loaded)
+        {
+            if (loaded.Error == null && loaded.Value == null)
+                throw new InvalidOperationException("The settings loader returned neither settings nor a recovery error.");
+            settingsError = loaded.Error; settingsHash = loaded.FileHash;
+            settings = settingsError == null ? loaded.Value : new PluginSettings();
+            settingsNotice.Visible = settingsError != null;
+            settingsNotice.Text = settingsError == null ? "" :
+                "SETTINGS RECOVERY - automatic recording disabled. Safe manual mode uses the active mod's export folder. " +
+                "Open Settings to reload or explicitly save a repair. No settings file was changed.\r\n" +
+                settingsPath + "\r\n" + settingsError.Message;
+            if (settingsError != null) Console.Error.WriteLine("FCS-Scribe settings recovery: " + settingsError);
+        }
+
+        private async Task ReloadSettings()
+        {
+            LoadedSettings loaded = await Task.Run(() => SettingsStorage.Load(settingsPath));
+            if (closing) return;
+            AdoptSettings(loaded);
+            if (settingsError == null)
+            {
+                automaticPaused = false;
+                schedule.Reset(clock.ElapsedMilliseconds, settings.ReviewSeconds);
+                status.Text = "Settings reloaded and validated. Existing tracking files were not moved. " + ScheduleText();
+            }
+            else status.Text = "Settings could not be loaded. Original file retained; safe manual recovery mode remains active.";
+        }
+
+        private async Task SaveSettings(PluginSettings next)
+        {
+            string expectedHash = settingsHash;
+            bool recovering = settingsError != null;
+            SavedSettings saved = await Task.Run(() => SettingsStorage.Save(settingsPath, next, expectedHash, recovering));
+            if (closing) return;
+            AdoptSettings(new LoadedSettings { Value = next, FileHash = saved.FileHash });
+            automaticPaused = false;
+            schedule.Reset(clock.ElapsedMilliseconds, settings.ReviewSeconds);
+            status.Text = "Settings saved. " + (saved.RecoveryBackup == null ? "" :
+                "Original bytes preserved at " + saved.RecoveryBackup + ". ") +
+                "Existing tracking files were not moved. " + ScheduleText();
         }
 
         private string ScheduleText()
         {
+            if (settingsError != null) return "Settings recovery: safe manual mode; use Settings to reload or save a repair.";
             return automaticPaused ? "Automatic review paused after an error; resume or save settings to re-enable." :
                 settings.ReviewSeconds == 0 ? "Manual recording/compilation." : "Automatic recording: " +
                     settings.ReviewSeconds + " seconds; compilation: 30 minutes while Scribe is visible.";
@@ -648,7 +692,7 @@ namespace FcsScribe
         private void ConfigureTimer()
         {
             timer.Stop();
-            if (closing || automaticPaused || tracker == null || settings.ReviewSeconds == 0) return;
+            if (closing || automaticPaused || settingsError != null || tracker == null || settings.ReviewSeconds == 0) return;
             timer.Interval = 1000;
             timer.Start();
         }

@@ -86,14 +86,20 @@ namespace FcsScribe
         private readonly TextBox directory = new TextBox { Width = 440 };
         public PluginSettings Value { get; private set; }
 
-        public SettingsDialog(PluginSettings settings)
+        public SettingsDialog(PluginSettings settings, string settingsPath = null, Exception loadError = null)
         {
             Text = "FCS-Scribe settings";
-            Width = 640; Height = 360;
+            Width = 640; Height = loadError == null ? 400 : 540;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false; StartPosition = FormStartPosition.CenterParent;
             var layout = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown,
                 WrapContents = false, AutoScroll = true, Padding = new Padding(12) };
+            if (loadError != null)
+                layout.Controls.Add(new Label { AutoSize = true, MaximumSize = new System.Drawing.Size(580, 0),
+                    Text = "SETTINGS RECOVERY: " + loadError.Message + "\r\n" + settingsPath +
+                        "\r\nProposed values start at Manual/active-mod defaults. Reload to retry reading the file, " +
+                        "or explicitly Save repaired settings to preserve its original bytes in a unique recovery backup. " +
+                        "An unreadable original must become readable and be reloaded before it can be replaced." });
             layout.Controls.Add(new Label { Text = "Review and save a validated checkpoint:", AutoSize = true });
             interval.Items.AddRange(new object[] { "Manual", "Automatic - 30 seconds", "Automatic - 1 minute",
                 "Automatic - 5 minutes", "Automatic - 10 minutes" });
@@ -114,7 +120,8 @@ namespace FcsScribe
             layout.Controls.Add(new Label { AutoSize = true, MaximumSize = new System.Drawing.Size(540, 0),
                 Text = "Recordings are flushed to timestamped session logs at each interval. Automatic mode compiles them into the main journal every 30 minutes. Manual mode uses Review changes and Compile journal. Neither saves the mod or applies notes." });
             var buttons = new FlowLayoutPanel { AutoSize = true };
-            var save = new Button { Text = "Save settings", AutoSize = true };
+            var save = new Button { Text = loadError == null ? "Save settings" : "Save repaired settings", AutoSize = true };
+            var reload = new Button { Text = "Discard edits and reload", AutoSize = true, DialogResult = DialogResult.Retry };
             var cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel };
             save.Click += delegate {
                 try
@@ -124,14 +131,14 @@ namespace FcsScribe
                         ReviewSeconds = PluginSettings.Intervals[interval.SelectedIndex],
                         ExportDirectory = activeFolder.Checked ? null : directory.Text
                     };
-                    Value.Validate();
+                    Value.ValidateForUse();
                     if (!activeFolder.Checked && (String.IsNullOrWhiteSpace(directory.Text) || !Directory.Exists(directory.Text)))
                         throw new DirectoryNotFoundException("Choose an existing custom export directory.");
                     DialogResult = DialogResult.OK;
                 }
                 catch (Exception error) { Plugin.ShowError(error); }
             };
-            buttons.Controls.Add(save); buttons.Controls.Add(cancel); layout.Controls.Add(buttons);
+            buttons.Controls.Add(save); buttons.Controls.Add(reload); buttons.Controls.Add(cancel); layout.Controls.Add(buttons);
             Controls.Add(layout); AcceptButton = save; CancelButton = cancel;
         }
     }
