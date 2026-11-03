@@ -39,14 +39,14 @@ internal static class IntegrationTests
     }
 
     [STAThread]
-    public static int Main()
+    public static int Main(string[] args)
     {
         int result = 1;
         using (var host = new Form { ShowInTaskbar = false, Opacity = 0 })
         {
             host.Shown += delegate {
                 host.BeginInvoke(new Action(delegate {
-                    try { result = Run(); }
+                    try { result = Run(args.Contains("--settings-recovery")); }
                     finally { host.Close(); }
                 }));
             };
@@ -55,7 +55,7 @@ internal static class IntegrationTests
         return result;
     }
 
-    private static int Run()
+    private static int Run(bool settingsOnly)
     {
         Form editor = null;
         try
@@ -78,7 +78,7 @@ internal static class IntegrationTests
             ((IList)FcsAdapter.Field(editor, "activeMods")).Add("scribe-test.mod");
             Check((bool)FcsAdapter.Call(data, "load", Path.Combine(directory, "fixture.mod"),
                 Enum.Parse(mode, "BASE"), false, false), "load representative mod copy as dependency");
-            File.Copy(Path.Combine(directory, "fixture.mod"), output);
+            File.Copy(Path.Combine(directory, "fixture.mod"), output, true);
             Check((bool)FcsAdapter.Call(data, "load", output, Enum.Parse(mode, "ACTIVE"), false, false),
                 "load disposable active mod");
             FcsAdapter.Call(data, "resolveAllReferences");
@@ -87,6 +87,12 @@ internal static class IntegrationTests
             object todo = FcsAdapter.Field(editor, "todoList");
             FcsAdapter.Call(todo, "LoadAll");
             var adapter = new FcsAdapter(assembly, editor);
+            if (settingsOnly)
+            {
+                CheckSettingsWindow(adapter, editor);
+                Console.WriteLine("PASS: " + passed + " settings recovery integration checks");
+                return 0;
+            }
             CheckWorkshop(adapter, editor, data, nav, assembly);
             CheckScribeWindow(adapter, editor);
             CheckInitializationWindow(adapter, editor);
@@ -472,6 +478,107 @@ internal static class IntegrationTests
                 "actual background Resume finalizes initialization without rewriting the captured baseline");
             Check(!File.ReadAllText(Path.Combine(project.DirectoryName, "project.json")).Contains("\"Initialization\""),
                 "resumed window uses the unchanged normal durable-marker format");
+        }
+    }
+
+    private static void CheckSettingsWindow(FcsAdapter adapter, Form editor)
+    {
+        string directory = Directory.GetCurrentDirectory();
+        string path = Path.Combine(directory, "recovery-settings.json");
+        File.WriteAllText(path, "{ broken settings");
+        string original = TrackingStorage.HashFile(path);
+        object header = FcsAdapter.Field(FcsAdapter.Field(FcsAdapter.Field(
+            FcsAdapter.Field(editor, "nav"), "ou"), "gameData"), "header");
+        string author = (string)FcsAdapter.Field(header, "Author");
+        using (var host = new Form { IsMdiContainer = true, ShowInTaskbar = false, Opacity = 0 })
+        using (var window = new ScribeWindow(adapter, editor, path))
+        {
+            window.MdiParent = host; host.Show(); window.Show();
+            var notice = (Label)FcsAdapter.Field(window, "settingsNotice");
+            var timer = (System.Windows.Forms.Timer)FcsAdapter.Field(window, "timer");
+            var draft = (TextBox)FcsAdapter.Field(window, "draft");
+            Check(FcsAdapter.Field(window, "settingsError") != null && notice.Visible &&
+                notice.Text.Contains(path) && notice.Text.Contains("SETTINGS RECOVERY") &&
+                notice.Text.Contains("automatic recording disabled") && TrackingStorage.HashFile(path) == original,
+                "corrupt settings open the actual window with a persistent recovery warning and untouched source");
+            Check(window.MainMenuStrip.Items.Cast<ToolStripMenuItem>().Last().Enabled &&
+                (string)FcsAdapter.Call(window, "ExportDirectory") == adapter.ActiveModDirectory(),
+                "Settings stays reachable and safe manual mode uses the active mod export folder");
+            string anchorPath = Path.Combine(directory, "mods", "settings-recovery-tracking.json");
+            RunWindow(window, "StartPath", anchorPath);
+            var project = (JournalProject)FcsAdapter.Field(window, "project");
+            Packet packet = project.ResumeTracker().Export(project.State);
+            Put(window, "exported", packet); draft.Text = "{ unfinished draft retained\r\n";
+            try
+            {
+                var settings = (PluginSettings)FcsAdapter.Field(window, "settings");
+                settings.ReviewSeconds = 30;
+                ((JournalSchedule)FcsAdapter.Field(window, "schedule")).Reset(-JournalSchedule.CompilationMilliseconds, 30);
+                FcsAdapter.Call(window, "ConfigureTimer");
+                Put(header, "Author", "Settings recovery manual recording fixture");
+                FcsAdapter.Call(timer, "OnTick", EventArgs.Empty);
+                RunWindow(window, "AutomaticTick");
+                Check(!timer.Enabled && project.EntryCount == 0,
+                    "recovery explicitly gates timer dispatch and automatic work even with a nonzero interval");
+                RunWindow(window, "Review");
+                Check(project.EntryCount == 1 && project.PendingCount == 1 && notice.Visible,
+                    "manual gameplay recording works in recovery without clearing its persistent warning");
+                RunWindow(window, "ReloadSettings");
+                Check(FcsAdapter.Field(window, "settingsError") != null && !timer.Enabled &&
+                    TrackingStorage.HashFile(path) == original,
+                    "failed reload keeps safe manual mode and never rewrites corrupt settings");
+                File.WriteAllText(path, Json.Write(new PluginSettings()));
+                string external = TrackingStorage.HashFile(path);
+                bool stale = false;
+                try { RunWindow(window, "SaveSettings", new PluginSettings { ReviewSeconds = 60 }); }
+                catch (IOException) { stale = true; }
+                Check(stale && TrackingStorage.HashFile(path) == external && notice.Visible,
+                    "a stale recovery window cannot overwrite another instance's repaired settings");
+                RunWindow(window, "ReloadSettings");
+                Check(FcsAdapter.Field(window, "settingsError") == null && !notice.Visible && !timer.Enabled,
+                    "explicit validated reload exits recovery without enabling manual-only settings");
+                File.WriteAllText(path, "another malformed original");
+                RunWindow(window, "ReloadSettings");
+                RunWindow(window, "SaveSettings", new PluginSettings { ReviewSeconds = 30 });
+                string backup = Directory.GetFiles(directory, "recovery-settings.json.recovery-*.bak").Single();
+                Check(File.ReadAllText(backup) == "another malformed original" &&
+                    PluginSettings.Load(path).ReviewSeconds == 30 && !notice.Visible && timer.Enabled,
+                    "explicit repaired Save preserves original bytes and adopts validated recording preferences");
+                string repairedHash = TrackingStorage.HashFile(path);
+                using (var locked = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+                {
+                    using (var blockedWindow = new ScribeWindow(adapter, editor, path))
+                        Check(FcsAdapter.Field(blockedWindow, "settingsError") is IOException &&
+                            FcsAdapter.Field(blockedWindow, "settingsHash") == null &&
+                            ((PluginSettings)FcsAdapter.Field(blockedWindow, "settings")).ReviewSeconds == 0 &&
+                            blockedWindow.MainMenuStrip.Items.Cast<ToolStripMenuItem>().Last().Enabled,
+                            "actual sharing denial during construction still opens a usable manual recovery window");
+                    RunWindow(window, "ReloadSettings");
+                    bool unreadable = false;
+                    try { RunWindow(window, "SaveSettings", new PluginSettings()); }
+                    catch (IOException) { unreadable = true; }
+                    Check(unreadable && FcsAdapter.Field(window, "settingsHash") == null && notice.Visible && !timer.Enabled,
+                        "sharing-denied reload enters recovery and an unknown original hash cannot authorize repair");
+                    using (var dialog = new SettingsDialog((PluginSettings)FcsAdapter.Field(window, "settings"), path,
+                        (Exception)FcsAdapter.Field(window, "settingsError")))
+                    {
+                        Check(((Button)dialog.AcceptButton).Text == "Save repaired settings" &&
+                            dialog.Controls[0].Controls.OfType<FlowLayoutPanel>().Last().Controls.OfType<Button>()
+                                .Any(x => x.DialogResult == DialogResult.Retry),
+                            "recovery Settings exposes explicit repair and discard-and-reload actions");
+                        dialog.Shown += delegate { dialog.BeginInvoke(new Action(() => ((Button)dialog.CancelButton).PerformClick())); };
+                        Check(dialog.ShowDialog(window) == DialogResult.Cancel, "recovery Settings can be cancelled normally");
+                    }
+                }
+                Check(TrackingStorage.HashFile(path) == repairedHash &&
+                    Directory.GetFiles(directory, "recovery-settings.json.recovery-*.bak").Length == 1,
+                    "failed unreadable repair and dialog cancellation leave settings and recovery backups untouched");
+                RunWindow(window, "ReloadSettings");
+                Check(!notice.Visible && timer.Enabled && Object.ReferenceEquals(project, FcsAdapter.Field(window, "project")) &&
+                    Object.ReferenceEquals(packet, FcsAdapter.Field(window, "exported")) && draft.Text == "{ unfinished draft retained\r\n",
+                    "reload after access recovery retains the current project, original packet and exact unfinished draft");
+            }
+            finally { Put(header, "Author", author); }
         }
     }
 

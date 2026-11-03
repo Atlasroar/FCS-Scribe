@@ -18,6 +18,8 @@ Workshop/cache/preview failures, with explicit partial-capture reasons.
 for draft text and its original AI-packet association.
 **v0.1.0-beta.8** makes failed new-project initialization and legacy conversion
 recoverable without claiming unrelated storage or deleting unknown artifacts.
+**v0.1.0-beta.9** opens invalid/unreadable settings in labelled safe manual
+mode, with explicit reload/repair and original-byte/concurrent-save protection.
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).
@@ -410,6 +412,23 @@ another existing default directory in settings or another location in an
 individual dialog. Changing defaults does not move the active tracking file.
 Manual exports cannot overwrite that file. Settings persist at
 `%LOCALAPPDATA%\FCS-Scribe\settings.json`.
+Beta 9 keeps the window usable when that file is corrupt, unsupported,
+unreadable or names an unavailable custom directory. A persistent recovery
+banner identifies the reason/path. Manual tracking and active-mod export
+defaults remain usable; automatic recording and compilation stay disabled.
+Opening the window does not rewrite the original settings.
+
+**Discard edits and reload** reads/validates current disk settings, including
+changes from another instance. A failed reload remains in safe manual mode.
+**Save repaired settings** explicitly saves your chosen valid values only after
+preserving readable original bytes in a unique `.recovery-<UTC>_<ID>.bak`;
+ordinary `.bak` rotation cannot erase that recovery copy. An unreadable
+original must become readable and be reloaded before it can be replaced.
+Cancel leaves the file untouched. Stale or concurrently locked saves fail
+instead of silently overwriting another cooperating instance. Reload/repair
+retain the current project, original packet and unfinished draft.
+See [settings recovery](Installation-and-Workflow#settings-recovery-beta-9).
+
 File dialogs restore FCS's working directory. AI/Workshop exports also reject
 destinations inside the active project's reserved storage folder.
 

@@ -10,6 +10,7 @@ It does not replace FCS or load an AI provider.
 | `src\Journal.cs` | Replayable record deltas, timestamped session logs, durable-head marker, writer lease, idempotent compilation, ownership-checked initialization/tail recovery and independent deadlines | Rewrite a full baseline each tick, claim unknown storage, discard uncompiled history or restore mod binaries |
 | `src\RangeExport.cs` | Selected original packets, stable range identity and collision-free qualified evidence in schema-3 AI handoffs | Rewrite saved batches, collapse observed reversals or treat a range as a resumable baseline |
 | `src\DraftWorkspace.cs` | Versioned portable original-packet/exact-text bundles, integrity validation and restored-draft readiness reporting | Invent missing evidence, approve restored text, save mods or treat draft text as tracking history |
+| `src\SettingsStorage.cs` | Explicit load errors with same-stream hashes, cooperating save lease, stale-file checks and unique original-byte repair backups | Silently default invalid settings, overwrite an unreadable original or claim a universal filesystem lock |
 | `src\SettingsDialog.cs` | New/resume choice, recording-range preview and manual/automatic review/export-directory settings | Automatically convert legacy evidence or export a range without confirmation |
 | `src\FcsAdapter.cs` | Guard the FCS executable and read/update verified editor objects on the UI thread | Guess APIs, silently omit unsupported values, or write binary mods |
 | `src\WorkshopArchive.cs` | Known-field XML cache contract and bounded, lossless local preview archiving | Contact Steam, overwrite prior archives, or re-encode/replace source images |
@@ -28,6 +29,13 @@ interfaces are not assumed to be managed editor APIs.
 The Scribe form uses the actual `baseForm` as its standard WinForms `MdiParent`,
 like native FCS windows. A separate bottom help label describes each action on
 mouse hover or keyboard focus without replacing the persistent operation status.
+
+Beta 9 keeps known settings read/parse/validation failures outside window
+construction failure: a persistent recovery banner identifies the path/reason.
+Temporary manual/active-folder values are explicitly labelled, with separate
+guards disabling automatic recording and compilation. Settings can reload or
+save a validated repair without replacing the current project or draft.
+Unknown/programmer and fatal-resource errors are not converted into defaults.
 
 Beta 2 tracking automation uses a UI-thread WinForms timer and a busy gate.
 FCS snapshots are captured on that thread; only detached data is parsed,

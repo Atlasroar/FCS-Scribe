@@ -249,8 +249,8 @@ namespace FcsScribe
     [DataContract]
     public sealed class PluginSettings
     {
-        [DataMember(Order = 0)] public int SchemaVersion = 1;
-        [DataMember(Order = 1)] public int ReviewSeconds;
+        [DataMember(Order = 0, IsRequired = true)] public int SchemaVersion = 1;
+        [DataMember(Order = 1, IsRequired = true)] public int ReviewSeconds;
         [DataMember(Order = 2)] public string ExportDirectory;
         public static readonly int[] Intervals = { 0, 30, 60, 300, 600 };
         public static string DefaultPath { get { return Path.Combine(
@@ -258,11 +258,27 @@ namespace FcsScribe
 
         public void Validate()
         {
-            if (SchemaVersion != 1 || !Intervals.Contains(ReviewSeconds))
+            if (SchemaVersion != 1)
+                throw new InvalidDataException("Unsupported settings schema. Expected schema 1; reload or explicitly save repaired settings.");
+            if (!Intervals.Contains(ReviewSeconds))
                 throw new InvalidDataException("Choose Manual, 30 seconds, 1 minute, 5 minutes or 10 minutes.");
-            if (!String.IsNullOrEmpty(ExportDirectory) &&
-                (!Path.IsPathRooted(ExportDirectory) || Path.GetPathRoot(ExportDirectory).Length < 3))
-                throw new InvalidDataException("The custom export directory must be an absolute path.");
+            if (String.IsNullOrEmpty(ExportDirectory)) return;
+            try
+            {
+                if (!Path.IsPathRooted(ExportDirectory) || Path.GetPathRoot(ExportDirectory).Length < 3)
+                    throw new InvalidDataException("The custom export directory must be an absolute path.");
+                Path.GetFullPath(ExportDirectory);
+            }
+            catch (ArgumentException error) { throw new InvalidDataException("The custom export directory is invalid.", error); }
+            catch (NotSupportedException error) { throw new InvalidDataException("The custom export directory is unsupported.", error); }
+            catch (PathTooLongException error) { throw new InvalidDataException("The custom export directory is too long.", error); }
+        }
+
+        public void ValidateForUse()
+        {
+            Validate();
+            if (!String.IsNullOrEmpty(ExportDirectory) && !Directory.Exists(ExportDirectory))
+                throw new DirectoryNotFoundException("The custom export directory is missing or unavailable: " + ExportDirectory);
         }
 
         public string DirectoryFor(string activeModDirectory)
@@ -275,12 +291,25 @@ namespace FcsScribe
 
         public static PluginSettings Load(string path)
         {
-            if (!File.Exists(path)) return new PluginSettings();
-            using (var stream = File.OpenRead(path))
+            string hash;
+            return Load(path, out hash);
+        }
+
+        internal static PluginSettings Load(string path, out string hash)
+        {
+            hash = null;
+            FileStream input;
+            try { input = File.OpenRead(path); }
+            catch (FileNotFoundException) { return new PluginSettings(); }
+            catch (DirectoryNotFoundException) { return new PluginSettings(); }
+            using (var stream = input)
             {
+                using (var sha = SHA256.Create())
+                    hash = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+                stream.Position = 0;
                 var settings = Json.ReadStream<PluginSettings>(stream);
                 if (settings == null) throw new InvalidDataException("Plugin settings are empty.");
-                settings.Validate();
+                settings.ValidateForUse();
                 return settings;
             }
         }

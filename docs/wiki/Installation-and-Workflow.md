@@ -82,6 +82,32 @@ choose another existing default; dialogs still allow individual locations.
 Changing settings does not move an existing tracking file. The settings file
 is `%LOCALAPPDATA%\FCS-Scribe\settings.json`.
 
+### Settings recovery (beta 9)
+
+If settings are invalid, unsupported, unreadable or reference an unavailable
+custom directory, Scribe opens with a persistent **SETTINGS RECOVERY** banner.
+It names the file and reason. Safe manual mode uses active-mod export defaults;
+automatic recording and compilation are disabled. Start/resume, manual Review
+and Compile, Workshop actions and draft work remain available. No original
+settings are rewritten just by opening Scribe.
+
+Open **Settings**. **Discard edits and reload** discards only the dialog's
+unsaved configuration choices and validates the current disk file; it does not
+discard the working draft or project. Fix access/directory problems and reload,
+or choose valid values and explicitly **Save repaired settings**. Repair
+preserves readable original bytes in a unique
+`settings.json.recovery-<UTC>_<unique-ID>.bak` before atomic replacement.
+Later saves never rotate away that original. Cancel writes nothing.
+
+An unreadable original cannot be safely replaced until access is restored and
+Reload obtains its bytes. If another instance changes or locks shared settings,
+Save fails explicitly; reload after it finishes before choosing and saving
+values again. Valid reload/Save exits recovery and adopts its selected interval.
+The current tracking project, original AI packet and exact draft text remain
+in place. Settings schedule-reset behavior remains an open S07 issue.
+
+### Project storage
+
 The selected JSON is a full baseline, not a per-tick rewrite. Adjacent
 `<file>.json.scribe\project.json` tracks identity/head, `sessions` holds one UTC
 timestamp + unique-ID JSONL log per start/resume, and `journal.jsonl` receives

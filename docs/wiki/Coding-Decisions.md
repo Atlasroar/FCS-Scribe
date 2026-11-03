@@ -186,6 +186,27 @@ ownership and remain fail-closed rather than being guessed safe to delete.
 Scoped internal write/flush/commit checkpoints allow deterministic fault tests;
 production callers use the same atomic writes without injected faults.
 
+## Keep settings failure explicit and recoverable (beta 9)
+
+Shared configuration must not prevent the documentation window from opening.
+Known read/parse/schema/interval/path failures produce an explicit error state,
+not successful default settings. The window deliberately enters labelled manual
+mode with active-mod export defaults and persistent recovery instructions;
+automatic work is independently gated until a valid reload or explicit repair.
+
+Load hashes and deserializes the same read stream. Only missing-file/directory
+errors while opening the settings source mean first launch; a missing configured
+export directory is instead a recovery error. Required schema/interval fields
+cannot silently become zero values. Unknown/fatal failures still propagate.
+
+Save uses an exclusive cooperating settings lease around observed-file checks,
+backup and atomic flushed replacement. Repair first preserves the readable
+original in a unique, verified, nonrotating backup. Unknown original hashes
+cannot authorize replacement. Cancel and failed reload never write settings;
+reload also resolves a stale instance without reopening Scribe. These operations
+retain the current project, packet and exact editable draft. Existing schedule
+reset semantics are deliberately left for S07 rather than claimed fixed here.
+
 ## Separate future saved-data analysis
 
 OCS is useful complementary research, not a substitute for live-model access.

@@ -164,13 +164,29 @@ Recorded checks: 428 core, 266 disposable vanilla FCS and 265 representative-mod
 FCS checks passed. The released beta 7 binary also generated compiled/uncompiled
 history that beta 8 replayed/exported with exact original evidence and unchanged
 source-file hashes. Physical power loss, every real ACL/disk-full condition and
-full FCS Extended interaction remain outside these fault tests. S06 is next.
+full FCS Extended interaction remain outside these fault tests. S06 is addressed below.
 
 ### S06. Medium: invalid settings can block the entire window
 
-- [ ] Offer an explicit settings recovery/reset path even when settings cannot be loaded during window construction.
-- [ ] Report corrupt settings and preserve recoverable originals; avoid silent defaults or overwriting another instance's changes.
-- [ ] Cover malformed/unsupported settings, missing custom directories, stale settings hashes and simultaneous editor instances.
+- [x] Offer an explicit settings recovery/reset path even when settings cannot be loaded during window construction.
+- [x] Report corrupt settings and preserve recoverable originals; avoid silent defaults or overwriting another instance's changes.
+- [x] Cover malformed/unsupported settings, missing custom directories, stale settings hashes and simultaneous editor instances.
+
+S06 is addressed in beta 9. Known settings failures open the window with an
+explicit persistent recovery warning, temporary Manual/active-mod defaults
+and automatic work independently disabled. Settings exposes discard-and-reload
+and explicit repaired Save without replacing the project, packet or draft.
+Same-stream load hashes, a cooperating settings save lease and observed-file
+checks prevent silent stale overwrites. Repair preserves exact readable bytes
+in a unique nonrotating recovery backup before atomic replacement; an unknown
+original hash refuses repair until access is restored and Reload succeeds.
+Recorded checks: 458 core; 266 vanilla plus 16 isolated settings checks; 265
+representative-mod plus 16 isolated settings checks. Actual Windows read/replace
+sharing denial and simultaneous cooperating saves are covered. A combined
+32-bit run/full-debug JIT lifetimes exhausted address space; isolated hosts and
+PDB-only symbols keep the final checks bounded, not a production S12 fix.
+Full interactive acceptance and exhaustive ACL/disk/power-loss cases remain
+open. Settings schedule-reset behavior is deliberately left for S07 next.
 
 ### S07. Medium: compilation deadlines can be deferred indefinitely
 

@@ -6,15 +6,15 @@ complete editor compatibility.
 
 ## Automated and disposable-copy evidence
 
-The recorded beta 8 checks passed. These retain session-journal, grouped-menu,
+The recorded beta 9 checks passed. These retain session-journal, grouped-menu,
 complete-coverage/safe-retry, recording-range, optional Workshop isolation and
-portable draft checks while adding recoverable initialization:
+portable draft and recoverable initialization checks while adding settings recovery:
 
 | Check | Result | Boundary |
 | --- | --- | --- |
-| Dependency-free core checks | 428 passed | Adds New/conversion interruptions at marker/baseline/final-marker write, flush and before/after commit; retry/Resume, repeated failures, backup/source/history ownership, actual sharing/target conflicts and source-byte preservation |
-| Actual FCS methods on copied vanilla data | 266 passed | Adds actual Start retry after an uncommitted baseline write and background Resume after a committed baseline/final-marker failure, with unchanged baseline bytes and normal recording/session behavior |
-| Actual FCS methods on a representative copied mod | 265 passed | Same coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
+| Dependency-free core checks | 458 passed | Adds malformed/required/schema/interval/path cases, unavailable folders, actual read/replace sharing denial, unique original-byte backups, stale/deleted sources and two simultaneous cooperating saves |
+| Actual FCS methods on copied vanilla data | 266 existing + 16 settings recovery passed | Adds actual corrupt/locked startup, persistent warning, manual recording with automatic work gated, reload/repair/cancel and draft/packet/project retention in a separate fresh host |
+| Actual FCS methods on a representative copied mod | 265 existing + 16 settings recovery passed | Same coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
 
 The integration host initializes actual FCS forms without launching the complete
 interactive editor/mod-selector workflow. It exercises unsaved overrides,
@@ -78,6 +78,19 @@ or exercise every real ACL/network-filesystem failure.
 A separate check used the **released beta 7 binary** to generate compiled and
 uncompiled history with Workshop context, then used beta 8 to replay/export it.
 Original serialized evidence, captured state and every source-file hash matched.
+
+Beta 9's settings matrix distinguishes unreadable originals from missing files,
+hashes/parses the same stream and verifies exact bytes before/after repair.
+Actual Windows sharing modes block reads and atomic replacement; a cooperating
+lease and two simultaneous saves exercise serialization and stale conflicts.
+The actual window records gameplay manually during recovery, gates timer and
+automatic compilation, cancels its recovery dialog, reloads repaired settings
+and retains the same project/packet and exact unfinished draft.
+Settings checks run in a fresh 32-bit process; a combined run and full-debug
+JIT lifetimes exhausted the host's address space. The final runner uses
+PDB-only symbols and separate hosts, not a production memory fix. Large-model
+and history performance remains S12. These cases do not establish exhaustive
+ACL/disk-full/network-filesystem or physical-power-loss behavior.
 
 ## Reproduce
 

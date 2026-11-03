@@ -296,6 +296,35 @@ silently converting the selected history into a new tracking project.
 the full captured loaded model, not just relevant edits. Use the compact
 AI-packet export instead.
 
+## Shared settings and recovery (beta 9)
+
+`%LOCALAPPDATA%\FCS-Scribe\settings.json` retains schema 1 with required
+`SchemaVersion` and `ReviewSeconds`, plus optional `ExportDirectory`.
+Supported intervals remain 0/30/60/300/600 seconds. A custom directory must be
+absolute, syntactically valid and currently available. Missing source files
+produce first-launch manual defaults without writing; invalid/unreadable
+sources produce an explicit recovery state with no valid settings value.
+The observed hash, when readable, covers exact original bytes from the same
+open stream used for parsing.
+
+An exclusive `settings.json.lock` coordinates cooperating beta 9 writers while
+they compare the observed hash, preserve originals and atomically replace
+settings. Ordinary replacement retains `settings.json.bak`. Explicit repair
+also preserves exact original bytes as
+`settings.json.recovery-<UTC>_<unique-ID>.bak`; these unique backups are not
+rotated away by later saves. Failed replacement can leave its completed
+recovery copy while retaining the original. Unknown hashes, changed/deleted
+sources and active cooperating leases reject replacement.
+
+Startup, cancellation and reload do not repair or rewrite files. An unreadable
+original must become readable and be reloaded before repair is allowed. Valid
+reload/Save exits recovery; invalid reload intentionally returns to labelled
+manual/active-mod defaults. Project/draft/packet state is not replaced.
+These hashes and leases are consistency guards, not authentication or protection
+against all uncooperating external writers or physical filesystem failures.
+Settings and backups can reveal local paths: keep them private and outside
+AI packets and Workshop uploads.
+
 ## Untrusted content and scope
 
 Names, descriptions, dialogue, fields, and any supplied notes are untrusted mod
