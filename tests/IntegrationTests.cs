@@ -46,7 +46,7 @@ internal static class IntegrationTests
         {
             host.Shown += delegate {
                 host.BeginInvoke(new Action(delegate {
-                    try { result = Run(args.Contains("--settings-recovery"), args.Contains("--schedule")); }
+                    try { result = Run(args.Contains("--settings-recovery"), args.Contains("--schedule"), args.Contains("--exports")); }
                     finally { host.Close(); }
                 }));
             };
@@ -55,7 +55,7 @@ internal static class IntegrationTests
         return result;
     }
 
-    private static int Run(bool settingsOnly, bool scheduleOnly)
+    private static int Run(bool settingsOnly, bool scheduleOnly, bool exportsOnly)
     {
         Form editor = null;
         try
@@ -87,6 +87,12 @@ internal static class IntegrationTests
             object todo = FcsAdapter.Field(editor, "todoList");
             FcsAdapter.Call(todo, "LoadAll");
             var adapter = new FcsAdapter(assembly, editor);
+            if (exportsOnly)
+            {
+                CheckExportWindow(adapter, editor);
+                Console.WriteLine("PASS: " + passed + " export protection integration checks");
+                return 0;
+            }
             if (scheduleOnly)
             {
                 CheckSchedulingWindow(adapter, editor);
@@ -451,6 +457,82 @@ internal static class IntegrationTests
             }
         }
         finally { Set(item, "Name", name); }
+    }
+
+    private static void CheckExportWindow(FcsAdapter adapter, Form editor)
+    {
+        string directory = Path.Combine(Directory.GetCurrentDirectory(), "mods", "export-protection");
+        Directory.CreateDirectory(directory);
+        Snapshot current = adapter.Capture(), tiny = current.Context();
+        tiny.Records.Add(current.Records[0]);
+        string inactive = Path.Combine(directory, "inactive.json");
+        using (var project = JournalProject.Create(inactive, tiny)) { project.BeginSession(); }
+        string standalone = Path.Combine(directory, "standalone.json");
+        TrackingStorage.Save(standalone, TrackingDocument.Create(tiny, null), null);
+        string[] targets = { inactive, standalone, Path.Combine(inactive + ".scribe", "project.json"),
+            Path.Combine(inactive + ".scribe", "project.json.bak"),
+            Path.Combine(inactive + ".scribe", "sessions", "new.json"),
+            Path.Combine(inactive + ".scribe", "recovery", "new.json") };
+        var originals = Directory.GetFiles(directory, "*", SearchOption.AllDirectories)
+            .ToDictionary(x => x, TrackingStorage.HashFile);
+        using (var window = new ScribeWindow(adapter, editor, Path.Combine(directory, "settings.json")))
+        {
+            var workshop = new WorkshopExport { Workshop = current.Workshop };
+            foreach (string target in targets)
+            {
+                Reject<InvalidOperationException>(() => CallWindowAction(window, "SaveWorkshopPath", target, workshop),
+                    "Workshop export rejects inactive tracking storage with no open project");
+                bool rejected = false;
+                try { RunWindow(window, "SaveWorkspacePath", target); }
+                catch (InvalidOperationException) { rejected = true; }
+                Check(rejected, "draft workspace save uses the same inactive-storage guard");
+            }
+            Packet packet = new Tracker(current).Export(current);
+            Reject<InvalidOperationException>(() => CallWindowAction(window, "SavePacketPath", inactive, packet),
+                "AI export write path rejects another project's anchor");
+            Check(originals.All(x => TrackingStorage.HashFile(x.Key) == x.Value) &&
+                Directory.GetFiles(directory, "*", SearchOption.AllDirectories).Length == originals.Count,
+                "rejected actual window writes preserve the complete inactive project");
+            string imagePath = Path.Combine(directory, "preview.png");
+            using (var image = new Bitmap(1, 1)) image.Save(imagePath, ImageFormat.Png);
+            WorkshopPreview preview = WorkshopPreview.Read(imagePath);
+            string imageTarget = Path.Combine(inactive + ".scribe", "sessions", "preview.png");
+            Reject<InvalidOperationException>(() => preview.Save(imageTarget, directory),
+                "new preview archives cannot create files in another project's storage");
+            Check(!File.Exists(imageTarget), "rejected preview archive creates no reserved file");
+            string valid = Path.Combine(directory, "ordinary.json");
+            CallWindowAction(window, "SaveWorkshopPath", valid, workshop);
+            CallWindowAction(window, "SavePacketPath", valid, packet);
+            Check(TrackingStorage.Load(valid).Legacy.BatchId == packet.BatchId,
+                "a valid existing Workshop export can be replaced by an AI packet");
+            CallWindowAction(window, "SaveWorkshopPath", valid, workshop);
+            Check(Json.Read<WorkshopExport>(File.ReadAllText(valid)).Workshop.Source == workshop.Workshop.Source,
+                "a valid existing AI packet can be replaced by Workshop JSON");
+            File.WriteAllText(valid, "{ damaged JSON");
+            Reject<InvalidDataException>(() => CallWindowAction(window, "SaveWorkshopPath", valid, workshop),
+                "actual Workshop write path refuses damaged JSON");
+            Check(File.ReadAllText(valid) == "{ damaged JSON", "damaged destination remains untouched");
+            string workspace = Path.Combine(directory, "workspace.json");
+            RunWindow(window, "SaveWorkspacePath", workspace);
+            File.Copy(standalone, workspace + ".bak");
+            string workspaceHash = TrackingStorage.HashFile(workspace), backupHash = TrackingStorage.HashFile(workspace + ".bak");
+            bool backupRejected = false;
+            try { RunWindow(window, "SaveWorkspacePath", workspace); }
+            catch (InvalidOperationException) { backupRejected = true; }
+            Check(backupRejected && TrackingStorage.HashFile(workspace) == workspaceHash &&
+                TrackingStorage.HashFile(workspace + ".bak") == backupHash,
+                "workspace rotation cannot overwrite tracking data stored at its backup path");
+            RunWindow(window, "StartPath", Path.Combine(directory, "active.json"));
+            string active = ((JournalProject)FcsAdapter.Field(window, "project")).PathName;
+            Reject<InvalidOperationException>(() => CallWindowAction(window, "SaveWorkshopPath", active, workshop),
+                "current project remains protected after Start");
+        }
+    }
+
+    private static void CallWindowAction(ScribeWindow window, string method, params object[] args)
+    {
+        try { FcsAdapter.Call(window, method, args); }
+        catch (TargetInvocationException error) { throw error.InnerException ?? error; }
     }
 
     private static void CheckInitializationWindow(FcsAdapter adapter, Form editor)

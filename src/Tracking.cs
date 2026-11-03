@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace FcsScribe
 {
@@ -204,7 +205,8 @@ namespace FcsScribe
             return WriteAtomic(path, value, expectedHash, null);
         }
 
-        internal static string WriteAtomic<T>(string path, T value, string expectedHash, Action<string> checkpoint)
+        internal static string WriteAtomic<T>(string path, T value, string expectedHash, Action<string> checkpoint,
+            bool preserveBackup = true, bool pretty = false)
         {
             RequireJson(path);
             CheckUnchanged(path, expectedHash);
@@ -214,7 +216,12 @@ namespace FcsScribe
                 using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                 {
                     if (checkpoint != null) checkpoint("write");
-                    Json.WriteStream(output, value);
+                    if (pretty)
+                    {
+                        byte[] bytes = Encoding.UTF8.GetBytes(Json.Pretty(Json.Write(value)));
+                        output.Write(bytes, 0, bytes.Length);
+                    }
+                    else Json.WriteStream(output, value);
                     if (checkpoint != null) checkpoint("flush");
                     output.Flush(true);
                 }
@@ -222,7 +229,7 @@ namespace FcsScribe
                 if (checkpoint != null) checkpoint("commit");
                 CheckUnchanged(path, expectedHash);
                 if (expectedHash == null) File.Move(temporary, path);
-                else File.Replace(temporary, path, path + ".bak");
+                else File.Replace(temporary, path, preserveBackup ? path + ".bak" : null);
                 if (checkpoint != null) checkpoint("committed");
                 return hash;
             }

@@ -230,6 +230,27 @@ UTC clocks are not trusted evidence: a future timestamp on Resume/new debt is
 treated as due now, not a potentially unbounded delay. Already-running
 countdowns are not re-anchored by wall-clock adjustments.
 
+## Identify export destinations independently of the open project (beta 11)
+
+An in-memory active-path check cannot protect a closed project's baseline or
+Workshop export with no project open. The shared guard instead reserves
+`.json.scribe` paths, recognizes adjacent storage and inspects existing JSON's
+top-level format without materializing its snapshots. It does not need valid
+history/schema to reject a recognized anchor. Escaped/duplicate format fields,
+copied anchors and unrelated nested text are distinguished.
+
+The selected policy refuses unreadable/malformed existing JSON rather than
+assuming it is safe to replace. Valid existing AI/Workshop exports remain
+usable destinations. A boundary scan also rejects multiple concatenated JSON
+objects that the Framework reader can otherwise silently ignore.
+
+Reuse atomic storage with observed-hash checks and a pre-commit guard. Export
+replacement keeps existing human-readable UTF-8 output but does not rotate a
+neighboring backup. Workspace saves retain their backup and workspace-only
+checks, additionally protecting its rotation target. New preview images guard
+reserved locations without weakening create-new semantics. This is local
+best-effort consistency, not authentication or a universal alias/race lock.
+
 ## Separate future saved-data analysis
 
 OCS is useful complementary research, not a substitute for live-model access.

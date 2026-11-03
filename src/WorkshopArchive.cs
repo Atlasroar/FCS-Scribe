@@ -70,6 +70,7 @@ namespace FcsScribe
             if (bytes == null)
                 throw new InvalidOperationException("No local Workshop preview exists. Set an image in FCS's Steam Workshop window first.");
             string target = Path.GetFullPath(destination);
+            ExportStorage.RequireLocation(target, null);
             string protectedRoot = Path.GetFullPath(fcsDirectory).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
             if (target.StartsWith(protectedRoot, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("Choose an archive location outside the Kenshi/FCS installation.");

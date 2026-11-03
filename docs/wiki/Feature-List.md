@@ -22,6 +22,9 @@ recoverable without claiming unrelated storage or deleting unknown artifacts.
 mode, with explicit reload/repair and original-byte/concurrent-save protection.
 **v0.1.0-beta.10** preserves compilation debt across settings changes and
 short sessions, with a persistent pending notice and explicit manual-mode hold.
+**v0.1.0-beta.11** protects recognized inactive tracking anchors/backups and
+reserved storage from export/workspace writes, including Workshop without an
+open project.
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).
@@ -412,7 +415,8 @@ live FCS capture remains on its UI thread and can briefly pause large sessions.
 JSON save dialogs default to the active `.mod` file's own directory. Choose
 another existing default directory in settings or another location in an
 individual dialog. Changing defaults does not move the active tracking file.
-Manual exports cannot overwrite that file. Settings persist at
+Exports cannot overwrite recognized active or inactive tracking anchors or
+reserved storage. Settings persist at
 `%LOCALAPPDATA%\FCS-Scribe\settings.json`.
 Beta 9 keeps the window usable when that file is corrupt, unsupported,
 unreadable or names an unavailable custom directory. A persistent recovery
@@ -431,8 +435,11 @@ instead of silently overwriting another cooperating instance. Reload/repair
 retain the current project, original packet and unfinished draft.
 See [settings recovery](Installation-and-Workflow#settings-recovery-beta-9).
 
-File dialogs restore FCS's working directory. AI/Workshop exports also reject
-destinations inside the active project's reserved storage folder.
+File dialogs restore FCS's working directory. AI/Workshop exports, draft
+workspace saves and new preview archives reject reserved tracking storage.
+Existing unreadable/malformed JSON is not replaced; use a different filename.
+Valid existing AI/Workshop exports remain replaceable with the normal dialog
+confirmation. See [destination protection](Installation-and-Workflow#export-destination-protection-beta-11).
 
 ## 10. Compile journal: consolidate without deleting sessions
 

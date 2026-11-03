@@ -18,6 +18,7 @@ remain editable drafts and require human review and approval.
 - [Byte-identical preview-image archiving](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#8-archive-preview-image-preserve-the-original-bytes).
 - [Manual or scheduled recording and configurable export folders](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#9-plugin-settings-review-scheduling-and-export-defaults).
 - [Manual or age-based automatic journal compilation](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#10-compile-journal-consolidate-without-deleting-sessions).
+- [Export destination protection](https://github.com/Atlasroar/FCS-Scribe/wiki/Installation-and-Workflow#export-destination-protection-beta-11): keep exports separate from active/inactive tracking storage.
 
 ## Wiki guide
 

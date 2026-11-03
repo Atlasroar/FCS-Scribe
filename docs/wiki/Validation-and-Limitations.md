@@ -6,16 +6,16 @@ complete editor compatibility.
 
 ## Automated and disposable-copy evidence
 
-The recorded beta 10 checks passed. These retain session-journal, grouped-menu,
+The recorded beta 11 checks passed. These retain session-journal, grouped-menu,
 complete-coverage/safe-retry, recording-range, optional Workshop isolation and
 portable draft, recoverable initialization and settings recovery checks while
-adding stable compilation scheduling:
+adding inactive export-destination protection:
 
 | Check | Result | Boundary |
 | --- | --- | --- |
-| Dependency-free core checks | 518 passed | Adds exact/sub-millisecond age boundaries, repeated configuration, interval/manual transitions, deferred overdue debt, short-session age restoration, UTC/future-clock rules and byte-preserving replay of pending timestamps |
-| Actual FCS methods on copied vanilla data | 266 existing + 16 settings + 24 scheduling passed | Adds real settings save/reload loops, interval changes, aged short-session resumes, manual/recovery holds, deferred/failed compilation, wrapping pending notice and independent review timing in fresh hosts |
-| Actual FCS methods on a representative copied mod | 265 existing + 16 settings + 24 scheduling passed | Same coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
+| Dependency-free core checks | 593 passed | Adds inactive/standalone/copied anchors, backup/storage guards, malformed/unreadable destinations, escaped/duplicate format fields, BOM encodings, concurrent changes and atomic export failure boundaries |
+| Actual FCS methods on copied vanilla data | 266 existing + 16 settings + 24 scheduling + 24 export protection passed | Adds actual window AI/Workshop/workspace path writes, inactive storage with no open project, protected workspace backup rotation, ordinary existing destinations and preview storage guards in fresh hosts |
+| Actual FCS methods on a representative copied mod | 265 existing + 16 settings + 24 scheduling + 24 export protection passed | Same coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
 
 The integration host initializes actual FCS forms without launching the complete
 interactive editor/mod-selector workflow. It exercises unsaved overrides,
@@ -106,6 +106,17 @@ acceptance.
 A separate check generated compiled/uncompiled history using the **released
 beta 9 binary**, then verified beta 10 replay/export retained exact evidence,
 captured state, the original oldest pending timestamp and every source hash.
+
+Beta 11 verifies complete inactive-project file hashes before/after rejected
+window writes, including Workshop without an open project. Core tests inject
+pre-commit write/flush/commit failures and destination conversions after
+observation, with explicit errors and no temporary files left behind.
+Existing schema-2/3 AI packets, Workshop exports and BOM-marked UTF-8/UTF-16
+destinations remain replaceable; separate `.bak` files remain untouched by
+AI/Workshop export replacement. Workspace rotation checks protect tracking
+content at its backup path. These checks do not drive every native file dialog,
+enumerate physical filesystem aliases, establish a universal race lock or
+simulate physical power loss.
 
 ## Reproduce
 

@@ -128,9 +128,139 @@ internal static class TrackingTests
             File.WriteAllText(settingsPath, "{}");
             Reject<SerializationException>(delegate { PluginSettings.Load(settingsPath); }, "missing required settings do not silently become defaults");
             CheckSettings(directory);
+            CheckExports(directory);
             return passed;
         }
         finally { Directory.Delete(directory, true); }
+    }
+
+    private static void CheckExports(string directory)
+    {
+        string root = Path.Combine(directory, "export-protection");
+        Directory.CreateDirectory(root);
+        string anchor = Path.Combine(root, "inactive.json");
+        Packet range;
+        using (var project = JournalProject.Create(anchor, State("10")))
+        {
+            project.BeginSession();
+            project.Record(State("11"));
+            project.Compile();
+            var recordings = project.ExportRecordings(State("11"));
+            range = RangeExport.Create(project.ProjectId, recordings, 0, recordings.Count - 1, State("11"));
+        }
+        string standalone = Path.Combine(root, "standalone.json");
+        TrackingStorage.Save(standalone, TrackingDocument.Create(State("10"), null), null);
+        File.Copy(standalone, standalone + ".bak");
+        File.Copy(standalone, standalone + ".legacy.bak");
+        var protectedPaths = new[] { anchor, anchor.ToUpperInvariant(), standalone, standalone + ".bak",
+            standalone + ".legacy.bak", anchor + ".bak", anchor + ".legacy.bak",
+            Path.Combine(anchor + ".scribe", "project.json"),
+            Path.Combine(anchor + ".scribe", "project.json.bak"),
+            Path.Combine(anchor + ".scribe", "journal.jsonl"),
+            Path.Combine(anchor + ".scribe", "sessions", "new.json"),
+            Path.Combine(anchor + ".scribe", "recovery", "new.json"), anchor + ".scribe",
+            Path.Combine(root, "missing.json.scribe", "new.json") };
+        var hashes = Directory.GetFiles(root, "*", SearchOption.AllDirectories)
+            .ToDictionary(x => x, TrackingStorage.HashFile);
+        foreach (string path in protectedPaths)
+            Reject<InvalidOperationException>(() => ExportStorage.ObserveTarget(path, null),
+                "inactive tracking storage is protected without an open project: " + path);
+        Check(hashes.All(x => TrackingStorage.HashFile(x.Key) == x.Value) &&
+            Directory.GetFiles(root, "*", SearchOption.AllDirectories).Length == hashes.Count,
+            "rejected inactive anchors, backups and storage retain every original byte and file");
+        string pending = Path.Combine(root, "pending.json");
+        Directory.CreateDirectory(pending + ".scribe");
+        Reject<InvalidOperationException>(() => ExportStorage.WriteJson(pending, new WorkshopExport(), null),
+            "an orphaned initialization folder reserves its missing anchor");
+        string active = Path.Combine(root, "active.json");
+        Reject<InvalidOperationException>(() => ExportStorage.ObserveTarget(active, active.ToUpperInvariant()),
+            "the active anchor stays protected even if externally deleted");
+        string suspicious = Path.Combine(root, "inspect.json");
+        foreach (string text in new[] {
+            "{\"Format\":\"FCS-Scribe tracking project\",\"SchemaVersion\":999}",
+            "{\"Fo\\u0072mat\":\"FCS-Scribe tracking project\"}",
+            "{\"Format\":\"ordinary\",\"Format\":\"FCS-Scribe tracking project\"}",
+            "{\"Format\":\"FCS-Scribe session storage\"}",
+            "{\"Format\":\"FCS-Scribe session\"}", "{\"Format\":\"FCS-Scribe journal entry\"}" })
+        {
+            File.WriteAllText(suspicious, text);
+            Reject<InvalidOperationException>(() => ExportStorage.WriteJson(suspicious, new WorkshopExport(), null),
+                "recognition does not require valid schema, canonical spelling or adjacent storage");
+            Check(File.ReadAllText(suspicious) == text, "recognized tracking JSON was not overwritten");
+        }
+        foreach (string text in new[] { "", "{", "null", "[]", "{} trailing", "{}{}",
+            "{\"Format\":{}}", "{\"ordinary\":true" })
+        {
+            File.WriteAllText(suspicious, text);
+            Reject<InvalidDataException>(() => ExportStorage.WriteJson(suspicious, new WorkshopExport(), null),
+                "unclassifiable existing JSON requires a new filename: " + text);
+            Check(File.ReadAllText(suspicious) == text, "unclassifiable destination retained exact bytes");
+        }
+        Packet packet = new Tracker(State("10")).Export(State("11"));
+        foreach (string text in new[] { Json.Write(packet), Json.Write(range), Json.Write(new WorkshopExport()),
+            Json.Write(DraftWorkspace.Create(packet, "unfinished")), "{\"Format\":\"ordinary\",\"nested\":{\"Format\":\"FCS-Scribe tracking project\"}}" })
+        {
+            File.WriteAllText(suspicious, text);
+            string backup = suspicious + ".bak";
+            File.WriteAllText(backup, Json.Write(TrackingDocument.Create(State("10"), null)));
+            string backupHash = TrackingStorage.HashFile(backup);
+            ExportStorage.WriteJson(suspicious, new WorkshopExport(), null);
+            Check(Json.Read<WorkshopExport>(File.ReadAllText(suspicious)).SchemaVersion == 1 &&
+                File.ReadAllText(suspicious).Contains(Environment.NewLine) && TrackingStorage.HashFile(backup) == backupHash,
+                "valid existing exports/ordinary JSON remain replaceable, formatted, without touching neighboring backups");
+        }
+        string lockedHash = TrackingStorage.HashFile(suspicious);
+        using (var locked = new FileStream(suspicious, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            Reject<IOException>(() => ExportStorage.WriteJson(suspicious, packet, null),
+                "unreadable destinations fail explicitly before writing");
+        Check(TrackingStorage.HashFile(suspicious) == lockedHash, "unreadable destination retained exact bytes");
+        string changed = Json.Write(packet) + " ";
+        Reject<IOException>(() => ExportStorage.WriteJson(suspicious, new WorkshopExport(), null, step => {
+            if (step == "flush") File.WriteAllText(suspicious, changed);
+        }), "a concurrent ordinary destination change is not overwritten");
+        Check(File.ReadAllText(suspicious) == changed, "concurrent content remains intact");
+        string tracking = Json.Write(TrackingDocument.Create(State("10"), null));
+        Reject<InvalidOperationException>(() => ExportStorage.WriteJson(suspicious, packet, null, step => {
+            if (step == "flush") File.WriteAllText(suspicious, tracking);
+        }), "a destination converted to tracking after observation is reclassified before commit");
+        Check(File.ReadAllText(suspicious) == tracking, "concurrent tracking conversion retained exact bytes");
+        string race = Path.Combine(root, "race.json");
+        Reject<InvalidOperationException>(() => ExportStorage.WriteJson(race, packet, null, step => {
+            if (step == "flush") Directory.CreateDirectory(race + ".scribe");
+        }), "newly reserved storage cancels export before creating its anchor");
+        Check(!File.Exists(race) && Directory.GetFiles(root, "*.tmp").Length == 0,
+            "failed exports leave no destination or temporary files");
+        string valid = Path.Combine(root, "inactive.json.scribe-copy");
+        Directory.CreateDirectory(valid);
+        ExportStorage.WriteJson(Path.Combine(valid, "normal.json"), packet, null);
+        Check(File.Exists(Path.Combine(valid, "normal.json")), "a similarly prefixed sibling is not tracking storage");
+        foreach (string stepToFail in new[] { "write", "flush", "commit" })
+        {
+            string faulted = Path.Combine(root, "fault-" + stepToFail + ".json");
+            foreach (bool exists in new[] { false, true })
+            {
+                if (exists) File.WriteAllText(faulted, Json.Write(new WorkshopExport()));
+                string before = exists ? TrackingStorage.HashFile(faulted) : null;
+                Reject<IOException>(() => ExportStorage.WriteJson(faulted, packet, null, step => {
+                    if (step == stepToFail) throw new IOException("Injected export " + step + " failure.");
+                }), "precommit export failure is explicit: " + stepToFail);
+                Check((exists ? TrackingStorage.HashFile(faulted) == before : !File.Exists(faulted)) &&
+                    Directory.GetFiles(root, "*.tmp").Length == 0,
+                    "precommit failure preserves an existing destination or leaves a new one absent");
+            }
+        }
+        File.WriteAllText(suspicious, Json.Write(packet), System.Text.Encoding.Unicode);
+        ExportStorage.WriteJson(suspicious, new WorkshopExport(), null);
+        Check(Json.Read<WorkshopExport>(File.ReadAllText(suspicious)).SchemaVersion == 1,
+            "a valid BOM-marked UTF-16 destination remains replaceable");
+        File.WriteAllText(suspicious, Json.Write(range), new System.Text.UTF8Encoding(true));
+        ExportStorage.WriteJson(suspicious, new WorkshopExport(), null);
+        Check(Json.Read<WorkshopExport>(File.ReadAllText(suspicious)).SchemaVersion == 1,
+            "a valid BOM-marked UTF-8 range export remains replaceable");
+        Reject<InvalidOperationException>(() => ExportStorage.ObserveTarget(
+            Path.Combine(anchor + ".scribe.", "new.json"), null), "trailing-dot folder aliases cannot bypass reserved storage");
+        Reject<NotSupportedException>(() => ExportStorage.ObserveTarget(suspicious + ":export.json", null),
+            "alternate data stream spellings are not export locations");
     }
 
     private static void CheckSettings(string directory)
