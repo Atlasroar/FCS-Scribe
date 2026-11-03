@@ -215,6 +215,37 @@ Workshop-only export/archive action errors are reported without pausing
 gameplay recording; they do not re-enable already-paused automation. Ordinary
 tracking/model/journal failures still pause it.
 
+## Export destination protection (beta 11)
+
+Choose a separate filename for exports, not a tracking baseline or any file in
+`<baseline>.json.scribe`. These folders are reserved even when empty or left by
+an interrupted initialization. AI/Workshop exports and draft workspace saves
+protect recognized inactive projects too; Workshop export needs no open
+tracking project for these checks.
+
+Recognition uses adjacent project storage or top-level tracking/session/journal
+format identifiers, without requiring the complete project to be healthy.
+Recognized standalone anchors, copied tracking JSON and backups are protected.
+Workspace saves also check the `.bak` that atomic replacement would rotate.
+Preview archives cannot create new files inside reserved storage and retain
+their existing new-file-only and outside-Kenshi rules.
+
+Unreadable or malformed existing JSON cannot safely be classified and is
+refused, not replaced after a generic overwrite prompt. Preserve it for
+inspection/recovery and select another filename. Valid existing AI packets
+(including recording ranges), Workshop exports and ordinary JSON objects
+remain replaceable. A standalone old AI packet without tracking identity or
+adjacent storage is still an export, not an identifiable tracking anchor.
+Workspace Save retains its stricter workspace-only replacement rule.
+
+AI/Workshop export writes now stage and flush a temporary file, recheck
+protection and the observed original hash, then atomically create/replace the
+destination. They retain formatted UTF-8 output and do not rotate a neighboring
+`.bak`. A pre-commit failure leaves the prior destination intact; no partial
+success is reported. Checks are not a universal lock or protection against
+every filesystem alias, hostile last-instant replacement or power loss.
+Keep backups; S09 interactive acceptance and S13 storage/privacy work remain.
+
 ## Recovery and lifecycle
 
 ### Failed project initialization (beta 8)

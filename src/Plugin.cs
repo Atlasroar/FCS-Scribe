@@ -407,12 +407,16 @@ namespace FcsScribe
                 if (dialog.ShowDialog(this) != DialogResult.OK) return;
                 if (!String.Equals(Path.GetExtension(dialog.FileName), ".json", StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException("Workshop export requires a .json filename.");
-                ProtectTrackingFile(dialog.FileName);
-                File.WriteAllText(dialog.FileName, Json.Pretty(Json.Write(export)), new UTF8Encoding(false));
+                SaveWorkshopPath(dialog.FileName, export);
             }
             workshop.Text = Json.Pretty(Json.Write(export.Workshop));
             status.Text = WorkshopNotice(export.Workshop) +
                 "Workshop JSON exported from local data only. Review its source and warnings; use Archive preview image to copy the image separately.";
+        }
+
+        private void SaveWorkshopPath(string path, WorkshopExport export)
+        {
+            ExportStorage.WriteJson(path, export, project == null ? null : project.PathName);
         }
 
         private void ArchivePreview()
@@ -458,10 +462,7 @@ namespace FcsScribe
                 if (dialog.ShowDialog(this) != DialogResult.OK) return;
                 if (!String.Equals(Path.GetExtension(dialog.FileName), ".json", StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException("Export requires a .json filename; mod files are never export targets.");
-                ProtectTrackingFile(dialog.FileName);
-                if (adapter.Capture().Fingerprint() != packet.SourceFingerprint)
-                    throw new InvalidOperationException("The editor changed while selecting the range. Export again to review the current recordings and pending edits.");
-                File.WriteAllText(dialog.FileName, Json.Pretty(Json.Write(packet)), new UTF8Encoding(false));
+                SavePacketPath(dialog.FileName, packet);
             }
             AdoptWorkspace(packet, Json.Pretty(Json.Write(packet.ResponseTemplate)), null, null);
             ShowChanges(packet);
@@ -469,6 +470,14 @@ namespace FcsScribe
                 " selected recordings exported; no history advanced or compiled. " +
                 "Share manually with AI, then import/paste its JSON response. " +
                 "Mod text may be private; inspect the packet before sharing.";
+        }
+
+        private void SavePacketPath(string path, Packet packet)
+        {
+            ProtectTrackingFile(path);
+            if (adapter.Capture().Fingerprint() != packet.SourceFingerprint)
+                throw new InvalidOperationException("The editor changed while selecting the range. Export again to review the current recordings and pending edits.");
+            ExportStorage.WriteJson(path, packet, project == null ? null : project.PathName);
         }
 
         private async Task Import()
@@ -556,6 +565,7 @@ namespace FcsScribe
         {
             path = Path.GetFullPath(path);
             ProtectTrackingFile(path);
+            ProtectTrackingFile(path + ".bak");
             long revision = draftRevision;
             Packet packet = exported;
             DraftWorkspace snapshot = DraftWorkspace.Create(packet, draft.Text);
@@ -564,7 +574,13 @@ namespace FcsScribe
             string hash = await Task.Run(() => {
                 // A workspace must never replace a tracking anchor, AI packet or unrelated JSON.
                 if (!same && File.Exists(path)) expectedHash = DraftWorkspace.Load(path).FileHash;
-                return TrackingStorage.WriteAtomic(path, snapshot, expectedHash);
+                return TrackingStorage.WriteAtomic(path, snapshot, expectedHash, step => {
+                    if (step == "commit")
+                    {
+                        ProtectTrackingFile(path);
+                        ProtectTrackingFile(path + ".bak");
+                    }
+                });
             });
             if (Object.ReferenceEquals(exported, packet))
             {
@@ -632,9 +648,7 @@ namespace FcsScribe
 
         private void ProtectTrackingFile(string path)
         {
-            if (project != null && (String.Equals(Path.GetFullPath(path), project.PathName, StringComparison.OrdinalIgnoreCase) ||
-                Path.GetFullPath(path).StartsWith(project.DirectoryName + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException("The active tracking JSON cannot be overwritten by an AI or Workshop export.");
+            ExportStorage.ObserveTarget(path, project == null ? null : project.PathName);
         }
 
         private async Task Settings()

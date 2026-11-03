@@ -217,13 +217,29 @@ failed compilation, paused-error wording and independent recording deadlines.
 The released beta 9 binary also generated compiled/uncompiled history whose
 beta 10 replay retained exact evidence, state, pending timestamp and all source
 hashes. Full interactive acceptance, trusted cross-restart clocks and large
-model/history performance remain unverified; S08 is next.
+model/history performance remain unverified; S08 is addressed below.
 
 ### S08. Medium: exports can overwrite inactive tracking projects
 
-- [ ] Protect recognized inactive project anchors and reserved storage, including Workshop export when no project is open.
-- [ ] Explain the rejection and preserve ordinary user-selected export locations; do not rely solely on a generic overwrite confirmation.
-- [ ] Cover another project's baseline, markers/backups and current storage alongside valid existing AI/Workshop export destinations.
+- [x] Protect recognized inactive project anchors and reserved storage, including Workshop export when no project is open.
+- [x] Explain the rejection and preserve ordinary user-selected export locations; do not rely solely on a generic overwrite confirmation.
+- [x] Cover another project's baseline, markers/backups and current storage alongside valid existing AI/Workshop export destinations.
+
+S08 is addressed in beta 11. Shared disk-based guards recognize standalone
+tracking formats and adjacent storage, reserve `.json.scribe` paths even before
+initialization completes, and protect workspace backup rotation and new preview
+archives. The selected policy refuses unreadable/malformed existing destinations
+instead of assuming they are safe; valid AI/Workshop exports remain replaceable.
+Atomic export staging/flush, observed-hash verification and a pre-commit
+reclassification replace direct truncating writes without rotating export
+backups or changing any stored schema.
+
+Core and actual-window coverage includes inactive anchors/markers/backups with
+no project open, damaged destinations, concurrent conversion/reservation,
+pre-commit failures, BOM encodings, valid existing packets/Workshop exports,
+ordinary sibling paths and byte-preserving rejection. Generic overwrite prompts
+are not the protection mechanism. These are local consistency checks, not a
+universal alias/race/power-loss guarantee; S09 interactive acceptance is next.
 
 ### S09. High acceptance gate: complete the real FCS Extended workflow
 
