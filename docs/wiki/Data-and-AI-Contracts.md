@@ -261,6 +261,31 @@ anchors without `JournalVersion` cannot themselves detect missing sidecars.
 An exclusive project writer lease coordinates Scribe instances, not arbitrary
 external editors. Timestamps are not entry identities or proof of authenticity.
 
+### Pending initialization (beta 8)
+
+During New/legacy conversion, marker schema 1 may contain optional
+`Initialization: { BaselineHash, SourceHash }`. `BaselineHash` is the stream
+SHA-256 of the intended full tracking document. `SourceHash` is null for a new
+file or the exact original legacy-file hash for conversion. Pending
+`ProjectId` and `HeadId` must match, and the marker fingerprint identifies
+the initial state. The pending marker is flushed before baseline commit.
+
+Before that commit, a retry requires a recognized pending marker with the same
+source identity, no existing baseline for New, and no session/journal/recovery
+history. It may replace only recognizable prior initialization metadata, never
+unknown backups. Legacy bytes are preserved/verified before conversion.
+After baseline commit, Resume requires matching root/project/fingerprint,
+exact baseline bytes, an empty initial history and the intact legacy backup
+where applicable, then atomically writes the ordinary complete marker.
+
+Completed markers omit `Initialization`, preserving the existing normal
+serialization. Tracking, session, packet and workspace schemas are unchanged.
+No history is reset, no committed baseline is rewritten during finalization,
+and no unknown artifacts are deleted. Earlier unflagged orphan markers and
+backup-only storage cannot safely establish ownership and require matching-file
+restoration or another filename. These are consistency/observed-file checks
+under the cooperating writer lease, not authentication or a universal lock.
+
 Legacy schema-1/2 AI exports contain no complete baseline. Explicit conversion
 preserves exact bytes in `.legacy.bak` and the packet in `ImportedEvidence`,
 then starts from the current editor state. It does not reconstruct old state.

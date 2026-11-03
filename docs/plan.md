@@ -145,13 +145,26 @@ close until retried. Restoring is not applying, approval, tracking resume or
 mod recovery. Explicit saving is not autosave or forced-termination recovery.
 Recorded checks: 235 core, 260 disposable vanilla FCS and 259 representative-mod
 FCS checks passed. Native file dialogs and complete real FCS Extended interaction
-remain in S09. S05 is next.
+remain in S09. S05 is addressed separately in beta 8 below.
 
 ### S05. Medium: failed project creation can leave an orphaned marker
 
-- [ ] Make baseline/marker initialization recoverable when marker creation succeeds but baseline creation fails.
-- [ ] Clean up or repair only artifacts owned by that failed attempt; never damage existing storage or legacy backups.
-- [ ] Inject permission/write/commit failures and verify that retry or recovery works without ambiguous "project already exists" errors.
+- [x] Make baseline/marker initialization recoverable with optional pending metadata: New retries uncommitted attempts and Resume validates/finalizes committed baselines.
+- [x] Repair only recognized initialization metadata; refuse existing history, foreign markers, changed sources and unrelated backups. Preserve legacy bytes and never recursively delete storage.
+- [x] Inject access-denied/write/flush/before-and-after-commit failures, actual sharing/target conflicts and observed external edits; verify retry/recovery and actionable New-versus-Resume guidance.
+
+S05 is addressed in beta 8. The pending marker binds the intended full baseline
+hash, initial project identity/fingerprint and optional original legacy-file
+hash before baseline commit. Finalization removes only the optional pending
+field; normal marker serialization and other stored schemas remain unchanged.
+Old unflagged orphan markers cannot prove ownership and are left untouched:
+restore their original files or choose another filename. This is not permission
+to reset missing recorded history, sweep unknown temporary files or restore mods.
+Recorded checks: 428 core, 266 disposable vanilla FCS and 265 representative-mod
+FCS checks passed. The released beta 7 binary also generated compiled/uncompiled
+history that beta 8 replayed/exported with exact original evidence and unchanged
+source-file hashes. Physical power loss, every real ACL/disk-full condition and
+full FCS Extended interaction remain outside these fault tests. S06 is next.
 
 ### S06. Medium: invalid settings can block the entire window
 

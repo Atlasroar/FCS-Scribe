@@ -7,7 +7,7 @@ It does not replace FCS or load an AI provider.
 | --- | --- | --- |
 | `src\Core.cs` | Typed snapshots, immutable baseline copy, deterministic changes, fingerprints, packets, and draft validation | Depend on FCS, WinForms, or a provider SDK |
 | `src\Tracking.cs` | Resumable documents, structural/history integrity checks, atomic checkpoint storage and settings | Read live FCS objects from worker threads or claim that legacy packets restore a full baseline |
-| `src\Journal.cs` | Replayable record deltas, timestamped session logs, durable-head marker, writer lease, idempotent compilation, explicit tail recovery and independent deadlines | Rewrite a full baseline each tick, discard uncompiled history or restore mod binaries |
+| `src\Journal.cs` | Replayable record deltas, timestamped session logs, durable-head marker, writer lease, idempotent compilation, ownership-checked initialization/tail recovery and independent deadlines | Rewrite a full baseline each tick, claim unknown storage, discard uncompiled history or restore mod binaries |
 | `src\RangeExport.cs` | Selected original packets, stable range identity and collision-free qualified evidence in schema-3 AI handoffs | Rewrite saved batches, collapse observed reversals or treat a range as a resumable baseline |
 | `src\DraftWorkspace.cs` | Versioned portable original-packet/exact-text bundles, integrity validation and restored-draft readiness reporting | Invent missing evidence, approve restored text, save mods or treat draft text as tracking history |
 | `src\SettingsDialog.cs` | New/resume choice, recording-range preview and manual/automatic review/export-directory settings | Automatically convert legacy evidence or export a range without confirmation |

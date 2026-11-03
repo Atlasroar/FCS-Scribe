@@ -98,6 +98,13 @@ namespace FcsScribe
     }
 
     [DataContract]
+    public sealed class JournalInitialization
+    {
+        [DataMember(Order = 0)] public string BaselineHash;
+        [DataMember(Order = 1)] public string SourceHash;
+    }
+
+    [DataContract]
     public sealed class JournalMarker
     {
         [DataMember(Order = 0)] public string Format = "FCS-Scribe session storage";
@@ -105,6 +112,7 @@ namespace FcsScribe
         [DataMember(Order = 2)] public string ProjectId;
         [DataMember(Order = 3)] public string HeadId;
         [DataMember(Order = 4)] public string Fingerprint;
+        [DataMember(Order = 5, EmitDefaultValue = false)] public JournalInitialization Initialization;
     }
 
     public sealed class LegacyTrackingException : IOException
@@ -159,6 +167,11 @@ namespace FcsScribe
             lease = AcquireLease(PathName);
             try
             {
+                string markerPath = Path.Combine(DirectoryName, "project.json");
+                if (!File.Exists(PathName) && File.Exists(markerPath))
+                    throw new IOException("Session storage exists without its tracking baseline. If a new-project initialization " +
+                        "was interrupted, retry Start tracking > New with this same filename. Unrecognized storage is never " +
+                        "replaced; restore its original baseline or choose a new filename.");
                 anchor = new FileStream(PathName, FileMode.Open, FileAccess.Read, FileShare.Read);
                 LoadedTracking loaded = TrackingStorage.Load(PathName);
                 if (loaded.Legacy != null) throw new LegacyTrackingException(loaded.Legacy, loaded.FileHash);
@@ -178,14 +191,24 @@ namespace FcsScribe
                 }
                 entries.Add(HeadId, new Stamp { Fingerprint = Fingerprint, Compiled = true });
                 JournalMarker marker = null;
-                string markerPath = Path.Combine(DirectoryName, "project.json");
                 if (File.Exists(markerPath))
                 {
-                    using (var stream = File.OpenRead(markerPath)) marker = Json.ReadStream<JournalMarker>(stream);
-                    markerHash = TrackingStorage.HashFile(markerPath);
+                    marker = ReadMarker(markerPath, out markerHash);
                     if (marker == null || marker.Format != "FCS-Scribe session storage" || marker.SchemaVersion != 1 ||
                         marker.ProjectId != ProjectId || !IsId(marker.HeadId))
                         throw new InvalidDataException("The session storage marker belongs to another project or is invalid.");
+                    if (marker.Initialization != null)
+                    {
+                        ValidateInitialization(marker);
+                        RequireEmptyHistory(PathName);
+                        if (root.JournalVersion != 1 || root.Entries.Count != 0 ||
+                            root.InitialFingerprint != root.StateFingerprint ||
+                            marker.Fingerprint != root.StateFingerprint || marker.Initialization.BaselineHash != loaded.FileHash)
+                            throw new InvalidDataException("The interrupted initialization does not match this baseline. " +
+                                "Restore the matching files; nothing was replaced.");
+                        markerHash = FinishInitialization(PathName, marker, markerHash, null);
+                        marker.Initialization = null;
+                    }
                 }
                 else if (root.JournalVersion != 0)
                     throw new InvalidDataException("The project's session storage is missing. Restore its .json.scribe folder.");
@@ -230,44 +253,173 @@ namespace FcsScribe
 
         public static JournalProject Create(string path, Snapshot current)
         {
+            return Create(path, current, null);
+        }
+
+        internal static JournalProject Create(string path, Snapshot current, Action<string> checkpoint)
+        {
             TrackingStorage.RequireJson(path);
             path = Path.GetFullPath(path);
+            if (System.IO.Directory.Exists(path)) throw new IOException("The tracking JSON destination is a directory. Choose a file path.");
             using (AcquireLease(path))
             {
-                if (File.Exists(path) || File.Exists(Path.Combine(path + ".scribe", "project.json")))
-                    throw new IOException("The project already exists. Resume it or choose a new filename.");
+                if (File.Exists(path))
+                    throw new IOException("The tracking JSON already exists. Use Start tracking > Resume existing JSON. " +
+                        "A failed initialization may already have committed its baseline; Resume validates it without overwriting.");
                 TrackingDocument document = TrackingDocument.Create(current, null);
                 document.JournalVersion = 1;
-                InitializeMarker(path, document);
-                TrackingStorage.Save(path, document, null);
+                InitializeProject(path, document, null, checkpoint);
             }
             return Open(path);
         }
 
         public static JournalProject ConvertLegacy(string path, Snapshot current, LegacyTrackingException legacy)
         {
+            return ConvertLegacy(path, current, legacy, null);
+        }
+
+        internal static JournalProject ConvertLegacy(string path, Snapshot current, LegacyTrackingException legacy,
+            Action<string> checkpoint)
+        {
             TrackingStorage.RequireJson(path);
-            using (AcquireLease(Path.GetFullPath(path)))
+            path = Path.GetFullPath(path);
+            using (AcquireLease(path))
             {
                 TrackingDocument document = TrackingDocument.Create(current, legacy.Packet);
                 document.JournalVersion = 1;
-                TrackingStorage.PreserveLegacy(path, legacy.FileHash);
-                if (File.Exists(Path.Combine(path + ".scribe", "journal.jsonl")) ||
-                    (System.IO.Directory.Exists(Path.Combine(path + ".scribe", "sessions")) &&
-                    System.IO.Directory.GetFiles(Path.Combine(path + ".scribe", "sessions"), "*.jsonl").Length != 0))
-                    throw new IOException("Existing session history must not be replaced during legacy conversion.");
-                InitializeMarker(path, document);
-                TrackingStorage.Save(path, document, legacy.FileHash);
+                InitializeProject(path, document, legacy.FileHash, checkpoint);
             }
             return Open(path);
         }
 
-        private static void InitializeMarker(string path, TrackingDocument document)
+        private static void InitializeProject(string path, TrackingDocument document, string sourceHash,
+            Action<string> checkpoint)
         {
-            string marker = Path.Combine(path + ".scribe", "project.json");
-            TrackingStorage.WriteAtomic(marker, new JournalMarker { ProjectId = document.BaselineId,
-                HeadId = document.BaselineId, Fingerprint = document.StateFingerprint },
-                File.Exists(marker) ? TrackingStorage.HashFile(marker) : null);
+            document.Validate();
+            RequireEmptyHistory(path);
+            string markerPath = Path.Combine(path + ".scribe", "project.json");
+            string markerHash = null;
+            if (File.Exists(markerPath))
+            {
+                JournalMarker previous = ReadMarker(markerPath, out markerHash);
+                ValidateInitialization(previous);
+                if (previous.Initialization.SourceHash != sourceHash)
+                    throw new IOException("Unfinished initialization belongs to a different source. Reload the original JSON " +
+                        "or choose a new filename; existing storage was not replaced.");
+            }
+            RequireOwnedMarkerBackup(markerPath, sourceHash);
+            TrackingStorage.Verify(path, sourceHash);
+            RequireBaselineBackup(path, sourceHash);
+            if (sourceHash != null)
+            {
+                TrackingStorage.PreserveLegacy(path, sourceHash);
+            }
+            var marker = new JournalMarker { ProjectId = document.BaselineId, HeadId = document.BaselineId,
+                Fingerprint = document.StateFingerprint, Initialization = new JournalInitialization {
+                    BaselineHash = Json.StreamHash(document), SourceHash = sourceHash
+                } };
+            markerHash = TrackingStorage.WriteAtomic(markerPath, marker, markerHash,
+                InitializationCheckpoint(path, marker, checkpoint, "marker-"));
+            TrackingStorage.WriteAtomic(path, document, sourceHash,
+                InitializationCheckpoint(path, marker, checkpoint, "baseline-"));
+            FinishInitialization(path, marker, markerHash, checkpoint);
+        }
+
+        private static string FinishInitialization(string path, JournalMarker marker, string markerHash,
+            Action<string> checkpoint)
+        {
+            RequireEmptyHistory(path);
+            string markerPath = Path.Combine(path + ".scribe", "project.json");
+            RequireOwnedMarkerBackup(markerPath, marker.Initialization.SourceHash);
+            RequireLegacyBackup(path, marker.Initialization.SourceHash);
+            TrackingStorage.Verify(path, marker.Initialization.BaselineHash);
+            var complete = new JournalMarker { ProjectId = marker.ProjectId, HeadId = marker.HeadId,
+                Fingerprint = marker.Fingerprint };
+            return TrackingStorage.WriteAtomic(markerPath, complete, markerHash,
+                InitializationCheckpoint(path, marker, checkpoint, "final-marker-"));
+        }
+
+        private static Action<string> InitializationCheckpoint(string path, JournalMarker marker,
+            Action<string> checkpoint, string phase)
+        {
+            return step => {
+                if (checkpoint != null) checkpoint(phase + step);
+                if (step != "commit") return;
+                RequireEmptyHistory(path);
+                RequireOwnedMarkerBackup(Path.Combine(path + ".scribe", "project.json"), marker.Initialization.SourceHash);
+                RequireLegacyBackup(path, marker.Initialization.SourceHash);
+                if (phase != "final-marker-") RequireBaselineBackup(path, marker.Initialization.SourceHash);
+                TrackingStorage.Verify(path, phase == "final-marker-" ?
+                    marker.Initialization.BaselineHash : marker.Initialization.SourceHash);
+            };
+        }
+
+        private static void RequireBaselineBackup(string path, string sourceHash)
+        {
+            if (System.IO.Directory.Exists(path + ".bak") ||
+                (File.Exists(path + ".bak") && (sourceHash == null || TrackingStorage.HashFile(path + ".bak") != sourceHash)) ||
+                (sourceHash == null && (File.Exists(path + ".legacy.bak") || System.IO.Directory.Exists(path + ".legacy.bak"))))
+                throw new IOException("An unrelated baseline/legacy backup already exists. Restore its matching project " +
+                    "or choose a different copy/filename; no backup was overwritten.");
+        }
+
+        private static void RequireLegacyBackup(string path, string sourceHash)
+        {
+            if (sourceHash != null && (!File.Exists(path + ".legacy.bak") ||
+                TrackingStorage.HashFile(path + ".legacy.bak") != sourceHash))
+                throw new IOException("The preserved legacy backup is missing or changed. Restore it before resuming; nothing was replaced.");
+        }
+
+        private static JournalMarker ReadMarker(string path, out string hash)
+        {
+            using (var stream = File.OpenRead(path))
+            {
+                JournalMarker marker = Json.ReadStream<JournalMarker>(stream);
+                stream.Position = 0;
+                using (var sha = SHA256.Create())
+                    hash = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+                return marker;
+            }
+        }
+
+        private static void ValidateInitialization(JournalMarker marker)
+        {
+            if (marker == null || marker.Format != "FCS-Scribe session storage" || marker.SchemaVersion != 1 ||
+                !IsId(marker.ProjectId) || marker.HeadId != marker.ProjectId || !IsHash(marker.Fingerprint) ||
+                marker.Initialization == null || !IsHash(marker.Initialization.BaselineHash) ||
+                (marker.Initialization.SourceHash != null && !IsHash(marker.Initialization.SourceHash)))
+                throw new InvalidDataException("Existing session storage is not a recognized unfinished initialization. " +
+                    "Restore its original baseline or choose a new filename. No existing storage was removed.");
+        }
+
+        private static void RequireOwnedMarkerBackup(string markerPath, string sourceHash)
+        {
+            if (System.IO.Directory.Exists(markerPath + ".bak"))
+                throw new IOException("The session marker backup path is a directory. Choose another filename; existing contents were not changed.");
+            if (!File.Exists(markerPath + ".bak")) return;
+            if (!File.Exists(markerPath))
+                throw new IOException("A session marker backup exists without its marker. Restore the matching project " +
+                    "or choose a new filename; existing backups are never claimed as a new project.");
+            string hash;
+            JournalMarker backup = ReadMarker(markerPath + ".bak", out hash);
+            ValidateInitialization(backup);
+            if (backup.Initialization.SourceHash != sourceHash)
+                throw new IOException("The existing session marker backup belongs to another source. It was not overwritten.");
+        }
+
+        private static void RequireEmptyHistory(string path)
+        {
+            string directory = path + ".scribe", sessions = Path.Combine(directory, "sessions"),
+                recovery = Path.Combine(directory, "recovery");
+            if (File.Exists(Path.Combine(directory, "journal.jsonl")) ||
+                System.IO.Directory.Exists(Path.Combine(directory, "journal.jsonl")) ||
+                File.Exists(Path.Combine(directory, "journal.jsonl.bak")) ||
+                System.IO.Directory.Exists(Path.Combine(directory, "journal.jsonl.bak")) ||
+                File.Exists(sessions) || File.Exists(recovery) ||
+                (System.IO.Directory.Exists(recovery) && System.IO.Directory.GetFileSystemEntries(recovery).Length != 0) ||
+                (System.IO.Directory.Exists(sessions) && System.IO.Directory.GetFileSystemEntries(sessions).Length != 0))
+                throw new IOException("Existing session history cannot be claimed by project initialization. Restore its " +
+                    "matching baseline or choose a new filename; no history was replaced.");
         }
 
         private void WriteMarker(string headId, string fingerprint)
@@ -542,6 +694,8 @@ namespace FcsScribe
         }
 
         private static bool IsId(string text) { Guid id; return Guid.TryParse(text, out id); }
+        private static bool IsHash(string text)
+        { return text != null && text.Length == 64 && text.All(x => "0123456789abcdef".Contains(x)); }
         private static bool IsUtc(string text)
         {
             DateTime value;

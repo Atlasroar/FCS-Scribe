@@ -201,6 +201,11 @@ namespace FcsScribe
 
         public static string WriteAtomic<T>(string path, T value, string expectedHash)
         {
+            return WriteAtomic(path, value, expectedHash, null);
+        }
+
+        internal static string WriteAtomic<T>(string path, T value, string expectedHash, Action<string> checkpoint)
+        {
             RequireJson(path);
             CheckUnchanged(path, expectedHash);
             string temporary = Path.GetFullPath(path) + "." + Guid.NewGuid().ToString("N") + ".tmp";
@@ -208,13 +213,17 @@ namespace FcsScribe
             {
                 using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                 {
+                    if (checkpoint != null) checkpoint("write");
                     Json.WriteStream(output, value);
+                    if (checkpoint != null) checkpoint("flush");
                     output.Flush(true);
                 }
                 string hash = HashFile(temporary);
+                if (checkpoint != null) checkpoint("commit");
                 CheckUnchanged(path, expectedHash);
                 if (expectedHash == null) File.Move(temporary, path);
                 else File.Replace(temporary, path, path + ".bak");
+                if (checkpoint != null) checkpoint("committed");
                 return hash;
             }
             finally { if (File.Exists(temporary)) File.Delete(temporary); }

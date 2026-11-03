@@ -6,15 +6,15 @@ complete editor compatibility.
 
 ## Automated and disposable-copy evidence
 
-The recorded beta 7 checks passed. These retain session-journal, grouped-menu,
-complete-coverage/safe-retry, recording-range and optional Workshop isolation
-checks while adding portable draft lifecycle protection:
+The recorded beta 8 checks passed. These retain session-journal, grouped-menu,
+complete-coverage/safe-retry, recording-range, optional Workshop isolation and
+portable draft checks while adding recoverable initialization:
 
 | Check | Result | Boundary |
 | --- | --- | --- |
-| Dependency-free core checks | 235 passed | Adds exact workspace text/packet serialization, schema-1/2/3 evidence, unfinished/mismatched/stale responses, missing/corrupt evidence, atomic backup and observed-file conflict checks |
-| Actual FCS methods on copied vanilla data | 260 passed | Adds visible dirty state, Save/Open across new windows, cancelled Start/Resume/Open/close, late edits during save/load/session start, close while busy, corrupt/unrelated destinations, external changes during Open, and restored current/stale validation without implicit apply |
-| Actual FCS methods on a representative copied mod | 259 passed | Same coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
+| Dependency-free core checks | 428 passed | Adds New/conversion interruptions at marker/baseline/final-marker write, flush and before/after commit; retry/Resume, repeated failures, backup/source/history ownership, actual sharing/target conflicts and source-byte preservation |
+| Actual FCS methods on copied vanilla data | 266 passed | Adds actual Start retry after an uncommitted baseline write and background Resume after a committed baseline/final-marker failure, with unchanged baseline bytes and normal recording/session behavior |
+| Actual FCS methods on a representative copied mod | 265 passed | Same coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
 
 The integration host initializes actual FCS forms without launching the complete
 interactive editor/mod-selector workflow. It exercises unsaved overrides,
@@ -67,6 +67,17 @@ storage/adoption and closing handlers. They do not operate every native
 Save/Open/overwrite/approval dialog
 through the full FCS Extended application; those interactions remain S09.
 Explicit workspace persistence is not an autosave or forced-shutdown guarantee.
+
+Beta 8's initialization matrix injects I/O/access-denied exceptions into scoped
+atomic-write checkpoints, including immediately after completed commits.
+Separate cases use actual Windows sharing violations and destination-directory
+collisions, observed external file changes, missing legacy backups and
+unrecognized history/markers/backups. Recovered projects subsequently record
+and replay normally. These tests do not cut physical power, exhaust a volume
+or exercise every real ACL/network-filesystem failure.
+A separate check used the **released beta 7 binary** to generate compiled and
+uncompiled history with Workshop context, then used beta 8 to replay/export it.
+Original serialized evidence, captured state and every source-file hash matched.
 
 ## Reproduce
 
