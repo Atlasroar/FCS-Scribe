@@ -205,7 +205,30 @@ original in a unique, verified, nonrotating backup. Unknown original hashes
 cannot authorize replacement. Cancel and failed reload never write settings;
 reload also resolves a stale instance without reopening Scribe. These operations
 retain the current project, packet and exact editable draft. Existing schedule
-reset semantics are deliberately left for S07 rather than claimed fixed here.
+reset semantics were left for S07; beta 10 addresses them below.
+
+## Derive compilation debt from durable evidence (beta 10)
+
+A reset-on-configuration timer can be postponed forever by folder edits or
+short sessions. The selected policy instead uses the oldest durable uncompiled
+entry's existing UTC timestamp plus 30 minutes, including time closed/manual.
+There is no new persisted deadline or migration. Compiled duplicates do not
+reintroduce debt, and an empty pending set does not cause periodic no-op writes.
+
+Start/Resume reconstructs age once; an in-window monotonic countdown survives
+same-interval configuration, interval/manual transitions and UI deferral.
+Unchanged intervals preserve recording too; changed intervals re-arm only
+recording. Successful compilation clears the pending timer without shifting
+review. A new earlier pending timestamp can only bring the deadline forward.
+Failures never acknowledge debt; a faulted journal still requires Resume.
+
+Manual and settings-recovery modes explicitly gate automatic work, even if
+the debt is overdue. Returning to automatic mode makes old debt eligible at
+the next normal unblocked tick, not as a settings-save side effect. A wrapping
+pending notice displays count, oldest UTC, due/overdue state and holds.
+UTC clocks are not trusted evidence: a future timestamp on Resume/new debt is
+treated as due now, not a potentially unbounded delay. Already-running
+countdowns are not re-anchored by wall-clock adjustments.
 
 ## Separate future saved-data analysis
 

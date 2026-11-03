@@ -20,6 +20,8 @@ for draft text and its original AI-packet association.
 recoverable without claiming unrelated storage or deleting unknown artifacts.
 **v0.1.0-beta.9** opens invalid/unreadable settings in labelled safe manual
 mode, with explicit reload/repair and original-byte/concurrent-save protection.
+**v0.1.0-beta.10** preserves compilation debt across settings changes and
+short sessions, with a persistent pending notice and explicit manual-mode hold.
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).
@@ -434,11 +436,30 @@ destinations inside the active project's reserved storage folder.
 
 ## 10. Compile journal: consolidate without deleting sessions
 
-Automatic mode compiles every 30 minutes on a separate deadline; manual mode
-uses **Compile journal**. Each interval entry is already durable before this
+In beta 10, automatic mode compiles on the next eligible tick once the oldest
+durable uncompiled recording is **30 minutes old**. Age includes time with
+Scribe closed or in Manual. It is not a new 30-minute wait after each settings
+save, interval change or session reopening. With no pending entries there is
+no empty compilation timer. Each interval entry is already durable before this
 step. Compilation appends missing entry IDs to the main journal, never rewrites
 the full baseline, and can be retried without duplicating complete entries.
 An interrupted final compilation line uses the same explicit recovery flow.
+
+The persistent **Pending compilation** notice shows the count, oldest UTC,
+due/overdue state and any manual/recovery/error hold, separately from transient
+operation status. It wraps in narrow windows. **Manual mode never compiles by
+itself**: use **Compile journal**. Settings recovery also holds automatic work.
+Selecting an automatic interval can make retained old debt immediately eligible,
+but compilation still waits for a visible, unblocked tick; busy/minimized/hidden
+windows, open menus and modal dialogs defer work without advancing the deadline.
+Errors preserve debt and pause automation; reopen/validate a faulted journal.
+
+Folder-only saves/reloads preserve recording and compilation deadlines.
+Changing intervals re-arms only recording. Successful compilation clears debt
+without moving the next recording; a later first pending entry starts its own
+30-minute age window. Reopening derives debt from existing validated timestamps,
+without rewriting history or migrating storage. See
+[compilation scheduling](Installation-and-Workflow#checkpoint-scheduling-and-storage).
 
 Session originals are retained. The status shows how many recordings await
 compilation. Close Scribe before archiving files yourself; only fully compiled

@@ -39,7 +39,7 @@ release decisions, and AI-generated record notes require human approval.
 
 ## Current status
 
-The current [v0.1.0-beta.9 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.9)
+The current [v0.1.0-beta.10 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.10)
 remains experimental and restricted to the inspected Steam FCS 2.14.2 executable
 hash. It includes local Workshop metadata, preview-image archiving, embedded
 MDI hosting and contextual action help alongside change documentation.
@@ -80,7 +80,12 @@ Beta 9 closes S06: invalid/unreadable settings open in explicitly labelled
 safe manual mode with a persistent warning. Settings can reload or explicitly
 repair readable originals with unique byte-preserving backups and cooperating
 concurrent-save protection, without losing the current project or draft.
-S07-S16 remain open; these fixes do not close full interactive acceptance.
+Beta 10 closes S07: compilation becomes due when the oldest durable uncompiled
+recording is 30 minutes old, including time closed or manual. Settings changes
+and short sessions cannot restart that age. A persistent notice shows retained
+debt; manual/recovery modes never compile automatically. Eligible automatic
+work catches up without resetting the separate recording deadline.
+S08-S16 remain open; these fixes do not close full interactive acceptance.
 
 **FCS notes are per-record editor-side annotations**, stored in
 `data\__TODO__<user>.txt`, not inside the mod file. Distributing only a `.mod`

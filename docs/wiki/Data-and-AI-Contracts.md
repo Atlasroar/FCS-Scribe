@@ -261,6 +261,27 @@ anchors without `JournalVersion` cannot themselves detect missing sidecars.
 An exclusive project writer lease coordinates Scribe instances, not arbitrary
 external editors. Timestamps are not entry identities or proof of authenticity.
 
+### Compilation debt (beta 10)
+
+No new field or schema is written. Each validated session/journal entry already
+has `RecordedUtc`. Replay tracks the earliest timestamp among uncompiled
+entries; entries recovered from the compiled journal, including session
+duplicates, are excluded. Context-only recordings count as pending too.
+
+Compilation is due at oldest pending age 30 minutes, including time closed or
+manual. Start/Resume reconstructs the remaining age, then uses a monotonic
+in-window deadline. Settings changes do not reset it. Manual/recovery/error
+holds and UI deferral do not clear it. Successful compilation empties pending
+debt without re-arming recording; a later first entry creates a new age window.
+No pending entries means no automatic compilation timer. Existing serialized
+packets, timestamps, markers and history remain untouched merely by replay.
+
+Scheduling requires UTC. A future pending timestamp on Resume/new debt is
+treated as due now in automatic mode, never silently compiled in manual mode.
+An already-running countdown is retained through UTC clock changes. These are
+best-effort local scheduling rules, not authenticated timestamps or a trusted
+cross-restart clock.
+
 ### Pending initialization (beta 8)
 
 During New/legacy conversion, marker schema 1 may contain optional

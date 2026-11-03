@@ -54,9 +54,10 @@ WinForms message loop without launching FCS's complete startup/mod-selector
 workflow. It exercises in-memory edits and normal save/reopen on disposable
 output, not the source installation or original mod. Fixtures remain available
 for inspection and can be deleted afterward.
-Settings recovery checks run in a second fresh 32-bit process to avoid retaining
-earlier large-model fixture allocations. Add `-SettingsOnly` for a targeted
-settings recovery run. PDB-only symbols retain useful failure locations without
+Settings recovery and compilation scheduling each run in a fresh 32-bit process
+to avoid retaining earlier large-model fixture allocations. Add `-SettingsOnly`
+or `-ScheduleOnly` for one targeted suite (not both). PDB-only symbols retain
+useful failure locations without
 full-debug JIT lifetime changes; this does not remove production memory limits.
 
 `Inspect-Fcs.ps1` supports inspection of the locally installed build. Obtain

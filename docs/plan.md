@@ -186,13 +186,38 @@ sharing denial and simultaneous cooperating saves are covered. A combined
 32-bit run/full-debug JIT lifetimes exhausted address space; isolated hosts and
 PDB-only symbols keep the final checks bounded, not a production S12 fix.
 Full interactive acceptance and exhaustive ACL/disk/power-loss cases remain
-open. Settings schedule-reset behavior is deliberately left for S07 next.
+open. S07 is addressed below.
 
 ### S07. Medium: compilation deadlines can be deferred indefinitely
 
-- [ ] Stop unrelated settings changes, such as export-folder changes, from resetting an existing compilation deadline.
-- [ ] Define the handling of pending compilation across short sessions and interval changes; make retained compilation debt visible without silently compiling in manual mode.
-- [ ] Cover repeated settings saves, short-session restarts, manual/automatic transitions, busy deferral and independent recording deadlines.
+- [x] Stop unrelated settings changes, such as export-folder changes, from resetting an existing compilation deadline.
+- [x] Define the handling of pending compilation across short sessions and interval changes; make retained compilation debt visible without silently compiling in manual mode.
+- [x] Cover repeated settings saves, short-session restarts, manual/automatic transitions, busy deferral and independent recording deadlines.
+
+S07 is addressed in beta 10. The selected policy counts age from the oldest
+durable uncompiled `RecordedUtc`, including time closed or manual. Start/Resume
+restores that age from existing validated entries; no storage migration or
+timestamp rewrite is needed. A monotonic in-window deadline survives settings
+saves/reloads, interval changes and UI deferral. Same-interval changes preserve
+recording too; changed intervals re-arm only recording. Empty pending sets do
+not schedule no-op compilations.
+
+A persistent wrapping notice shows count, oldest UTC, due/overdue state and
+manual/recovery/error holds. Manual/recovery modes never auto-compile;
+returning to automatic makes overdue work eligible at the next normal
+unblocked tick. Only successful compilation clears debt, without moving review.
+Future timestamps on Resume/new debt are due now rather than postponed;
+existing in-window countdowns are not re-anchored by UTC clock changes.
+
+Recorded checks: 518 core; 266 vanilla + 16 isolated settings + 24 isolated
+scheduling; 265 representative-mod + 16 settings + 24 scheduling checks.
+Real Scribe paths cover repeated settings saves/reloads, short-session resumes,
+manual/recovery/automatic transitions, busy/hidden/minimized/menu/modal deferral,
+failed compilation, paused-error wording and independent recording deadlines.
+The released beta 9 binary also generated compiled/uncompiled history whose
+beta 10 replay retained exact evidence, state, pending timestamp and all source
+hashes. Full interactive acceptance, trusted cross-restart clocks and large
+model/history performance remain unverified; S08 is next.
 
 ### S08. Medium: exports can overwrite inactive tracking projects
 

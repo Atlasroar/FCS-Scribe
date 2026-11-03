@@ -118,7 +118,7 @@ namespace FcsScribe
             activeFolder.CheckedChanged += delegate { directory.Enabled = browse.Enabled = !activeFolder.Checked; };
             folders.Controls.Add(directory); folders.Controls.Add(browse); layout.Controls.Add(folders);
             layout.Controls.Add(new Label { AutoSize = true, MaximumSize = new System.Drawing.Size(540, 0),
-                Text = "Recordings are flushed to timestamped session logs at each interval. Automatic mode compiles them into the main journal every 30 minutes. Manual mode uses Review changes and Compile journal. Neither saves the mod or applies notes." });
+                Text = "Recordings are flushed to session logs at each interval. Automatic mode compiles once the oldest pending recording is 30 minutes old, including time closed or manual. Settings changes do not reset that debt. Manual mode requires Compile journal. Neither saves the mod or applies notes." });
             var buttons = new FlowLayoutPanel { AutoSize = true };
             var save = new Button { Text = loadError == null ? "Save settings" : "Save repaired settings", AutoSize = true };
             var reload = new Button { Text = "Discard edits and reload", AutoSize = true, DialogResult = DialogResult.Retry };

@@ -73,9 +73,19 @@ dirty but does not save or advance the tracking baseline.
 **Plugin settings** offers Manual (default), 30 seconds, 1 minute, 5 minutes
 and 10 minutes. Automatic reviews durably append session deltas while the window
 is visible, not minimized/busy or blocked by visible modal forms; they never
-save the mod or apply AI notes. A separate 30-minute deadline compiles entries
-into the main journal. Manual mode uses **Compile journal** explicitly.
+save the mod or apply AI notes. In beta 10, compilation becomes due when the
+oldest durable uncompiled recording is 30 minutes old, including time closed or
+manual. It runs on the next eligible automatic tick, not inside settings Save
+or Resume. Manual mode uses **Compile journal** explicitly.
 Errors pause automation; reopen/validate after a journal write failure.
+
+The persistent **Pending compilation** notice shows the count, oldest UTC,
+due/overdue state and any manual/recovery/error hold. Settings saves/reloads and
+short sessions retain this debt. A folder-only edit does not reset recording
+either; an interval change re-arms recording without moving compilation.
+Hidden/minimized/busy windows, open menus and modal dialogs defer work without
+acknowledging the deadline. After successful compilation there is no empty
+timer: the next first pending recording starts a fresh age window.
 
 JSON save dialogs default to the active mod's actual directory. Settings can
 choose another existing default; dialogs still allow individual locations.
@@ -104,7 +114,8 @@ Reload obtains its bytes. If another instance changes or locks shared settings,
 Save fails explicitly; reload after it finishes before choosing and saving
 values again. Valid reload/Save exits recovery and adopts its selected interval.
 The current tracking project, original AI packet and exact draft text remain
-in place. Settings schedule-reset behavior remains an open S07 issue.
+in place. Beta 10 preserves compilation debt through these settings actions;
+recovery never enables automatic work until a valid reload or explicit repair.
 
 ### Project storage
 
