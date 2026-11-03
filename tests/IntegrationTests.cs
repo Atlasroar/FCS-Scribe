@@ -103,6 +103,9 @@ internal static class IntegrationTests
             object originalValue = originalFields[originalKey];
             object changed = originalValue is float ? (object)((float)originalValue + 1.0f) : (object)((int)originalValue + 1);
             item.GetType().GetProperty("Bah", Flags).SetValue(item, changed, new object[] { originalKey });
+            string secondId = initial.Records.First(x => x.Id != id).Id;
+            object secondItem = records[secondId];
+            Set(secondItem, "Name", (string)FcsAdapter.Property(secondItem, "Name") + " Scribe coverage");
             Check(tracker.Export(adapter.Capture()).Changes.Any(x => x.RecordId == id &&
                 x.Layer == "active"), "capture unsaved active override");
             Type noteType = assembly.GetType("forgotten_construction_set.ToDo+NotesItem+Type", true);
@@ -118,14 +121,32 @@ internal static class IntegrationTests
             Check(Json.Write(packet.Changes) == Json.Write(tracker.Export(adapter.Capture()).Changes), "notes excluded from gameplay diff");
             var draft = new NoteDraft {
                 BatchId = packet.BatchId, SourceFingerprint = packet.SourceFingerprint,
-                Entries = new List<NoteEntry> { new NoteEntry {
-                    TargetRecordId = id, Text = "Approved test documentation.",
-                    ChangeIds = packet.Changes.Where(x => x.RecordId == id).Select(x => x.Id).ToList()
-                }}
+                Entries = packet.Changes.GroupBy(x => x.RecordId).Select(group => new NoteEntry {
+                    TargetRecordId = group.Key,
+                    Text = group.Key == id ? "Approved test documentation." : "Second approved documentation.",
+                    ChangeIds = group.Select(x => x.Id).ToList()
+                }).ToList()
             };
             Snapshot beforeSave = adapter.Capture();
             string gameplay = beforeSave.Fingerprint();
+            var beforeNotes = draft.Entries.ToDictionary(x => x.TargetRecordId, x => adapter.Notes(x.TargetRecordId));
+            NoteDraft incomplete = Json.Read<NoteDraft>(Json.Write(draft));
+            incomplete.Entries.RemoveAt(1);
+            Reject<InvalidDataException>(() => adapter.Apply(packet, incomplete),
+                "incomplete record coverage is rejected before actual FCS notes mutation");
+            Check(beforeNotes.All(x => adapter.Notes(x.Key) == x.Value) && !(bool)FcsAdapter.Property(nav, "HasChanges"),
+                "rejected coverage leaves notes and dirty state unchanged");
+            NoteDraft duplicated = Json.Read<NoteDraft>(Json.Write(draft));
+            duplicated.Entries[1].ChangeIds.Add(duplicated.Entries[0].ChangeIds[0]);
+            Reject<InvalidDataException>(() => adapter.Apply(packet, duplicated),
+                "duplicate evidence across targets is rejected by the actual notes workflow");
+            NoteEntry completed = draft.Entries.Single(x => x.TargetRecordId == id);
+            FcsAdapter.Call(todo, "AddItem", item, DraftValidation.NoteText(packet.BatchId, completed),
+                Enum.Parse(noteType, "NOTE"), null, true, false);
+            string completedNotes = adapter.Notes(id);
             adapter.Apply(packet, draft);
+            Check(adapter.Notes(id) == completedNotes && adapter.Notes(secondId).Contains("Second approved documentation."),
+                "retry preserves a completed FCS note byte-for-byte and appends only the pending target");
             Check(adapter.Notes(id).Contains("Existing note.") && adapter.Notes(id).Contains("Approved test documentation."),
                 "append preserves existing notes");
             Check(adapter.Notes(id).Contains("Inherited note."), "append preserves inherited notes");
@@ -146,6 +167,8 @@ internal static class IntegrationTests
             Check(adapter.Notes(id).Contains("Existing note.") && adapter.Notes(id).Contains(DraftValidation.Marker(packet.BatchId)),
                 "notes survive FCS reload");
             Check(adapter.Notes(id).Contains("Inherited note."), "inherited notes survive normal save and reload");
+            Check(adapter.Notes(secondId).Contains("Second approved documentation."),
+                "the pending note appended on retry survives normal save and reload");
             Snapshot afterSave = adapter.Capture();
             Check(Json.Write(afterSave.Records) == Json.Write(beforeSave.Records),
                 "normal save does not alter captured gameplay records");

@@ -54,7 +54,8 @@ anything or modify your game. Do not replace FCS Extended's own contract DLL.
    an external assistant; the plugin sends nothing itself.
 4. Ask the assistant to follow the packet instructions and return the response
    template as JSON. Import or paste it into the editable draft.
-5. Verify target record IDs, evidence IDs, quantities, conditions, and prose.
+5. Verify target record IDs, quantities, conditions, and prose. In beta 4,
+   cover every exported change ID exactly once across the complete draft.
    Select **Apply approved notes** and explicitly approve.
 6. Inspect FCS Notes, then use FCS's ordinary **Save** action when ready.
 
@@ -165,3 +166,8 @@ Multi-record application is not transactional. If an error reports partial
 notes, inspect them before retrying or saving. Do not infer safety from a zero
 completed-entry count: an interrupted FCS operation may have made partial
 in-memory changes.
+Beta 4 retries require the original complete draft and unchanged captured
+state. Matching completed notes are skipped; only pending targets are appended.
+Conflicting text/evidence, partial blocks or multiple same-batch markers stop
+the operation for inspection. Do not delete completed entries from the draft.
+Draft/export associations still do not survive closing Scribe.

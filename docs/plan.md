@@ -55,6 +55,8 @@ regression evidence, accurate user-facing guidance and a recorded outcome before
 moving on. Known limitations do not imply a promise to build a mod-restoration
 system, capture every editor event, support every FCS version or query Steam.
 Do not silently reclassify unresolved defects as accepted limitations.
+Each addressed issue gets its own PR, merge and beta release before proceeding
+to the next issue.
 
 ### UI cleanup: grouped actions
 
@@ -72,9 +74,18 @@ beta 2 assets remain unchanged. The real-editor acceptance gate remains open.
 
 ### S01. High: incomplete evidence coverage can pass draft validation
 
-- [ ] Resolve the mismatch between the wiki's incomplete-draft guarantee and validation that only checks each submitted citation.
-- [ ] Define complete coverage versus explicitly approved partial documentation, including safe retries after partial notes application; do not silently omit evidence.
-- [ ] Cover omitted records/change IDs, duplicate citations, deleted-record targets and partial-application retries; align the contract and wiki.
+The user selected **complete coverage of every exported change**. Beta 4
+enforces exactly-once citations, not implicitly approved partial documentation.
+
+- [x] Reject omitted/duplicate evidence before mutation and align the wiki with the full-coverage guarantee.
+- [x] Retain the complete original draft for retries, skip only one matching completed block per target, and reject conflicts or a fully applied batch.
+- [x] Cover omitted records/change IDs, duplicate citations, deleted-record targets, line-ending normalization, conflicting blocks, stale state and partial-application retries; preserve the append format and update the contract/wiki.
+
+S01 is addressed in beta 4. Safe retry is not transactional rollback or draft
+persistence; broader S04/S15 work and real FCS Extended acceptance remain open.
+Recorded checks: 157 core, 141 disposable vanilla FCS and 140 representative-mod
+FCS checks passed. The representative mod has no instances; vanilla covers that
+mutation. S02 is the next open stabilization issue.
 
 ### S02. High: AI handoff can omit accumulated recordings
 

@@ -39,7 +39,7 @@ release decisions, and AI-generated record notes require human approval.
 
 ## Current status
 
-The current [v0.1.0-beta.3 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.3)
+The current [v0.1.0-beta.4 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.4)
 remains experimental and restricted to the inspected Steam FCS 2.14.2 executable
 hash. It includes local Workshop metadata, preview-image archiving, embedded
 MDI hosting and contextual action help alongside change documentation.
@@ -55,8 +55,11 @@ Beta 3 groups the ten actions into Core, Workshop and Draft menus, with
 separate approval and Settings actions, keyboard/hover help and narrow-window
 overflow access. Automatic work waits while menus are open. The
 [stabilization plan](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/plan.md#stabilization-gate-before-further-feature-work)
-tracks sixteen open issues/support boundaries before further feature expansion;
-this UI release does not claim to resolve them.
+tracks sixteen issues/support boundaries before further feature expansion.
+Beta 4 closes S01: drafts must cover every exported change exactly once, and
+partial-application retries retain the complete draft while skipping only
+matching completed notes. S02-S16 remain open; the full interactive acceptance
+gate is not closed by this fix.
 
 **FCS notes are per-record editor-side annotations**, stored in
 `data\__TODO__<user>.txt`, not inside the mod file. Distributing only a `.mod`

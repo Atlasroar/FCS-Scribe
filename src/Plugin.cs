@@ -398,13 +398,16 @@ namespace FcsScribe
         {
             if (exported == null) throw new InvalidOperationException("Export a packet before importing/applying notes.");
             NoteDraft notes = Json.Read<NoteDraft>(draft.Text);
-            DraftValidation.Check(exported, notes, adapter.Capture(), adapter.Notes);
-            if (MessageBox.Show(this, "Approve the edited draft and append its " + notes.Entries.Count +
-                " note(s) to FCS? Existing notes are retained. The mod will be marked changed, but NOT saved. " +
+            var pending = DraftValidation.Pending(exported, notes, adapter.Capture(), adapter.Notes);
+            if (MessageBox.Show(this, "The complete draft covers all " + exported.Changes.Count +
+                " exported changes. Approve appending " + pending.Count + " pending note(s) to FCS? " +
+                (notes.Entries.Count - pending.Count) + " matching completed note(s) will be skipped. " +
+                "Existing notes are retained. The mod will be marked changed, but NOT saved. " +
                 "Multi-record application is not transactional; inspect FCS Notes afterward.",
                 "Approve notes", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
             adapter.Apply(exported, notes);
-            status.Text = "Approved notes appended in FCS. Inspect FCS Notes and use FCS's normal Save when ready. Baseline unchanged.";
+            status.Text = "Approved pending notes appended in FCS; matching completed notes were not duplicated. " +
+                "Inspect FCS Notes and use FCS's normal Save when ready. Baseline unchanged.";
         }
 
         private static TextBox TextArea(bool readOnly)
