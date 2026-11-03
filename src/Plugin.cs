@@ -75,13 +75,14 @@ namespace FcsScribe
         private PluginSettings settings;
         private bool busy, closing, automaticPaused;
         private readonly Timer timer = new Timer();
-        private readonly FlowLayoutPanel actions = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true };
+        private readonly MenuStrip actions = new MenuStrip { Dock = DockStyle.Top, AutoSize = true,
+            AllowMerge = false, CanOverflow = true, TabStop = true };
         private Packet exported;
         private readonly TextBox review = TextArea(true);
         private readonly TextBox draft = TextArea(false);
         private readonly TextBox workshop = TextArea(true);
         private readonly Label status = new Label { Dock = DockStyle.Bottom, Height = 48 };
-        private const string HelpHint = "Hover over a button, or focus it with Tab, to see what it does.";
+        private const string HelpHint = "Hover over a menu action, or select it with the keyboard, to see what it does.";
         private readonly Label help = new Label { Dock = DockStyle.Bottom, Height = 48, Text = HelpHint,
             BorderStyle = BorderStyle.FixedSingle };
 
@@ -99,16 +100,26 @@ namespace FcsScribe
             Text = "FCS-Scribe - experimental documentation";
             Width = 1080;
             Height = 780;
-            AddAsyncButton(actions, "Start tracking", "Create or resume a tracking project and begin a new timestamped session log. Replaces the editable draft; does not save or restore the mod.", Start);
-            AddAsyncButton(actions, "Review changes", "Record new changes since the last durable entry into this session log. Automatic intervals are available in Plugin settings.", Review);
-            AddAsyncButton(actions, "Compile journal", "Consolidate durable session entries into the main journal without duplicates or deleting session files. Automatic mode also compiles every 30 minutes.", Compile);
-            AddButton(actions, "Export AI packet", "Save change evidence, Workshop context and a blank AI response template as JSON. Replaces the editable draft; sends nothing online.", Export);
-            AddButton(actions, "Export Workshop info", "Save current local Workshop information and preview-image details as JSON. No tracking baseline or record changes required.", ExportWorkshop);
-            AddButton(actions, "Archive preview image", "Copy the local Workshop preview, byte-for-byte, to a new image file outside Kenshi. Does not download or change the original.", ArchivePreview);
-            AddButton(actions, "Import draft", "Load an AI response JSON into the editable draft. Requires an exported batch; nothing is applied until approval.", Import);
-            AddButton(actions, "Paste draft", "Replace the editable draft with clipboard text. Review and validate it before applying; nothing is applied by pasting.", delegate { draft.Text = Clipboard.GetText(); });
-            AddButton(actions, "Apply approved notes", "Validate the draft and ask for approval, then append record Notes/TODO entries and mark FCS dirty. Does not save or edit Workshop notes.", Apply);
-            AddAsyncButton(actions, "Plugin settings", "Choose manual or automatic review (30 seconds, 1, 5 or 10 minutes) and the default JSON export folder. Existing tracking files stay at their chosen location.", Settings);
+            var coreMenu = AddMenu("&Core", "Start or resume tracking, review changes, compile the journal or export an AI packet.");
+            AddAsyncAction(coreMenu.DropDownItems, "&Start tracking", "Create or resume a tracking project and begin a new timestamped session log. Replaces the editable draft; does not save or restore the mod.", Start);
+            AddAsyncAction(coreMenu.DropDownItems, "&Review changes", "Record new changes since the last durable entry into this session log. Automatic intervals are available in Settings.", Review);
+            AddAsyncAction(coreMenu.DropDownItems, "&Compile journal", "Consolidate durable session entries into the main journal without duplicates or deleting session files. Automatic mode also compiles every 30 minutes.", Compile);
+            AddAction(coreMenu.DropDownItems, "&Export AI packet", "Save change evidence, Workshop context and a blank AI response template as JSON. Replaces the editable draft; sends nothing online.", Export);
+            var workshopMenu = AddMenu("&Workshop", "Export local Workshop information or archive the original preview image.");
+            AddAction(workshopMenu.DropDownItems, "&Export Workshop info", "Save current local Workshop information and preview-image details as JSON. No tracking baseline or record changes required.", ExportWorkshop);
+            AddAction(workshopMenu.DropDownItems, "&Archive preview image", "Copy the local Workshop preview, byte-for-byte, to a new image file outside Kenshi. Does not download or change the original.", ArchivePreview);
+            var draftMenu = AddMenu("&Draft", "Import a draft file or paste clipboard text for review before approval.");
+            AddAction(draftMenu.DropDownItems, "&Import draft", "Load an AI response JSON into the editable draft. Requires an exported batch; nothing is applied until approval.", Import);
+            AddAction(draftMenu.DropDownItems, "&Paste draft", "Replace the editable draft with clipboard text. Review and validate it before applying; nothing is applied by pasting.", delegate { draft.Text = Clipboard.GetText(); });
+            AddAction(actions.Items, "&Apply approved notes", "Validate the draft and ask for approval, then append record Notes/TODO entries and mark FCS dirty. Does not save or edit Workshop notes.", Apply);
+            AddAsyncAction(actions.Items, "&Settings", "Choose manual or automatic review (30 seconds, 1, 5 or 10 minutes) and the default JSON export folder. Existing tracking files stay at their chosen location.", Settings);
+            MainMenuStrip = actions;
+            actions.OverflowButton.AccessibleDescription = "Show menu actions that do not fit in the window.";
+            actions.OverflowButton.MouseEnter += delegate { help.Text = actions.OverflowButton.AccessibleDescription; };
+            actions.OverflowButton.MouseLeave += delegate { UpdateHelp(); };
+            actions.OverflowButton.Paint += delegate { if (actions.OverflowButton.Selected) UpdateHelp(); };
+            actions.MenuDeactivate += delegate { help.Text = HelpHint; };
+            actions.Leave += delegate { help.Text = HelpHint; };
             var tabs = new TabControl { Dock = DockStyle.Fill };
             var changesTab = new TabPage("Changes and warnings");
             changesTab.Controls.Add(review);
@@ -133,6 +144,8 @@ namespace FcsScribe
                 if (busy || closing || automaticPaused || !Visible || tracker == null ||
                     WindowState == FormWindowState.Minimized ||
                     (MdiParent != null && MdiParent.WindowState == FormWindowState.Minimized) ||
+                    actions.OverflowButton.DropDown.Visible ||
+                    actions.Items.OfType<ToolStripDropDownItem>().Any(x => x.DropDown.Visible) ||
                     Application.OpenForms.Cast<Form>().Any(x => x.Visible && x.Modal)) return;
                 if (!schedule.ReviewDue(clock.ElapsedMilliseconds) && !schedule.CompilationDue(clock.ElapsedMilliseconds)) return;
                 try { await RunBusy(AutomaticTick); }
@@ -461,23 +474,58 @@ namespace FcsScribe
             Plugin.ShowError(error);
         }
 
-        private void AddButton(Control parent, string label, string description, Action action)
+        private ToolStripMenuItem AddMenu(string label, string description)
         {
-            AddAsyncButton(parent, label, description, () => { action(); return Task.FromResult(0); });
+            ToolStripMenuItem item = CreateMenuItem(label, description);
+            item.DropDownClosed += delegate { UpdateHelp(); };
+            actions.Items.Add(item);
+            return item;
         }
 
-        private void AddAsyncButton(Control parent, string label, string description, Func<Task> action)
+        private ToolStripMenuItem CreateMenuItem(string label, string description)
         {
-            var button = new Button { Text = label, AutoSize = true, AccessibleDescription = description };
-            button.MouseEnter += delegate { help.Text = description; };
-            button.MouseLeave += delegate { help.Text = button.Focused ? description : HelpHint; };
-            button.Enter += delegate { help.Text = description; };
-            button.Leave += delegate { help.Text = HelpHint; };
-            button.Click += async delegate {
+            var item = new ToolStripMenuItem(label) {
+                AccessibleName = label.Replace("&", ""), AccessibleDescription = description,
+                Overflow = ToolStripItemOverflow.AsNeeded
+            };
+            item.MouseEnter += delegate { help.Text = description; };
+            item.MouseLeave += delegate { UpdateHelp(); };
+            // ToolStrip items have no focus event; keyboard selection repaints the selected item.
+            item.Paint += delegate { if (item.Selected) UpdateHelp(); };
+            return item;
+        }
+
+        private void UpdateHelp()
+        {
+            var items = actions.Items.Cast<ToolStripItem>();
+            ToolStripItem selected = items.FirstOrDefault(x => x is ToolStripDropDownItem &&
+                ((ToolStripDropDownItem)x).DropDown.Visible) ?? items.FirstOrDefault(x => x.Selected) ??
+                (actions.OverflowButton.Selected || actions.OverflowButton.DropDown.Visible ? actions.OverflowButton : null);
+            var menu = selected as ToolStripDropDownItem;
+            while (menu != null && menu.DropDown.Visible)
+            {
+                ToolStripItem child = menu.DropDownItems.Cast<ToolStripItem>().FirstOrDefault(x => x.Selected);
+                if (child == null) break;
+                selected = child;
+                menu = child as ToolStripDropDownItem;
+            }
+            string text = selected == null ? HelpHint : selected.AccessibleDescription;
+            if (help.Text != text) help.Text = text;
+        }
+
+        private void AddAction(ToolStripItemCollection parent, string label, string description, Action action)
+        {
+            AddAsyncAction(parent, label, description, () => { action(); return Task.FromResult(0); });
+        }
+
+        private void AddAsyncAction(ToolStripItemCollection parent, string label, string description, Func<Task> action)
+        {
+            ToolStripMenuItem item = CreateMenuItem(label, description);
+            item.Click += async delegate {
                 try { await RunBusy(action); }
                 catch (Exception error) { if (!closing) PauseAfterError(error); }
             };
-            parent.Controls.Add(button);
+            parent.Add(item);
         }
     }
 }

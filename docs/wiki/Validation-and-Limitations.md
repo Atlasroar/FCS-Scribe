@@ -6,14 +6,14 @@ complete editor compatibility.
 
 ## Automated and disposable-copy evidence
 
-The recorded beta 2 checks passed. These include session-journal and checkpoint
-automation coverage added since v0.1.0-beta.1:
+The recorded beta 3 checks passed. These retain beta 2's session-journal and
+checkpoint coverage and add grouped-menu coverage:
 
 | Check | Result | Boundary |
 | --- | --- | --- |
 | Dependency-free core checks | 138 passed | Includes session deltas/replay, idempotent compilation, explicit interrupted-tail recovery, complete-corruption rejection, missing history/storage, old-format compatibility, writer exclusion, target protection and independent deadlines |
-| Actual FCS methods on copied vanilla data | 116 passed | Includes background start/resume, new-session identities, durable recording, automatic/manual compilation, ten-button help, defaults and error handling alongside previous coverage |
-| Actual FCS methods on a representative copied mod | 115 passed | Same follow-up coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
+| Actual FCS methods on copied vanilla data | 136 passed | Includes exact menu grouping, hover/keyboard help, overflow access, serialized menu dispatch and deferral while menus are open, alongside background start/resume, durable recording and compilation |
+| Actual FCS methods on a representative copied mod | 135 passed | Same coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
 
 The integration host initializes actual FCS forms without launching the complete
 interactive editor/mod-selector workflow. It exercises unsaved overrides,
@@ -25,7 +25,7 @@ unknown and unpublished values, current required/reference lists without header
 mutation, malformed/partial XML and DTD rejection, PNG/JPEG/GIF byte preservation,
 new-file/source protection, stale previews, the exact 1 MB boundary and refresh/
 upload blocking with offline capture preserved. Actual
-FCS MDI parenting and every action button's hover/focus help are exercised
+FCS MDI parenting and every menu action's hover/keyboard help are exercised
 under a generic WinForms message loop so async continuations stay on the UI
 thread. This does not launch FCS's complete startup/mod-selector workflow.
 
@@ -52,6 +52,8 @@ New/resume/legacy-conversion/settings dialogs, every timer interval, long-runnin
 validation/close and restart recovery also need interactive acceptance.
 Also exercise the 30-minute schedule, discrepancy confirmation, recovery
 approval/cancellation, two editor instances and manual session archiving.
+Beta 3's grouped menus also require real-editor mouse/keyboard, small-window
+layout and MDI acceptance; disposable-copy results do not close this gate.
 
 Broader dependency stacks, other extensions, unsupported/read-only modes, and
 visible failure handling also need the checks recorded in the

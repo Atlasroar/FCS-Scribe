@@ -26,6 +26,10 @@ the extension selector, and open a writable `.mod` in normal editing mode.
 The plugin adds an FCS-Scribe toolbar button and opens as an embedded MDI child.
 Hover over action buttons, or focus them with Tab, to see descriptions at the
 bottom; operation status stays visible separately.
+In **v0.1.0-beta.3**, actions are grouped into **Core**, **Workshop**
+and **Draft** menus, with separate **Apply approved notes** and **Settings**
+entries. See the [feature list](Feature-List#1-embedded-window-and-contextual-help)
+for the menu layout and keyboard help; the published beta 2 keeps its button row.
 
 Install FCS Extended from its upstream distribution; this project's archive
 does not include or replace upstream binaries. Start with disposable mods and

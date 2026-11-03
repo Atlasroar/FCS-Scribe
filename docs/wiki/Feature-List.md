@@ -6,6 +6,8 @@ settings are included in v0.1.0-beta.2.** The earlier v0.1.0-beta.1
 still uses session-only baselines and non-advancing manual reviews.
 Interactive FCS Extended acceptance remains open. Planned features at the end
 are not implemented.
+**v0.1.0-beta.3** groups the window actions into menus as described below.
+The earlier beta 2 archive uses the flat button row.
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).
@@ -15,16 +17,16 @@ For evidence and unsupported cases, see [Validation and limitations](Validation-
 | Feature | How to access it | What it produces |
 | --- | --- | --- |
 | Embedded documentation window | FCS-Scribe toolbar button | An MDI child inside FCS, with change, draft and Workshop tabs |
-| Contextual button help | Hover over a button or focus it with Tab | An explanation at the bottom, separate from operation status |
-| Resumable baseline | Start tracking | A new or validated saved checkpoint and evidence history |
-| Change catalogue | Review changes | Exact before/after evidence and a successfully saved checkpoint |
-| Session consolidation | Compile journal | Append durable session entries to the main journal without duplicates or deleting originals |
-| Review and export settings | Plugin settings | Manual or 30/60/300/600-second reviews and default JSON directory |
-| Manual AI handoff | Export AI packet | Schema-2 JSON with evidence, context, instructions and a response template |
-| Editable draft | Import draft or Paste draft | JSON you can review and edit before applying |
+| Contextual action help | Hover over a menu action or select it with the keyboard | An explanation at the bottom, separate from operation status |
+| Resumable baseline | Core > Start tracking | A new or validated saved checkpoint and evidence history |
+| Change catalogue | Core > Review changes | Exact before/after evidence and a successfully saved checkpoint |
+| Session consolidation | Core > Compile journal | Append durable session entries to the main journal without duplicates or deleting originals |
+| Review and export settings | Settings | Manual or 30/60/300/600-second reviews and default JSON directory |
+| Manual AI handoff | Core > Export AI packet | Schema-2 JSON with evidence, context, instructions and a response template |
+| Editable draft | Draft > Import draft or Paste draft | JSON you can review and edit before applying |
 | Approved record notes | Apply approved notes | Appended FCS Notes/TODO entries; FCS is marked dirty, not saved |
-| Workshop information | Workshop info tab or Export Workshop info | Local/staged/cached metadata, source details and warnings |
-| Preview-image archive | Archive preview image | A new, byte-identical copy of the local PNG/JPEG/GIF preview |
+| Workshop information | Workshop info tab or Workshop > Export Workshop info | Local/staged/cached metadata, source details and warnings |
+| Preview-image archive | Workshop > Archive preview image | A new, byte-identical copy of the local PNG/JPEG/GIF preview |
 
 ## 1. Embedded window and contextual help
 
@@ -33,10 +35,22 @@ mode, then select **FCS-Scribe** on the FCS toolbar. Scribe opens as a standard
 MDI child inside FCS, rather than a separate owned desktop window. Selecting
 the toolbar action again brings the existing Scribe window forward.
 
-The window contains **Changes and warnings**, **Editable draft JSON**, and
-**Workshop info** tabs. Hover over any of its ten action buttons, or focus
-one with Tab, to read what it does in the bottom help area. The last
-operation's status remains visible separately.
+Beta 3 uses five top-level entries inside Scribe:
+
+- **Core:** Start tracking, Review changes, Compile journal and Export AI packet.
+- **Workshop:** Export Workshop info and Archive preview image.
+- **Draft:** Import draft and Paste draft.
+- **Apply approved notes:** a separate approval action.
+- **Settings:** a separate configuration action, called Plugin settings in beta 2.
+
+All ten actions remain available. Hover over a menu action or select it with
+keyboard navigation to read its explanation in the bottom help area. Menus are
+disabled while an action is running and do not merge into the parent FCS menu.
+Narrow windows keep remaining entries accessible through an overflow menu.
+Automatic work waits until open menus close rather than interrupting selection.
+The last operation's status remains visible separately. The **Changes and
+warnings**, **Editable draft JSON**, and **Workshop info** tabs are unchanged.
+The published beta 2 uses the earlier flat button row.
 
 The adapter rejects unsupported executable builds, read-only sessions and
 merge/translation modes. It supports the inspected Steam FCS 2.14.2 build,
@@ -159,7 +173,10 @@ combine entries intended for the same target.
 
 A deleted record cannot hold a new note. Its template target is left empty
 so you can explicitly select a surviving record to hold the documentation.
-An incomplete draft is rejected rather than partially accepted.
+Empty or malformed note entries and unknown cited change IDs are rejected.
+Validation does **not yet require every exported change to be cited**: review
+the draft's evidence coverage explicitly. This gap is tracked as S01 in the
+[stabilization plan](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/plan.md#s01-high-incomplete-evidence-coverage-can-pass-draft-validation).
 
 No evidence-ID check can establish that the assistant's prose is correct.
 Review its claims, quantities, conditions and interpretation yourself.
@@ -253,7 +270,7 @@ and rejects larger previews.
 
 ## 9. Plugin settings: review scheduling and export defaults
 
-Select **Plugin settings** to choose **Manual** (default), **30 seconds**,
+Select **Settings** (**Plugin settings** in beta 2) to choose **Manual** (default), **30 seconds**,
 **1 minute**, **5 minutes** or **10 minutes**. Automatic reviews durably append
 session deltas like manual reviews; they do not save the mod, apply AI notes or
 send network requests.

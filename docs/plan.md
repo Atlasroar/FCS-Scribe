@@ -36,10 +36,135 @@ reusable for saved-data analysis and eventual wiki generation.
 | Requested follow-up | Embedded window and contextual help | Native MDI child and per-button bottom help implemented; construction/event checks pass; interactive acceptance remains |
 | Beta 2 | Resumable tracking and session journals | Full initial baseline, timestamped delta logs and durable replay implemented; history UI/draft persistence remain planned |
 | Beta 2 | Recording, compilation and export settings | Manual/30/60/300/600-second recording, explicit/30-minute compilation and active-mod defaults implemented |
+| Beta 3 stabilization | Grouped window menus | Core, Workshop and Draft dropdowns with standalone approval/settings implemented and disposable-copy checked; real FCS Extended UI acceptance remains |
 | Next | Markdown export | Planned; use the existing verified catalogue rather than a second diff engine |
 | Next, staged | OCS integration | Repository assessment complete; optional read-only saved-data backend planned, not installed or implemented |
 | Later | Wiki-ready export | Planned after dependency/provenance validation |
 | Optional | Direct AI connection | Planned only after the manual workflow is reliable |
+
+## Stabilization gate: before further feature work
+
+The current user-directed UI cleanup is the first work item. After that, address
+S01-S16 **one issue at a time**, in the order below, before starting new feature
+expansion. In particular, OCS implementation, Markdown/wiki exports and direct
+AI connections stay on hold. Existing checkmarks elsewhere describe their
+original scope; they do not close these newly identified gaps.
+
+Each issue needs a focused change or an explicitly accepted support boundary,
+regression evidence, accurate user-facing guidance and a recorded outcome before
+moving on. Known limitations do not imply a promise to build a mod-restoration
+system, capture every editor event, support every FCS version or query Steam.
+Do not silently reclassify unresolved defects as accepted limitations.
+
+### UI cleanup: grouped actions
+
+- [x] Replace the flat button row with Core (Start tracking, Review changes, Compile journal, Export AI packet), Workshop (Export Workshop info, Archive preview image) and Draft (Import draft, Paste draft) dropdowns.
+- [x] Keep Apply approved notes and Settings as separate top-level actions inside Scribe, without merging menus into the parent FCS window.
+- [x] Preserve every action's existing dispatch, explicit approval, busy/error handling and independent bottom help/status areas.
+- [x] Cover exact menu grouping, hover/keyboard-selection help, operation gating, narrow-window overflow, menu-based review and deferral of automatic work while menus are open on disposable FCS copies.
+- [x] Update wiki-source navigation guidance and distinguish beta 3 menus from the beta 2 button row.
+- [ ] Verify menu opening, keyboard navigation, small-window layout and FCS MDI interaction in the real FCS Extended acceptance pass (S09).
+
+Beta 3 checks passed: 138 core, 136 disposable vanilla FCS and 135
+representative-mod FCS checks, plus the plugin build. The representative mod
+has no instances; vanilla covers that mutation. Beta 3 contains this UI cleanup;
+beta 2 assets remain unchanged. The real-editor acceptance gate remains open.
+
+### S01. High: incomplete evidence coverage can pass draft validation
+
+- [ ] Resolve the mismatch between the wiki's incomplete-draft guarantee and validation that only checks each submitted citation.
+- [ ] Define complete coverage versus explicitly approved partial documentation, including safe retries after partial notes application; do not silently omit evidence.
+- [ ] Cover omitted records/change IDs, duplicate citations, deleted-record targets and partial-application retries; align the contract and wiki.
+
+### S02. High: AI handoff can omit accumulated recordings
+
+- [ ] Provide an explicit, reviewable way to document accumulated recordings instead of only pending changes or the latest matching saved batch.
+- [ ] Preserve batch/evidence identity and current-state validation; handle a Workshop/context-only recording making the previous gameplay batch ineligible.
+- [ ] Cover several automatic ticks, multiple sessions, context-only changes, unchanged reviews and restart without advancing or rewriting history merely to export.
+
+### S03. High: Workshop failures can stop ordinary tracking
+
+- [ ] Separate gameplay capture availability from optional Workshop/cache/preview availability without silently hiding extraction errors.
+- [ ] Represent unavailable metadata and its reason explicitly; preserve meaningful stale-draft checks and the no-Steam/no-save contract.
+- [ ] Cover corrupt caches, unsupported/oversized previews, missing data and active upload/refresh states during ordinary recording.
+
+### S04. Medium: editable drafts and export associations are not durable
+
+- [ ] Preserve draft/packet associations or require explicit save/discard protection before close, session replacement, Import and Paste overwrite work.
+- [ ] Validate restored drafts against their original evidence and current editor state; never imply that tracking history already backs up draft text.
+- [ ] Cover cancellation, restart, unsaved edits during background work and stale or missing associated packets.
+
+### S05. Medium: failed project creation can leave an orphaned marker
+
+- [ ] Make baseline/marker initialization recoverable when marker creation succeeds but baseline creation fails.
+- [ ] Clean up or repair only artifacts owned by that failed attempt; never damage existing storage or legacy backups.
+- [ ] Inject permission/write/commit failures and verify that retry or recovery works without ambiguous "project already exists" errors.
+
+### S06. Medium: invalid settings can block the entire window
+
+- [ ] Offer an explicit settings recovery/reset path even when settings cannot be loaded during window construction.
+- [ ] Report corrupt settings and preserve recoverable originals; avoid silent defaults or overwriting another instance's changes.
+- [ ] Cover malformed/unsupported settings, missing custom directories, stale settings hashes and simultaneous editor instances.
+
+### S07. Medium: compilation deadlines can be deferred indefinitely
+
+- [ ] Stop unrelated settings changes, such as export-folder changes, from resetting an existing compilation deadline.
+- [ ] Define the handling of pending compilation across short sessions and interval changes; make retained compilation debt visible without silently compiling in manual mode.
+- [ ] Cover repeated settings saves, short-session restarts, manual/automatic transitions, busy deferral and independent recording deadlines.
+
+### S08. Medium: exports can overwrite inactive tracking projects
+
+- [ ] Protect recognized inactive project anchors and reserved storage, including Workshop export when no project is open.
+- [ ] Explain the rejection and preserve ordinary user-selected export locations; do not rely solely on a generic overwrite confirmation.
+- [ ] Cover another project's baseline, markers/backups and current storage alongside valid existing AI/Workshop export destinations.
+
+### S09. High acceptance gate: complete the real FCS Extended workflow
+
+- [ ] Run the interactive acceptance items in sections 1-5B on disposable mods/notes, including the new menu UI.
+- [ ] Exercise startup/discovery, focus commits, dialogs, scheduling, resize/minimize/close/restart, other extensions and visible failure paths.
+- [ ] Record actual results and remaining exceptions; standalone form/method checks do not close this gate.
+
+### S10. Support boundary: tracking is not mod recovery
+
+- [ ] Make recorded state versus saved mod state unmistakable in start/resume/status/recovery guidance.
+- [ ] Exercise crash/discard discrepancies and confirm that continuing records differences rather than silently restoring or saving the mod.
+- [ ] Document a practical mod-and-notes backup workflow without adding an unverified binary writer or restoration feature.
+
+### S11. Support boundary: partial capture and interval sampling
+
+- [ ] Keep a clear supported/omitted-state matrix, including pending controls, dialogue buffers and external files.
+- [ ] Explain and verify that A-to-B-to-A edits between recordings are not an event log; zero evidence is not proof of no editor changes.
+- [ ] Verify real control-commit behavior and retain explicit partial-extraction warnings wherever results are presented.
+
+### S12. Performance: full capture and growing history
+
+- [ ] Profile capture, comparisons, resume, per-recording session hashes and compilation scans on realistic large stacks/histories.
+- [ ] Establish measured latency/memory budgets, then reduce repeated full-file/full-history work without dropping integrity checks.
+- [ ] Cover retained compiled sessions, large changed records and long-running 32-bit editor sessions; document practical limits.
+
+### S13. Storage safety: incomplete backups and accidental distribution
+
+- [ ] Make the anchor/marker/journal/uncompiled-session dependency clear and validate restore/copy workflows.
+- [ ] Provide practical safe-archival and pre-Workshop-upload guidance while retaining the requested active-mod-folder default.
+- [ ] Cover missing or wrongly archived files and privacy warnings for full loaded/dependency data; never silently prune required history.
+
+### S14. Portability: path identity and divergent histories
+
+- [ ] Define a verified relocation/new-baseline workflow for moved mods or another machine without bypassing identity checks.
+- [ ] Explain linear history, branch divergence and load-order incompatibility before users attempt version-control merges.
+- [ ] Cover moved/copied paths and divergent chains; automatic journal merging remains outside the verified contract.
+
+### S15. Notes safety: partial application and sidecar distribution
+
+- [ ] Improve per-record partial-application reporting and verified retry guidance without promising rollback or reapplying completed notes.
+- [ ] Make shared per-record notes sidecars and their separate backup/distribution requirements explicit in the approval workflow.
+- [ ] Exercise failures between records, duplicate markers, inherited notes, normal save and restart on disposable copies.
+
+### S16. Compatibility and provenance boundaries
+
+- [ ] Retain the exact executable guard and document a verified compatibility matrix; do not treat unsupported builds as compatible.
+- [ ] Exercise representative dependency stacks and keep unresolved base/locked ownership visible rather than inferring source mods.
+- [ ] Keep cached/staged Workshop values distinct from published Steam truth; BFrizzleFoShizzle's documentation remains authoritative.
 
 ## 1. Integration feasibility and compatibility
 
@@ -131,7 +256,7 @@ is complete. Use disposable mods and notes files for manual checks.
 - [ ] Test unsupported-build, read-only, merge/translation-mode, malformed-draft, and notes-save failure behavior visibly.
 - [ ] Re-run relevant automated checks after fixes, update documentation, and explicitly decide whether the MVP is ready for normal use.
 
-Recorded implementation evidence: 138 core checks, 116 disposable vanilla
+Recorded beta 2 implementation evidence: 138 core checks, 116 disposable vanilla
 integration checks, and 115 representative-mod integration checks passed. The
 mod fixture had no instances and explicitly skipped that mutation; vanilla
 coverage includes it. These results do not replace interactive acceptance.
@@ -147,7 +272,7 @@ coverage includes it. These results do not replace interactive acceptance.
 - [x] Archive the local preview byte-for-byte, detect PNG/JPEG/GIF encoding despite `.img`, report size/hash, and preserve the original.
 - [x] Require a new archive outside Kenshi, reject overwrite/mod targets/stale previews, and exercise the exact 1 MB size boundary.
 - [x] Embed Scribe as a native MDI child of FCS rather than an owned desktop window.
-- [x] Give all ten current action buttons bottom-of-window hover and keyboard-focus descriptions without erasing operation status.
+- [x] Give all ten actions bottom-of-window hover and keyboard descriptions without erasing operation status; the current UI follow-up moves them into menus.
 - [x] Exercise missing/partial/corrupt caches, stale dialogs, explicit unpublished/unknown values, dependency reads without mutation, upload/refresh blocking without disabling offline capture, image formats, archive failures, MDI parenting and help events on disposable FCS copies.
 - [ ] Manually verify embedded resizing, minimize/restore, close/reopen, hover/focus help, and Workshop tab behavior in FCS Extended.
 - [ ] Manually compare all fields with the actual Workshop window, archive a real preview, and verify offline/cache/unknown warnings.
@@ -222,9 +347,10 @@ Implementation follows the design decision and MVP acceptance gate.
 
 ## 7. Next features
 
-Remaining history UI and export work follows MVP acceptance. The beta 2
-checkpoint foundation is already implemented. OCS design research can proceed
-independently, but its implementation must not block stabilizing the live plugin.
+Remaining feature expansion follows the stabilization gate and MVP acceptance.
+The beta 2 checkpoint foundation is already implemented. History/export changes
+needed to resolve S02 are stabilization work; broader history UI, OCS and new
+output formats remain deferred.
 
 ### Session history
 
@@ -265,8 +391,8 @@ saved-data backend where it has passed cross-validation.
 
 ## Working order
 
-1. Finish the real FCS Extended acceptance gate and fix any issues it exposes.
-2. Complete OCS design decisions, then implement/test the optional read-only backend.
-3. Add session history and Markdown exports as independently scoped follow-ups.
-4. Validate dependency provenance before building wiki-ready exports.
-5. Add a direct AI connection only if explicitly prioritized; it is not an MVP prerequisite.
+1. Finish the requested menu cleanup without changing existing action semantics.
+2. Address S01-S16 one at a time, recording regression evidence and any explicitly accepted support boundaries.
+3. Close the real FCS Extended acceptance gate and any issues it exposes before new feature expansion.
+4. Only then resume OCS design/implementation, broader session history and Markdown exports as independently scoped work.
+5. Validate dependency provenance before wiki-ready exports; a direct AI connection remains optional and explicitly prioritized.

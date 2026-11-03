@@ -194,21 +194,68 @@ internal static class IntegrationTests
         using (var window = new ScribeWindow(adapter, editor, Path.Combine(Directory.GetCurrentDirectory(), "plugin-settings.json")))
         {
             Check(window.IsMdiChild && window.MdiParent == editor, "Scribe uses FCS's actual MDI container");
-            var actions = window.Controls.OfType<FlowLayoutPanel>().Single();
+            var actions = window.Controls.OfType<MenuStrip>().Single();
             var help = (Label)FcsAdapter.Field(window, "help");
             var status = (Label)FcsAdapter.Field(window, "status");
             string originalStatus = status.Text;
-            Check(actions.Controls.OfType<Button>().Count() == 10, "all ten actions are available");
-            foreach (Button button in actions.Controls.OfType<Button>())
+            var menus = actions.Items.Cast<ToolStripMenuItem>().ToList();
+            Check(menus.Select(x => x.Text.Replace("&", "")).SequenceEqual(
+                new[] { "Core", "Workshop", "Draft", "Apply approved notes", "Settings" }),
+                "five top-level menus/actions replace the flat button row");
+            Check(window.MainMenuStrip == actions && !actions.AllowMerge && actions.TabStop,
+                "menus stay inside Scribe and support keyboard access without merging into FCS");
+            string[][] groups = {
+                new[] { "Start tracking", "Review changes", "Compile journal", "Export AI packet" },
+                new[] { "Export Workshop info", "Archive preview image" },
+                new[] { "Import draft", "Paste draft" }
+            };
+            for (int i = 0; i < groups.Length; i++)
+                Check(menus[i].DropDownItems.Cast<ToolStripMenuItem>().Select(x => x.Text.Replace("&", "")).SequenceEqual(groups[i]),
+                    menus[i].Text + " contains the requested actions in order");
+            var commands = menus.SelectMany(x => x.HasDropDownItems ?
+                x.DropDownItems.Cast<ToolStripMenuItem>() : new[] { x }).ToList();
+            Check(commands.Count == 10, "all ten original actions remain available");
+            foreach (ToolStripMenuItem item in menus.Take(3).Concat(commands))
             {
-                typeof(Control).GetMethod("OnMouseEnter", Flags).Invoke(button, new object[] { EventArgs.Empty });
-                Check(!String.IsNullOrEmpty(button.AccessibleDescription) && help.Text == button.AccessibleDescription &&
-                    status.Text == originalStatus, button.Text + " hover explains action without erasing operation status");
-                typeof(Control).GetMethod("OnMouseLeave", Flags).Invoke(button, new object[] { EventArgs.Empty });
-                Check(help.Text != button.AccessibleDescription, button.Text + " hover help clears on exit");
-                typeof(Control).GetMethod("OnEnter", Flags).Invoke(button, new object[] { EventArgs.Empty });
-                Check(help.Text == button.AccessibleDescription, button.Text + " keyboard focus explains action");
-                typeof(Control).GetMethod("OnLeave", Flags).Invoke(button, new object[] { EventArgs.Empty });
+                typeof(ToolStripItem).GetMethod("HandleMouseEnter", Flags).Invoke(item, new object[] { EventArgs.Empty });
+                Check(!String.IsNullOrEmpty(item.AccessibleDescription) && help.Text == item.AccessibleDescription &&
+                    status.Text == originalStatus, item.Text + " hover explains action without erasing operation status");
+                typeof(ToolStripItem).GetMethod("HandleMouseLeave", Flags).Invoke(item, new object[] { EventArgs.Empty });
+                Check(help.Text != item.AccessibleDescription, item.Text + " hover help clears on exit");
+            }
+            var completion = new TaskCompletionSource<int>();
+            Task operation = (Task)FcsAdapter.Call(window, "RunBusy", new Func<Task>(() => completion.Task));
+            try { Check(!actions.Enabled, "the entire menu is disabled while an operation is pending"); }
+            finally { completion.SetResult(0); AwaitUi(operation); }
+            Check(actions.Enabled, "the menu is re-enabled after an operation completes");
+            using (var host = new Form { IsMdiContainer = true, ShowInTaskbar = false, Opacity = 0,
+                Width = 1200, Height = 900 })
+            {
+                window.MdiParent = host;
+                host.Show(); window.Show();
+                foreach (ToolStripMenuItem menu in menus)
+                {
+                    menu.Select(); actions.Refresh();
+                    Check(help.Text == menu.AccessibleDescription, menu.Text + " keyboard selection explains the menu/action");
+                    if (!menu.HasDropDownItems) continue;
+                    menu.ShowDropDown();
+                    foreach (ToolStripMenuItem item in menu.DropDownItems)
+                    {
+                        item.Select(); menu.DropDown.Refresh();
+                        Check(help.Text == item.AccessibleDescription && status.Text == originalStatus,
+                            item.Text + " keyboard selection explains the action without erasing operation status");
+                    }
+                    menu.HideDropDown();
+                }
+                window.Width = 320; window.PerformLayout(); actions.PerformLayout();
+                Check(actions.OverflowButton.Visible && menus.Last().Placement == ToolStripItemPlacement.Overflow,
+                    "narrow windows retain access to actions through the overflow menu");
+                actions.OverflowButton.ShowDropDown();
+                menus.Last().Select(); actions.OverflowButton.DropDown.Refresh();
+                Check(help.Text == menus.Last().AccessibleDescription,
+                    "keyboard selection in the overflow menu retains contextual help");
+                actions.OverflowButton.HideDropDown();
+                window.Hide(); window.MdiParent = editor;
             }
 
             Check(window.Controls.OfType<TabControl>().Single().TabPages.Cast<TabPage>().Any(x => x.Text == "Workshop info"),
@@ -262,7 +309,16 @@ internal static class IntegrationTests
             settings.ReviewSeconds = 0;
             FcsAdapter.Call(window, "ConfigureTimer");
             Check(!timer.Enabled, "manual review disables scheduling");
-            RunWindow(window, "Review");
+            ToolStripMenuItem reviewAction = window.MainMenuStrip.Items.Cast<ToolStripMenuItem>().First()
+                .DropDownItems.Cast<ToolStripMenuItem>().Single(x => x.Text.Replace("&", "") == "Review changes");
+            reviewAction.PerformClick();
+            var reviewTimeout = System.Diagnostics.Stopwatch.StartNew();
+            while ((bool)FcsAdapter.Field(window, "busy") && reviewTimeout.Elapsed < TimeSpan.FromMinutes(3))
+            {
+                Application.DoEvents(); Thread.Sleep(10);
+            }
+            Check(!(bool)FcsAdapter.Field(window, "busy") && !((bool)FcsAdapter.Field(window, "automaticPaused")),
+                "the Review changes menu dispatches through the serialized asynchronous operation gate");
             Check(first.EntryCount == 0, "unchanged reviews do not append duplicate checkpoints");
             RunWindow(window, "ResumePath", path);
             JournalProject resumed = (JournalProject)FcsAdapter.Field(window, "project");
@@ -286,6 +342,13 @@ internal static class IntegrationTests
                     Put(window, "automaticPaused", false);
                     FcsAdapter.Call(window, "ConfigureTimer");
                     Put(header, "Author", "Automatic checkpoint fixture");
+                    var coreMenu = (ToolStripMenuItem)window.MainMenuStrip.Items[0];
+                    coreMenu.ShowDropDown();
+                    FcsAdapter.Call(timer, "OnTick", EventArgs.Empty);
+                    Check(!(bool)FcsAdapter.Field(window, "busy") &&
+                        ((JournalProject)FcsAdapter.Field(window, "project")).EntryCount == 0,
+                        "automatic work defers while the user is browsing a menu");
+                    coreMenu.HideDropDown();
                     FcsAdapter.Call(timer, "OnTick", EventArgs.Empty);
                     var timeout = System.Diagnostics.Stopwatch.StartNew();
                     while ((bool)FcsAdapter.Field(window, "busy") && timeout.Elapsed < TimeSpan.FromMinutes(3))
