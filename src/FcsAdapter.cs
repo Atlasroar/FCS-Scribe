@@ -218,6 +218,12 @@ namespace FcsScribe
             };
         }
 
+        public string ActiveModDirectory()
+        {
+            EnsureReady();
+            return Path.GetDirectoryName(Path.GetFullPath((string)Property(nav, "ActiveFile")));
+        }
+
         public PreviewImage ArchivePreview(string destination, string expectedHash)
         {
             EnsureReady();

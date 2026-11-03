@@ -17,7 +17,8 @@ to replace FCS, autonomously edit gameplay, or make an AI provider mandatory.
 
 | Area | Available in the experimental plugin | Intended expansion |
 | --- | --- | --- |
-| Tracking | Explicit in-memory baseline and deterministic comparison of the captured model | Persistent baselines and documentation-batch history |
+| Tracking | One project baseline, timestamped delta session logs and resumable journal history | History browsing and multi-batch documentation workflows |
+| Review scheduling | Manual or opt-in 30-second/1/5/10-minute recordings; manual/30-minute compilation | Broader interactive acceptance |
 | Change evidence | Stable IDs, names, exact field/reference values, layers, instances, and unresolved-data warnings | Verified dependency and field-level provenance |
 | AI documentation | Manual JSON export/import, editable drafts, evidence IDs, and explicit approval | Optional direct provider connection |
 | FCS notes | Append through the existing Notes/TODO facility; preserve prior notes and use normal FCS Save | Improved workflow after interactive acceptance |
@@ -25,11 +26,12 @@ to replace FCS, autonomously edit gameplay, or make an AI provider mandatory.
 | Saved-data analysis | Not implemented | Optional read-only OpenConstructionSet backend and installation discovery |
 | Published documentation | Project documentation and wiki | Markdown changelogs and dependency-resolved wiki-ready exports |
 
-The **v0.1.0-beta.1 prerelease remains experimental**, restricted to one inspected FCS build.
+The **v0.1.0-beta.2 prerelease remains experimental**, restricted to one inspected FCS build.
 Interactive FCS Extended acceptance and broader mod-stack validation remain
 open; planned features are not included simply because they appear above.
-See the [beta release notes](docs/releases/v0.1.0-beta.1.md) for the changes
-since the initial alpha.
+See the [beta release notes](docs/releases/v0.1.0-beta.2.md) for resumable session
+journals, recording/compilation scheduling and export-folder settings added
+since beta 1.
 
 **Important:** these notes are stored by FCS in editor-side
 `data\__TODO__<user>.txt` files, **not inside the `.mod` file**. They are keyed by
@@ -81,10 +83,12 @@ bundle Kenshi, FCS, or upstream FCS Extended binaries.
 
 ## Workflow
 
-1. Finish any active field edit and select **Start tracking**. This explicitly
-   captures an immutable, in-memory baseline; earlier edits are outside it.
+1. Finish any active field edit and select **Start tracking**. Choose a new
+   tracking JSON or resume an existing one after background validation. A new
+   file starts from the current model; earlier edits are outside its baseline.
 2. Edit the mod normally. **Review changes** compares against that baseline,
-   including unsaved edits already committed to FCS's model.
+   including unsaved edits already committed to FCS's model, flushes new changes
+   to the session log and advances the baseline only after a successful write.
 3. **Export AI packet** saves schema-2 JSON containing exact before/after
    values, IDs, dependency/load-order and Workshop context, warnings, AI instructions, and
    a `ResponseTemplate`. Inspect the packet before sharing mod content with
@@ -103,13 +107,93 @@ empty: choose a surviving record ID yourself, combining entries if necessary.
 Each target can appear only once in a draft. An incomplete draft is rejected
 rather than partially accepted.
 
-Saving and applying notes do not advance the baseline. Only **Start tracking**
-replaces it. A changed active mod, actual load order, or locked-mod list requires
+FCS saving and applying notes do not advance the baseline. Starting a new file
+or successfully saving a reviewed checkpoint does. A changed active mod,
+actual load order, or locked-mod list requires
 a new baseline. A save-time refresh of declared dependencies does not reset
 tracking, but can invalidate an already-exported draft. Gameplay changes after
 export block stale drafts. Batch markers detect repeat application to the same
-record. Baselines and exported-batch associations are lost when the plugin
-window/editor closes; copy unfinished drafts elsewhere before restarting.
+record. Resume restores the saved baseline and history, but editable drafts
+and their in-window export associations are not persisted; copy unfinished
+drafts elsewhere before restarting.
+
+## Tracking files and review settings
+
+**Start tracking** offers **New tracking JSON** and **Resume existing JSON**.
+The selected JSON is a full initial baseline, written once rather than on every
+tick. Every start/resume creates a distinct UTC timestamp + unique-ID session
+log. Parsing, replay/validation, comparison and disk work run in the background.
+Live FCS capture remains on its UI thread and can pause large sessions.
+
+For `fcs-scribe-tracking.json`, keep this storage together:
+
+```text
+fcs-scribe-tracking.json                  Initial full captured baseline
+fcs-scribe-tracking.json.scribe\
+  project.json                           Project identity and durable head
+  journal.jsonl                          Compiled change entries
+  sessions\<UTC timestamp>_<ID>.jsonl     One append-only log per session
+  recovery\<ID>.bak                       Originals retained after explicit recovery
+```
+
+Each recording stores changed records and current context, not another full
+loaded snapshot. Added/deleted records, provenance and context-only changes
+remain replayable. Unchanged state adds no entry. Each entry is flushed to disk
+before its baseline is adopted; a crash before compilation does not lose
+already completed recordings.
+
+**Plugin settings** selects **Manual** (default), **30 seconds**, **1 minute**,
+**5 minutes** or **10 minutes**. Automatic mode compiles durable session entries
+into the main journal every **30 minutes**; manual mode compiles only through
+**Compile journal**. Compilation appends without duplicate entry IDs and never
+deletes session files or rewrites the full baseline.
+
+Automatic work runs while Scribe is visible and not minimized, busy or blocked
+by a visible modal form. Deadlines are independent: recording and ordinary
+button actions do not postpone compilation. Busy work defers one due operation,
+not a backlog of overlapping ticks. Failures pause automation; reopen/validate
+after a journal write failure. Closing stops new ticks; an in-flight write may
+finish before its writer lease is released.
+No automatic review saves a `.mod`, applies AI notes or sends network requests.
+
+An exclusive project lease prevents cooperating Scribe instances from writing
+the same project. Hash/chain checks reject detected outside edits and invalid
+history; these are not signatures or a universal lock against external tools.
+An interrupted final JSONL line requires explicit recovery approval: preserve
+the original bytes in `recovery`, then remove only that incomplete tail.
+Complete but corrupt entries are rejected, never skipped.
+
+Resume replays the main journal and uncompiled sessions. Differences from the
+current editor require confirmation, because they may be lost/discarded unsaved
+edits. **Tracking is not a `.mod` backup and does not restore lost mod changes.**
+New roots detect a missing storage folder/head. Older full-state tracking JSONs
+remain readable unchanged, but cannot themselves signal a missing sidecar.
+
+Close Scribe before manually archiving session logs. Only fully compiled
+sessions are redundant; keep the baseline, `project.json`, main journal and
+all uncompiled sessions. The UI shows the number awaiting compilation. No
+history is automatically pruned. Back up the entire project, not just its JSON.
+
+Old schema-1/2 **AI packets are not baselines**. Loading one asks for conversion:
+preserve the exact original at `<file>.json.legacy.bak`, retain its evidence as
+history, and establish a fresh checkpoint from the **current editor state**.
+It does not reconstruct earlier state. Subsequent ticks append session entries;
+the original legacy backup is not rotated away.
+
+All JSON save dialogs default to the **active `.mod` file's own directory**.
+Settings can choose another existing default directory; individual dialogs
+still allow another location. Changing settings does not move an active
+tracking file. Settings persist in `%LOCALAPPDATA%\FCS-Scribe\settings.json`.
+File dialogs restore FCS's working directory, and manual exports cannot
+overwrite the currently active tracking JSON.
+
+**The baseline contains the full captured loaded model, including dependency
+records; session logs also contain potentially private mod data. Do not send
+tracking storage/backups to AI or include them in Workshop uploads.** Use **Export AI packet** for the compact
+handoff. It exports pending changes, or the most recent checkpoint with record
+evidence if its fingerprint still matches the current model. Older batches
+remain in tracking history; a history browser/combined AI export is not yet
+implemented.
 
 ## Workshop information and preview archives
 
@@ -170,7 +254,7 @@ Notes are ordinary editable text, not guaranteed-correct AI output. Evidence
 IDs are checked, but factual correctness still requires human review.
 Multi-record notes application is **not transactional**: errors report that
 partial in-memory notes may exist; inspect them before retrying or saving.
-No custom binary writer, silent save, mod overwrite, tracking history,
+No custom binary writer, silent mod save, mod overwrite,
 Markdown/wiki export, or direct AI-provider integration is implemented.
 
 ## Validation and inspection

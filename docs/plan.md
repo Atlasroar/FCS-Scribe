@@ -34,7 +34,8 @@ reusable for saved-data analysis and eventual wiki generation.
 | MVP | Safe notes insertion | Copy-based runtime checks pass; real FCS Extended approval/save workflow remains |
 | Requested follow-up | Workshop metadata and preview archive | Implemented and copy-tested; cached/local provenance explicit; interactive acceptance remains |
 | Requested follow-up | Embedded window and contextual help | Native MDI child and per-button bottom help implemented; construction/event checks pass; interactive acceptance remains |
-| Next | Session history | Planned; no cross-restart baseline/history persistence yet |
+| Beta 2 | Resumable tracking and session journals | Full initial baseline, timestamped delta logs and durable replay implemented; history UI/draft persistence remain planned |
+| Beta 2 | Recording, compilation and export settings | Manual/30/60/300/600-second recording, explicit/30-minute compilation and active-mod defaults implemented |
 | Next | Markdown export | Planned; use the existing verified catalogue rather than a second diff engine |
 | Next, staged | OCS integration | Repository assessment complete; optional read-only saved-data backend planned, not installed or implemented |
 | Later | Wiki-ready export | Planned after dependency/provenance validation |
@@ -64,7 +65,7 @@ Evidence: [feasibility report](feasibility.md), `src\FcsAdapter.cs`, and
 Evidence: `src\Core.cs`, `src\FcsAdapter.cs`, `tests\CoreTests.cs`, and
 `tests\IntegrationTests.cs`.
 
-- [x] Capture an immutable baseline only when the user explicitly selects Start tracking.
+- [x] Capture an immutable starting baseline through Start tracking; advance it only after successful checkpoint saves.
 - [x] Explain that edits made before tracking begins are outside the baseline.
 - [x] Compare against the tracking baseline, not just vanilla/base data.
 - [x] Use stable IDs rather than names for record identity.
@@ -130,8 +131,8 @@ is complete. Use disposable mods and notes files for manual checks.
 - [ ] Test unsupported-build, read-only, merge/translation-mode, malformed-draft, and notes-save failure behavior visibly.
 - [ ] Re-run relevant automated checks after fixes, update documentation, and explicitly decide whether the MVP is ready for normal use.
 
-Recorded implementation evidence: 47 core checks, 88 disposable vanilla
-integration checks, and 87 representative-mod integration checks passed. The
+Recorded implementation evidence: 138 core checks, 116 disposable vanilla
+integration checks, and 115 representative-mod integration checks passed. The
 mod fixture had no instances and explicitly skipped that mutation; vanilla
 coverage includes it. These results do not replace interactive acceptance.
 
@@ -146,10 +147,33 @@ coverage includes it. These results do not replace interactive acceptance.
 - [x] Archive the local preview byte-for-byte, detect PNG/JPEG/GIF encoding despite `.img`, report size/hash, and preserve the original.
 - [x] Require a new archive outside Kenshi, reject overwrite/mod targets/stale previews, and exercise the exact 1 MB size boundary.
 - [x] Embed Scribe as a native MDI child of FCS rather than an owned desktop window.
-- [x] Give all eight action buttons bottom-of-window hover and keyboard-focus descriptions without erasing operation status.
+- [x] Give all ten current action buttons bottom-of-window hover and keyboard-focus descriptions without erasing operation status.
 - [x] Exercise missing/partial/corrupt caches, stale dialogs, explicit unpublished/unknown values, dependency reads without mutation, upload/refresh blocking without disabling offline capture, image formats, archive failures, MDI parenting and help events on disposable FCS copies.
 - [ ] Manually verify embedded resizing, minimize/restore, close/reopen, hover/focus help, and Workshop tab behavior in FCS Extended.
 - [ ] Manually compare all fields with the actual Workshop window, archive a real preview, and verify offline/cache/unknown warnings.
+
+### 5B. Resumable tracking and scheduled checkpoint review (beta 2)
+
+- [x] Offer new-file and existing-JSON choices from Start tracking.
+- [x] Store one full starting state and versioned identity/fingerprints; retain existing full-state roots as compatible anchors.
+- [x] Validate saved state/history in the background, retain baseline identity across resume, and reject incompatible mod/load-order context.
+- [x] Preserve legacy AI exports as evidence and exact `.legacy.bak` bytes after explicit conversion approval, starting a fresh current-state baseline.
+- [x] Append durable changed-record/context deltas to one UTC timestamp + unique-ID session log per start/resume instead of rewriting full baselines.
+- [x] Persist a small atomic project/head marker and hold a project writer lease; detect missing required history and observed external edits.
+- [x] Compile missing entry IDs into the main append-only journal every 30 automatic minutes; provide explicit Compile journal in manual mode.
+- [x] Keep compilation independent of recording/button activity, defer busy/modal/minimized work and never run a catch-up backlog.
+- [x] Retain session originals; require all uncompiled logs and permit manual archival of compiled logs with the plugin closed.
+- [x] Recover only incomplete final lines after approval and durable original-byte backup; reject complete corruption without truncation.
+- [x] Confirm editor-versus-recorded-state discrepancies and explicitly distinguish tracking from mod backup/restoration.
+- [x] Advance the in-memory baseline only after a successful save; retain it and stop automatic review after errors.
+- [x] Offer Manual (default), 30 seconds, 1 minute, 5 minutes and 10 minutes in persisted Plugin settings.
+- [x] Serialize automatic actions, skip hidden/busy windows, stop on close and keep all live FCS reads on its UI thread.
+- [x] Default JSON dialogs to the active mod's actual directory; support custom defaults/individual locations without moving the active tracking file.
+- [x] Keep compact AI export available for pending evidence or the latest matching saved batch, without resetting imported drafts on each tick.
+- [x] Warn that full-state tracking files are large/private and must not be used for AI handoff or Workshop distribution.
+- [x] Exercise background start/resume, actual timer dispatch, independent interval/30-minute deadlines, idempotent compilation, crash-tail recovery, missing storage/head, legacy compatibility, writer exclusion and copied-data defaults.
+- [ ] Manually exercise new/resume/conversion/settings dialogs, long-running validation/close, all intervals and restart recovery in FCS Extended.
+- [ ] Add history browsing, combined batch export and persisted draft/export associations.
 
 ## 6. OpenConstructionSet integration
 
@@ -198,16 +222,17 @@ Implementation follows the design decision and MVP acceptance gate.
 
 ## 7. Next features
 
-These features follow MVP acceptance. OCS design research can proceed
+Remaining history UI and export work follows MVP acceptance. The beta 2
+checkpoint foundation is already implemented. OCS design research can proceed
 independently, but its implementation must not block stabilizing the live plugin.
 
 ### Session history
 
-- [ ] Persist baseline snapshots, identities/timestamps, dependency context, and documentation batches across editor restarts.
-- [ ] Restore history only after verifying active mod/context identity; clearly distinguish restored, stale, and incompatible sessions.
+- [x] Persist the baseline, identities/timestamps, dependency context and evidence across editor restarts using an anchor plus durable session/main journals.
+- [x] Restore history only after verifying active mod/context identity; report restored checkpoints/pending changes and reject incompatible sessions.
 - [ ] Preserve duplicate detection and draft-to-export associations across restarts without resetting the baseline on save/apply.
-- [ ] Add explicit user controls for selecting/advancing baselines and managing history.
-- [ ] Define storage/version migration, corruption/error behavior, and retention before implementation.
+- [ ] Add history browsing, batch selection and retention controls beyond new/resume/review.
+- [x] Define versioned storage/legacy conversion, explicit corruption failures, rotating small-marker backup, permanent legacy/recovery backups and unpruned session/main history.
 - [ ] Test restart recovery, stale drafts, changed mods/dependencies, and notes-only changes.
 
 ### Markdown changelogs/documentation
