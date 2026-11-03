@@ -7,6 +7,7 @@ It does not replace FCS or load an AI provider.
 | --- | --- | --- |
 | `src\Core.cs` | Typed snapshots, immutable baseline copy, deterministic changes, fingerprints, packets, and draft validation | Depend on FCS, WinForms, or a provider SDK |
 | `src\FcsAdapter.cs` | Guard the FCS executable and read/update verified editor objects on the UI thread | Guess APIs, silently omit unsupported values, or write binary mods |
+| `src\WorkshopArchive.cs` | Known-field XML cache contract and bounded, lossless local preview archiving | Contact Steam, overwrite prior archives, or re-encode/replace source images |
 | `src\Plugin.cs` | Implement the upstream plugin interface, attach a toolbar action, and present review/import/approval UI | Automatically trust/apply AI text or save the mod |
 | `scripts` and `tests` | Build/package artifacts, inspect metadata, and exercise core/disposable-FCS behavior | Change the live installation during validation |
 
@@ -19,6 +20,9 @@ for WinForms `Application.Idle` to find the actual `baseForm` and attach UI.
 
 No Harmony or native hook is added. RE_Kenshi/KenshiLib's native game-runtime
 interfaces are not assumed to be managed editor APIs.
+The Scribe form uses the actual `baseForm` as its standard WinForms `MdiParent`,
+like native FCS windows. A separate bottom help label describes each action on
+mouse hover or keyboard focus without replacing the persistent operation status.
 
 ## Evidence flow
 

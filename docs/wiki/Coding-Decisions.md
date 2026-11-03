@@ -22,6 +22,31 @@ All editor operations stay on the WinForms thread. No background read mutates
 or traverses live editor collections concurrently, and no hook library is
 introduced as a speculative workaround.
 
+## Use native MDI hosting and separate contextual help
+
+FCS's inspected main form is a standard WinForms MDI container, and its own
+Workshop and notes forms use that parent. Scribe uses the same mechanism
+instead of a second owned top-level window. Button hover and keyboard-focus
+help use a dedicated bottom label so descriptions never erase action results.
+
+## Capture Workshop context without invoking publishing behavior
+
+The active header, matching `ModInfo.info`, and staged change-notes textbox
+have different lifecycles. A stale dialog from another mod must not supply
+metadata. Without a matching dialog, read the known fields of the local
+`.info` XML cache with DTDs/external resolution disabled, surfacing malformed
+data rather than using FCS's silent `ModData.Load` fallback.
+
+FCS's UI refresh rewrites dependency declarations, and its upload handler saves
+the mod. Neither is an acceptable extraction API. Read the verified dependency
+derivation methods directly instead. Cache provenance, unknown values and
+unpublished IDs remain explicit; cached values do not prove published state.
+
+Archive the local `.img` preview as its actual PNG/JPEG/GIF encoding, preserving
+the original bytes and SHA-256. Respect FCS's 1 MB bound in the 32-bit process.
+Use a new destination outside the installation, never a mod or existing archive.
+This is not a Steam image downloader or a generic external-file tracker.
+
 ## Make the baseline explicit and immutable
 
 Comparison means "changed since Start tracking," not "different from vanilla."

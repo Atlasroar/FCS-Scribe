@@ -21,12 +21,15 @@ to replace FCS, autonomously edit gameplay, or make an AI provider mandatory.
 | Change evidence | Stable IDs, names, exact field/reference values, layers, instances, and unresolved-data warnings | Verified dependency and field-level provenance |
 | AI documentation | Manual JSON export/import, editable drafts, evidence IDs, and explicit approval | Optional direct provider connection |
 | FCS notes | Append through the existing Notes/TODO facility; preserve prior notes and use normal FCS Save | Improved workflow after interactive acceptance |
+| Workshop information | Read-only local/staged metadata export and lossless preview-image archiving | Published Steam state/history requires a separately verified integration |
 | Saved-data analysis | Not implemented | Optional read-only OpenConstructionSet backend and installation discovery |
 | Published documentation | Project documentation and wiki | Markdown changelogs and dependency-resolved wiki-ready exports |
 
-This first release is **experimental**, restricted to one inspected FCS build.
+The **v0.1.0-beta.1 prerelease remains experimental**, restricted to one inspected FCS build.
 Interactive FCS Extended acceptance and broader mod-stack validation remain
 open; planned features are not included simply because they appear above.
+See the [beta release notes](docs/releases/v0.1.0-beta.1.md) for the changes
+since the initial alpha.
 
 **Important:** these notes are stored by FCS in editor-side
 `data\__TODO__<user>.txt` files, **not inside the `.mod` file**. They are keyed by
@@ -67,6 +70,9 @@ With FCS closed, copy that **FCS-Scribe directory** to
 its extension-selection window, and open a writable `.mod`. The plugin adds an
 **FCS-Scribe** toolbar button. Do not copy or replace FCS Extended's own plugin
 contract DLL. Begin with disposable mod copies and back up your FCS notes files.
+Scribe opens inside FCS as a normal MDI child window. Hover over any action
+button, or focus it with Tab, for an explanation at the bottom of the window;
+the last operation's status remains visible separately.
 
 For a packaged release, extract `FCS-Scribe-v<version>.zip` and copy its
 `FCS-Scribe` folder to the same location. Release archives contain this project's
@@ -79,8 +85,8 @@ bundle Kenshi, FCS, or upstream FCS Extended binaries.
    captures an immutable, in-memory baseline; earlier edits are outside it.
 2. Edit the mod normally. **Review changes** compares against that baseline,
    including unsaved edits already committed to FCS's model.
-3. **Export AI packet** saves versioned JSON containing exact before/after
-   values, IDs, dependency/load-order context, warnings, AI instructions, and
+3. **Export AI packet** saves schema-2 JSON containing exact before/after
+   values, IDs, dependency/load-order and Workshop context, warnings, AI instructions, and
    a `ResponseTemplate`. Inspect the packet before sharing mod content with
    an external AI assistant. The plugin never sends it anywhere.
 4. Ask the assistant to follow `Instructions` and return JSON matching
@@ -105,6 +111,39 @@ export block stale drafts. Batch markers detect repeat application to the same
 record. Baselines and exported-batch associations are lost when the plugin
 window/editor closes; copy unfinished drafts elsewhere before restarting.
 
+## Workshop information and preview archives
+
+The **Workshop info** tab reads the same local sources used by FCS's Steam
+Workshop window. **Export Workshop info** writes a standalone JSON file even
+without a tracking baseline or gameplay edits. AI packets also include this
+information as `Context.Workshop`, not as evidence of new gameplay changes.
+
+| Export field | Source and meaning |
+| --- | --- |
+| `ModName` | Workshop title, distinct from the active `.mod` filename |
+| `Author`, `Version`, `Description` | Current active mod header, including committed unsaved edits |
+| `Dependencies`, `ReferencedMods` | FCS-derived required mods and the additional parenthesized references in its dependency list |
+| `Tags`, `SteamId`, `Visibility`, `VisibilityCode` | Matching Workshop dialog state, or its saved local `.info` cache |
+| `ChangeNotes` | Current Workshop upload draft text; not published changelog history or record Notes/TODO |
+| `LastUpdate` | Cached FCS timestamp, preserving its round-trip date/time and timezone kind; not filesystem modification time |
+| `Preview` | Local preview availability, source filename, actual format, byte count and SHA-256 |
+
+Open the active mod's **Steam Workshop** window first to capture its staged
+title/tags/visibility and change-notes draft. Without a matching dialog, Scribe
+reads the saved cache when present. Unknown fields stay `null` with warnings;
+Steam ID `"0"` remains an explicit unpublished/default value. Steam IDs are
+strings to avoid JSON number precision loss. No Steam request, Refresh, Save
+or Upload is triggered. A cached visibility or timestamp is **not** a claim
+about the current published listing. Metadata changes can invalidate exported
+drafts, but do not produce record change IDs.
+
+**Archive preview image** copies FCS's local `_<mod>.img` file byte-for-byte
+to a new PNG, JPEG or GIF file using its actual encoding. Choose a new filename
+outside the Kenshi/FCS installation; existing archives are never overwritten.
+The source is neither replaced nor re-encoded. Missing, unsupported or oversized
+images are reported explicitly (the inspected FCS limit is 1 MB). Preview
+details in JSON do not embed the image: use this action to archive it separately.
+
 ## Catalogue and limitations
 
 The reusable core is independent of FCS, WinForms, and AI providers. It compares
@@ -119,9 +158,11 @@ value. These may describe the **same edit**, not separate gameplay changes.
 are explicitly unresolved. This is not a dependency-resolved wiki exporter.
 Unsupported scalar types stop extraction with an error.
 
-Every packet is labeled **partial extraction**. External files, mod metadata,
-layouts, dialogue editor buffers, and pending control edits are outside the
-catalogue. Do not infer completeness from a zero-change result. Changes wholly
+Every packet is labeled **partial extraction**. General external files,
+metadata change history, layouts, dialogue editor buffers, and pending control
+edits are outside the catalogue. Current Workshop context and the local preview
+are the documented exceptions, not comprehensive external-file tracking.
+Do not infer completeness from a zero-change result. Changes wholly
 outside the captured model cannot be used for stale-draft detection. Large
 catalogues run synchronously on FCS's UI thread and can pause the editor.
 

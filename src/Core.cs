@@ -41,6 +41,45 @@ namespace FcsScribe
     }
 
     [DataContract]
+    public sealed class PreviewImage
+    {
+        [DataMember(Order = 0)] public string Status;
+        [DataMember(Order = 1)] public string SourceFileName;
+        [DataMember(Order = 2)] public string Format;
+        [DataMember(Order = 3)] public long? ByteLength;
+        [DataMember(Order = 4)] public string Sha256;
+    }
+
+    [DataContract]
+    public sealed class WorkshopMetadata
+    {
+        [DataMember(Order = 0)] public string ModName;
+        [DataMember(Order = 1)] public string Author;
+        [DataMember(Order = 2)] public int Version;
+        [DataMember(Order = 3)] public string Description;
+        [DataMember(Order = 4)] public List<string> Dependencies;
+        [DataMember(Order = 5)] public List<string> ReferencedMods;
+        [DataMember(Order = 6)] public List<string> Tags;
+        [DataMember(Order = 7)] public string ChangeNotes;
+        [DataMember(Order = 8)] public string SteamId;
+        [DataMember(Order = 9)] public string LastUpdate;
+        [DataMember(Order = 10)] public string Visibility;
+        [DataMember(Order = 11)] public int? VisibilityCode;
+        [DataMember(Order = 12)] public PreviewImage Preview;
+        [DataMember(Order = 13)] public string Source;
+        [DataMember(Order = 14)] public List<string> Warnings = new List<string>();
+    }
+
+    [DataContract]
+    public sealed class WorkshopExport
+    {
+        [DataMember(Order = 0)] public int SchemaVersion = 1;
+        [DataMember(Order = 1)] public string ModFileName;
+        [DataMember(Order = 2)] public string ExportedUtc;
+        [DataMember(Order = 3)] public WorkshopMetadata Workshop;
+    }
+
+    [DataContract]
     public sealed class Snapshot
     {
         [DataMember(Order = 0)] public string ModId;
@@ -51,6 +90,7 @@ namespace FcsScribe
         [DataMember(Order = 5)] public List<Record> Records = new List<Record>();
         [DataMember(Order = 6)] public List<string> Warnings = new List<string>();
         [DataMember(Order = 7)] public string Scope = "In-memory, partial extraction";
+        [DataMember(Order = 8, EmitDefaultValue = false)] public WorkshopMetadata Workshop;
 
         public void Validate()
         {
@@ -89,6 +129,7 @@ namespace FcsScribe
                 foreach (string value in Dependencies) add("dependency:" + value);
                 add(LockedMods.Count.ToString(CultureInfo.InvariantCulture));
                 foreach (string value in LockedMods) add("locked:" + value);
+                if (Workshop != null) { add("workshop-v1"); add(Json.Write(Workshop)); }
                 add(Records.Count.ToString(CultureInfo.InvariantCulture));
                 foreach (Record record in Records.OrderBy(x => x.Id, StringComparer.Ordinal))
                 {
@@ -116,6 +157,7 @@ namespace FcsScribe
                 ModId = ModId, ModName = ModName, Scope = Scope,
                 LoadOrder = LoadOrder.ToList(), Dependencies = Dependencies.ToList(),
                 LockedMods = LockedMods.ToList(), Warnings = Warnings.ToList(),
+                Workshop = Workshop == null ? null : Json.Read<WorkshopMetadata>(Json.Write(Workshop)),
                 Records = Records.Select(record => new Record {
                     Id = record.Id, Type = record.Type, Name = record.Name,
                     Cells = record.Cells.Select(cell => new Cell {
@@ -164,7 +206,7 @@ namespace FcsScribe
     [DataContract]
     public sealed class Packet
     {
-        [DataMember(Order = 0)] public int SchemaVersion = 1;
+        [DataMember(Order = 0)] public int SchemaVersion = 2;
         [DataMember(Order = 1)] public string BatchId;
         [DataMember(Order = 2)] public string BaselineId;
         [DataMember(Order = 3)] public string BaselineCapturedUtc;
@@ -315,7 +357,8 @@ namespace FcsScribe
                 SourceFingerprint = fingerprint, Context = new Snapshot {
                     ModId = current.ModId, ModName = current.ModName, Scope = current.Scope,
                     LoadOrder = current.LoadOrder.ToList(), Dependencies = current.Dependencies.ToList(),
-                    LockedMods = current.LockedMods.ToList(), Warnings = current.Warnings.ToList()
+                    LockedMods = current.LockedMods.ToList(), Warnings = current.Warnings.ToList(),
+                    Workshop = current.Workshop == null ? null : Json.Read<WorkshopMetadata>(Json.Write(current.Workshop))
                 },
                 Changes = changes, ResponseTemplate = draft,
                 Instructions = "Return only JSON matching ResponseTemplate, keeping BatchId, SourceFingerprint and ChangeIds. " +

@@ -10,15 +10,22 @@ The recorded checks passed:
 
 | Check | Result | Boundary |
 | --- | --- | --- |
-| Dependency-free core checks | 41 passed | Deterministic changes, immutable baseline, typed values, references, context, draft validation, and serialization |
-| Actual FCS methods on copied vanilla data | 30 passed | Includes real fields, references, instance tombstones, notes, dirty state, and save/reopen |
-| Actual FCS methods on a representative copied mod | 29 passed | No instances in this fixture; that mutation was explicitly skipped and covered by vanilla |
+| Dependency-free core checks | 47 passed | Deterministic changes, immutable baseline, typed values, references, Workshop context, stale drafts, schema compatibility and serialization |
+| Actual FCS methods on copied vanilla data | 88 passed | Includes Workshop/cache/preview/MDI/help coverage plus real fields, references, instance tombstones, notes, dirty state and save/reopen |
+| Actual FCS methods on a representative copied mod | 87 passed | Same follow-up coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
 
 The integration host initializes actual FCS forms without launching the complete
 interactive editor/mod-selector workflow. It exercises unsaved overrides,
 active/inherited note preservation, existing TODO category preservation,
 duplicate rejection, no save on apply, normal save/reopen, unchanged captured
 gameplay records, and baseline retention.
+Workshop checks cover every requested field, staged values versus cached data,
+unknown and unpublished values, current required/reference lists without header
+mutation, malformed/partial XML and DTD rejection, PNG/JPEG/GIF byte preservation,
+new-file/source protection, stale previews, the exact 1 MB boundary and refresh/
+upload blocking with offline capture preserved. Actual
+FCS MDI parenting and every action button's hover/focus help are exercised
+without running the full interactive message loop.
 
 Original game/mod files are only copied; test saves go to a fresh ignored
 `build\integration-fixtures` directory. The Framework test host is explicitly
@@ -44,6 +51,9 @@ The real FCS Extended workflow still needs a manual acceptance pass for
 extension discovery, toolbar placement, field-focus/control commits, review,
 export/import/paste, draft editing/cancellation/approval, stale/duplicate
 messages, notes inspection, and normal save/restart.
+Also check embedded resize/minimize/restore/close behavior, bottom help layout,
+Workshop tab refresh, field agreement with a real Workshop dialog and preview
+archive selection/cancellation.
 
 Broader dependency stacks, other extensions, unsupported/read-only modes, and
 visible failure handling also need the checks recorded in the
@@ -54,8 +64,10 @@ An experimental prerelease does not mark those checkboxes complete.
 
 - One inspected Steam FCS 2.14.2 executable hash is supported; GOG and other
   builds are not automatically compatible.
-- Pending controls, separate dialogue buffers, external data files, layouts,
-  and mod metadata are outside comprehensive tracking.
+- Pending controls, separate dialogue buffers, general external data files,
+  layouts and metadata change history are outside comprehensive tracking.
+- Workshop fields are local/staged/cached context, not a current Steam query or
+  published changelog. Preview archiving supports only the local FCS image.
 - Base/locked field-level source mod provenance remains unresolved.
 - Notes are shared editor-side record annotations, not `.mod` content or
   Workshop release notes.

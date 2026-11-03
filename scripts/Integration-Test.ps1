@@ -14,11 +14,13 @@ foreach ($name in @('forgotten construction set.exe', 'PropertyGrid.dll', 'Dialo
     Copy-Item -LiteralPath (Join-Path $FcsDirectory $name) -Destination $fixture
 }
 Copy-Item -LiteralPath $FixtureMod -Destination (Join-Path $fixture 'fixture.mod')
+Copy-Item -LiteralPath (Join-Path $FcsDirectory 'FCS_extended\FCS_extended_plugin.dll') -Destination $fixture
 $compiler = Join-Path ([Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()) 'csc.exe'
+$sources = @(Get-ChildItem (Join-Path $root 'src') -Filter '*.cs' | ForEach-Object { $_.FullName })
 & $compiler /nologo /target:exe /platform:x86 /warnaserror+ "/out:$fixture\IntegrationTests.exe" `
     /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll `
-    /reference:System.Runtime.Serialization.dll `
-    (Join-Path $root 'src\Core.cs') (Join-Path $root 'src\FcsAdapter.cs') (Join-Path $root 'tests\IntegrationTests.cs')
+    /reference:System.Runtime.Serialization.dll "/reference:$fixture\FCS_extended_plugin.dll" `
+    $sources (Join-Path $root 'tests\IntegrationTests.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Integration test compilation failed.' }
 Push-Location $fixture
 try {
