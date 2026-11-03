@@ -87,6 +87,10 @@ namespace FcsScribe
                         "Workshop metadata is current context, not a list of new edits."
                 }
             };
+            if (snapshot.Workshop.Issues != null)
+                snapshot.Warnings.AddRange(snapshot.Workshop.Issues.Select(x =>
+                    "Workshop " + x.Component + " unavailable [" + x.Code + "]: " + x.Message +
+                    " Gameplay capture continues; unavailable values are not validated."));
             foreach (DictionaryEntry pair in items)
             {
                 object item = pair.Value;
@@ -123,30 +127,29 @@ namespace FcsScribe
             object live = Field(dialog, "info");
             object location = WorkshopLocation();
             string file = (string)Call(location, "GetFileName");
-            bool matching = live != null && Object.ReferenceEquals(Field(live, "header"), header) &&
-                String.Equals(Path.GetFullPath((string)Call(live, "GetFileName")), Path.GetFullPath(file),
-                    StringComparison.OrdinalIgnoreCase);
-            if (matching && (bool)Field(dialog, "uploading"))
-                throw new InvalidOperationException("Wait for the Workshop upload to finish before capturing its metadata.");
-            if (matching)
-            {
-                object steam = assembly.GetType("forgotten_construction_set.SteamManager", true)
-                    .GetField("instance", Flags).GetValue(null);
-                if (steam != null && (bool)Property(steam, "Enabled") &&
-                    !((Button)Field(dialog, "btnRefreshFromSteam")).Enabled &&
-                    !((Button)Field(dialog, "btnUpload")).Enabled)
-                    throw new InvalidOperationException("Wait for the Workshop refresh to finish before capturing its metadata.");
-            }
+            bool matching = MatchingWorkshop(live, header, file);
+            WorkshopIssue busy = BusyWorkshop(dialog, matching);
             var result = new WorkshopMetadata {
                 Author = (string)Field(header, "Author"),
                 Version = (int)Field(header, "Version"),
                 Description = (string)Field(header, "Description"),
                 Dependencies = Strings(Call(gameData, "getRequiredMods")),
-                ReferencedMods = Strings(Call(gameData, "getReferencedMods")),
-                Preview = WorkshopPreview.Read((string)Call(location, "GetAbsoluteImagePath")).Info
+                ReferencedMods = Strings(Call(gameData, "getReferencedMods"))
             };
             result.Warnings.Add("Workshop values are local/staged or cached, not a fresh Steam query. No Save, Refresh or Upload was invoked.");
             result.Warnings.Add("Dependencies are FCS's current required mods; ReferencedMods are the additional parenthesized entries shown by FCS.");
+            string imagePath = (string)Call(location, "GetAbsoluteImagePath");
+            if (busy != null)
+            {
+                ReportWorkshopIssue(result, busy.Component, busy.Code, busy.Message, null);
+                result.Source = "Active mod header; busy Workshop dialog values and preview unavailable";
+                result.Preview = new PreviewImage { Status = "unavailable", SourceFileName = Path.GetFileName(imagePath),
+                    UnavailableReason = busy.Message };
+                return result;
+            }
+            WorkshopPreview preview = OptionalWorkshop(result, "preview", () => WorkshopPreview.Read(imagePath));
+            result.Preview = preview == null ? new PreviewImage { Status = "unavailable",
+                SourceFileName = Path.GetFileName(imagePath), UnavailableReason = result.Issues.Last().Message } : preview.Info;
             if (matching)
             {
                 result.Source = "Active mod header + current FCS Workshop dialog";
@@ -161,21 +164,10 @@ namespace FcsScribe
             else
             {
                 result.Source = "Active mod header; Workshop cache unavailable";
-                WorkshopFile saved = null;
-                try
-                {
-                    using (var input = File.OpenRead(file))
-                    using (var reader = XmlReader.Create(input, new XmlReaderSettings {
-                        DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 4 * 1024 * 1024
-                    }))
-                        saved = (WorkshopFile)new XmlSerializer(typeof(WorkshopFile)).Deserialize(reader);
-                }
-                catch (FileNotFoundException) { result.Warnings.Add("No saved Workshop .info cache exists; Workshop-only fields are unknown."); }
-                catch (DirectoryNotFoundException) { result.Warnings.Add("No saved Workshop cache directory exists; Workshop-only fields are unknown."); }
+                WorkshopFile saved = OptionalWorkshop(result, "cache",
+                    () => ReadWorkshopCache(file, (string)Field(location, "mod"), result));
                 if (saved != null)
                 {
-                    if (saved.mod != null && saved.mod != (string)Field(location, "mod"))
-                        throw new InvalidDataException("The Workshop .info cache identifies a different mod.");
                     result.Source = "Active mod header + saved Workshop .info cache";
                     result.ModName = saved.title;
                     result.Tags = saved.tags == null ? null : saved.tags.ToList();
@@ -203,6 +195,80 @@ namespace FcsScribe
             return result;
         }
 
+        private static bool MatchingWorkshop(object live, object header, string file)
+        {
+            return live != null && Object.ReferenceEquals(Field(live, "header"), header) &&
+                String.Equals(Path.GetFullPath((string)Call(live, "GetFileName")), Path.GetFullPath(file),
+                    StringComparison.OrdinalIgnoreCase);
+        }
+
+        private WorkshopIssue BusyWorkshop(object dialog, bool matching)
+        {
+            if (!matching) return null;
+            if ((bool)Field(dialog, "uploading"))
+                return new WorkshopIssue { Component = "dialog", Code = "upload-in-progress",
+                    Message = "Workshop upload is in progress; staged Workshop values and preview were not captured." };
+            object steam = assembly.GetType("forgotten_construction_set.SteamManager", true)
+                .GetField("instance", Flags).GetValue(null);
+            if (steam != null && (bool)Property(steam, "Enabled") &&
+                !((Button)Field(dialog, "btnRefreshFromSteam")).Enabled &&
+                !((Button)Field(dialog, "btnUpload")).Enabled)
+                return new WorkshopIssue { Component = "dialog", Code = "refresh-in-progress",
+                    Message = "Workshop refresh is in progress; staged Workshop values and preview were not captured." };
+            return null;
+        }
+
+        private static WorkshopFile ReadWorkshopCache(string file, string mod, WorkshopMetadata result)
+        {
+            try
+            {
+                using (var input = File.OpenRead(file))
+                using (var reader = XmlReader.Create(input, new XmlReaderSettings {
+                    DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 4 * 1024 * 1024
+                }))
+                {
+                    reader.MoveToContent();
+                    if (reader.LocalName != "ModData" || reader.NamespaceURI != "")
+                        throw new InvalidDataException("The Workshop .info cache has an unsupported root element.");
+                    var saved = (WorkshopFile)new XmlSerializer(typeof(WorkshopFile)).Deserialize(reader);
+                    if (saved == null || (saved.mod != null && saved.mod != mod))
+                        throw new InvalidDataException("The Workshop .info cache is empty or identifies a different mod.");
+                    return saved;
+                }
+            }
+            catch (FileNotFoundException) { result.Warnings.Add("No saved Workshop .info cache exists; Workshop-only fields are unknown."); }
+            catch (DirectoryNotFoundException) { result.Warnings.Add("No saved Workshop cache directory exists; Workshop-only fields are unknown."); }
+            catch (XmlException error) { throw new InvalidDataException("The Workshop .info cache XML is invalid or prohibited.", error); }
+            catch (InvalidOperationException error)
+            {
+                if (!(error.InnerException is XmlException) && !(error.InnerException is FormatException) &&
+                    !(error.InnerException is OverflowException)) throw;
+                throw new InvalidDataException("The Workshop .info cache XML or field values are invalid.", error);
+            }
+            return null;
+        }
+
+        private static T OptionalWorkshop<T>(WorkshopMetadata result, string component, Func<T> capture) where T : class
+        {
+            try { return capture(); }
+            catch (InvalidDataException error) { ReportWorkshopIssue(result, component, "invalid-data", error.Message, error); }
+            catch (NotSupportedException error) { ReportWorkshopIssue(result, component, "unsupported", error.Message, error); }
+            catch (UnauthorizedAccessException error) { ReportWorkshopIssue(result, component, "access-denied",
+                "Access to the Workshop " + component + " was denied. Check permissions and retry.", error); }
+            catch (IOException error) { ReportWorkshopIssue(result, component, "read-failed",
+                "The Workshop " + component + " could not be read; it may be locked or changing. Check the FCS-Scribe log and retry.", error); }
+            return null;
+        }
+
+        private static void ReportWorkshopIssue(WorkshopMetadata result, string component, string code, string message, Exception error)
+        {
+            if (result.Issues == null) result.Issues = new List<WorkshopIssue>();
+            result.Issues.Add(new WorkshopIssue { Component = component, Code = code, Message = message });
+            result.CaptureStatus = "partial";
+            result.Warnings.Add("Workshop " + component + " unavailable [" + code + "]: " + message);
+            if (error != null) Console.Error.WriteLine("FCS-Scribe Workshop " + component + " [" + code + "]: " + error);
+        }
+
         private static string FormatUpdate(object value)
         {
             return value == null ? null : ((DateTime)value).ToString("o", CultureInfo.InvariantCulture);
@@ -227,7 +293,11 @@ namespace FcsScribe
         public PreviewImage ArchivePreview(string destination, string expectedHash)
         {
             EnsureReady();
-            WorkshopPreview preview = WorkshopPreview.Read((string)Call(WorkshopLocation(), "GetAbsoluteImagePath"));
+            object location = WorkshopLocation(), dialog = Field(form, "modInfo");
+            WorkshopIssue busy = BusyWorkshop(dialog, MatchingWorkshop(Field(dialog, "info"),
+                Field(gameData, "header"), (string)Call(location, "GetFileName")));
+            if (busy != null) throw new InvalidOperationException(busy.Message + " Wait before archiving.");
+            WorkshopPreview preview = WorkshopPreview.Read((string)Call(location, "GetAbsoluteImagePath"));
             if (preview.Info.Sha256 != expectedHash)
                 throw new InvalidOperationException("The preview changed while choosing an archive location. Review it and try again.");
             preview.Save(destination, Path.GetDirectoryName(assembly.Location));

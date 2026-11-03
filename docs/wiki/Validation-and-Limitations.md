@@ -6,14 +6,15 @@ complete editor compatibility.
 
 ## Automated and disposable-copy evidence
 
-The recorded beta 5 checks passed. These retain session-journal, grouped-menu
-and complete-coverage/safe-retry checks and add recording-range regressions:
+The recorded beta 6 checks passed. These retain session-journal, grouped-menu,
+complete-coverage/safe-retry and recording-range checks while adding optional
+Workshop failure isolation:
 
 | Check | Result | Boundary |
 | --- | --- | --- |
-| Dependency-free core checks | 202 passed | Adds inclusive ranges across ticks/sessions, compiled/archived/restarted history, preserved original identities, qualified citations, reversals, context-only and pending entries, unchanged source files, schema-1/2 compatibility and range integrity/current-state checks |
-| Actual FCS methods on copied vanilla data | 153 passed | Adds range selector preview/bounds/context-only/cancellation, pending-state rejection, multiple real automatic ticks across resume and qualified range evidence through the FCS notes retry/save/reload workflow |
-| Actual FCS methods on a representative copied mod | 152 passed | Same coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
+| Dependency-free core checks | 215 passed | Adds optional-field serialization, stable partial availability/reason fingerprints, known-field/gameplay/recovery stale checks, range preservation and AI unknown-value instructions |
+| Actual FCS methods on copied vanilla data | 235 passed | Adds durable recording through busy upload/refresh, malformed/mismatched/locked cache, invalid/unsupported/oversized/locked preview, simultaneous failures, independent readable components, replay/export, visible UI warnings, automatic recording/recovery and separate action-error pause policies |
+| Actual FCS methods on a representative copied mod | 234 passed | Same coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
 
 The integration host initializes actual FCS forms without launching the complete
 interactive editor/mod-selector workflow. It exercises unsaved overrides,
@@ -27,8 +28,10 @@ or exhaustively inject failures within FCS's nontransactional methods.
 Workshop checks cover every requested field, staged values versus cached data,
 unknown and unpublished values, current required/reference lists without header
 mutation, malformed/partial XML and DTD rejection, PNG/JPEG/GIF byte preservation,
-new-file/source protection, stale previews, the exact 1 MB boundary and refresh/
-upload blocking with offline capture preserved. Actual
+new-file/source protection, stale previews and the exact 1 MB boundary.
+Beta 6 skips unstable Workshop fields during refresh/upload while gameplay
+recording continues. Strict archiving still blocks busy/unreadable images;
+offline capture remains available. Actual
 FCS MDI parenting and every menu action's hover/keyboard help are exercised
 under a generic WinForms message loop so async continuations stay on the UI
 thread. This does not launch FCS's complete startup/mod-selector workflow.
@@ -40,6 +43,19 @@ A separate cross-version check created a baseline, compiled entry and
 uncompiled entry using the released beta 4 binary, then reopened/exported them
 with beta 5. Original packet serialization and all tracking-file hashes were
 unchanged. This is compatibility evidence, not a broader performance test.
+A separate beta 6 check used the released beta 5 binary to generate actual
+compiled/uncompiled history containing Workshop/preview metadata. Beta 6
+replay/export preserved exact original packet serialization and every tracking
+source-file hash with the new optional availability fields omitted.
+
+The optional-failure matrix records actual unsaved names, verifies stable
+repeated captures and validates drafts against the known state. A real timer
+tick records through corrupt cache data without pausing; repairing the cache
+recovers metadata, stales the prior range draft and records context only.
+Pause-policy checks preserve scheduling for Workshop-only errors and preserve
+an existing tracking pause. This does not exhaustively fault-inject every
+filesystem permission failure, force memory exhaustion or complete a real
+interactive Steam upload/refresh.
 
 Original game/mod files are only copied; test saves go to a fresh ignored
 `build\integration-fixtures` directory. The Framework test host is explicitly
@@ -68,6 +84,8 @@ Beta 3's grouped menus also require real-editor mouse/keyboard, small-window
 layout and MDI acceptance; disposable-copy results do not close this gate.
 Beta 5's range selection, preview scrolling, destination/cancellation and real
 manual AI handoff also remain part of that interactive pass.
+Beta 6's warning/status/approval wording, Workshop-only error dialogs and real
+asynchronous Workshop operations also require interactive acceptance.
 
 Broader dependency stacks, other extensions, unsupported/read-only modes, and
 visible failure handling also need the checks recorded in the
@@ -82,6 +100,10 @@ An experimental prerelease does not mark those checkboxes complete.
   layouts and metadata change history are outside comprehensive tracking.
 - Workshop fields are local/staged/cached context, not a current Steam query or
   published changelog. Preview archiving supports only the local FCS image.
+- Known optional Workshop failures are explicit partial capture, not verified
+  payloads. Changing unreadable bytes without changing the reported availability
+  state/reason is not detected by fingerprints. Unexpected adapter/model and
+  fatal resource errors still stop actions.
 - Base/locked field-level source mod provenance remains unresolved.
 - Notes are shared editor-side record annotations, not `.mod` content or
   Workshop release notes.

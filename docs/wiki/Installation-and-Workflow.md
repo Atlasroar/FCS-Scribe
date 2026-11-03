@@ -158,6 +158,26 @@ overwritten. The preview hash in JSON associates it with the copied image.
 Missing images and unsupported/oversized encodings fail explicitly. Local
 metadata is not proof of the current published Steam listing or its changelog.
 
+In beta 6, known optional Workshop failures no longer stop Start tracking,
+Review changes, automatic recording or AI range export. The Workshop tab/JSON
+reports `CaptureStatus: "partial"` with component-specific `Issues`; tracking
+warnings and bottom status repeat the notice. Header fields and any readable
+component remain available. Expected absent files stay explicitly unknown.
+During an active upload/refresh, staged metadata and preview reads wait while
+gameplay capture continues; Scribe itself never invokes those operations.
+
+Repair the source/cache/image or wait for the Workshop operation to finish,
+then capture/review again. Recovery is recorded as context and can stale an
+existing draft, requiring re-export. Scribe does not repair or replace source
+files. Preview archiving remains strict: unavailable/unsupported images cannot
+be archived, and an upload/refresh beginning during file selection blocks it.
+Unavailable payloads are not validated; unchanged error status does not prove
+their bytes stayed unchanged. Unexpected model/contract and fatal resource
+errors still stop the action.
+Workshop-only export/archive action errors are reported without pausing
+gameplay recording; they do not re-enable already-paused automation. Ordinary
+tracking/model/journal failures still pause it.
+
 ## Recovery and lifecycle
 
 A deleted record cannot receive a new note: explicitly choose a surviving

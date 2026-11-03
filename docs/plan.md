@@ -104,13 +104,28 @@ history; schema-1/2 packets and tracking/session storage remain unchanged.
 Recorded checks: 202 core, 153 disposable vanilla FCS and 152
 representative-mod FCS checks passed. Real-editor acceptance, broader history
 management, draft persistence, large-history profiling and cross-range
-documentation deduplication are not claimed. S03 is next.
+documentation deduplication are not claimed. S03 was addressed separately
+in beta 6 below.
 
 ### S03. High: Workshop failures can stop ordinary tracking
 
-- [ ] Separate gameplay capture availability from optional Workshop/cache/preview availability without silently hiding extraction errors.
-- [ ] Represent unavailable metadata and its reason explicitly; preserve meaningful stale-draft checks and the no-Steam/no-save contract.
-- [ ] Cover corrupt caches, unsupported/oversized previews, missing data and active upload/refresh states during ordinary recording.
+- [x] Separate gameplay capture availability from optional Workshop/cache/preview availability without silently hiding extraction errors.
+- [x] Represent unavailable metadata and its reason explicitly; preserve meaningful stale-draft checks and the no-Steam/no-save contract.
+- [x] Cover corrupt caches, unsupported/oversized previews, missing data and active upload/refresh states during ordinary recording.
+
+S03 is addressed in beta 6. Known optional cache/preview errors and busy
+Workshop states report partial availability with structured reasons, warnings
+and visible status. Header fields/readable components remain available.
+Gameplay recording continues; strict preview archiving still fails explicitly.
+Workshop-only action errors do not pause recording or clear an earlier pause.
+Known fields and availability transitions still affect stale-draft checks.
+Unavailable payload bytes are not validated; unexpected contract/model and
+fatal resource errors are not suppressed.
+Recorded checks: 215 core, 235 disposable vanilla FCS and 234
+representative-mod FCS checks passed. Real beta 5 Workshop journal compatibility
+also preserves original serialization/hashes. Storage/packet schemas are
+unchanged; availability fields are optional. Actual interactive Steam
+operations remain part of S09. S04 is the next stabilization item.
 
 ### S04. Medium: editable drafts and export associations are not durable
 

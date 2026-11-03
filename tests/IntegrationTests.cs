@@ -548,12 +548,18 @@ internal static class IntegrationTests
         string cache = (string)FcsAdapter.Call(info, "GetFileName");
         string preview = (string)FcsAdapter.Call(info, "GetAbsoluteImagePath");
         string archive = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", Guid.NewGuid().ToString("N") + ".png"));
+        string projectPath = Path.Combine(Directory.GetCurrentDirectory(), "workshop-failures.json");
+        JournalProject project = null;
         try
         {
             WorkshopMetadata missing = adapter.CaptureWorkshop();
             Check(missing.SteamId == null && missing.ModName == null && missing.VisibilityCode == null &&
                 missing.ChangeNotes == null && missing.Warnings.Count > 0, "missing Workshop cache is explicitly unknown, not fabricated defaults");
             Check(missing.Preview.Status == "missing" && missing.Preview.Sha256 == null, "missing preview is explicit");
+            Check(missing.CaptureStatus == null && missing.Issues == null && adapter.Capture().Records.Count > 0,
+                "absent optional data stays explicitly missing without blocking ordinary model capture");
+            project = JournalProject.Create(projectPath, adapter.Capture());
+            project.BeginSession();
             Reject<InvalidOperationException>(delegate { adapter.ArchivePreview(archive, null); }, "missing preview cannot be archived");
             Put(header, "Author", "Fixture author");
             Put(header, "Description", "Fixture description \"quoted\"\r\nsecond line");
@@ -599,7 +605,10 @@ internal static class IntegrationTests
             Check(export.SchemaVersion == 1 && export.ModFileName == "scribe-test.mod" && export.Workshop.ModName == live.ModName &&
                 export.ExportedUtc.EndsWith("Z", StringComparison.Ordinal), "standalone Workshop JSON requires no tracking baseline or record changes");
             Put(dialog, "uploading", true);
-            Reject<InvalidOperationException>(delegate { adapter.CaptureWorkshop(); }, "capture during upload is blocked");
+            CheckPartialWorkshop(adapter, project, "dialog", "upload-in-progress");
+            Reject<InvalidOperationException>(() => adapter.ArchivePreview(archive, null), "archiving still waits for an active upload");
+            Check(adapter.CaptureWorkshop().ModName == null && adapter.CaptureWorkshop().Preview.Status == "unavailable",
+                "busy staged values and preview are unknown, not stale dialog values");
             Put(dialog, "uploading", false);
             object steam = assembly.GetType("forgotten_construction_set.SteamManager", true).GetField("instance", Flags).GetValue(null);
             bool connected = (bool)FcsAdapter.Property(steam, "Enabled");
@@ -610,7 +619,8 @@ internal static class IntegrationTests
             {
                 Set(steam, "Enabled", true);
                 refresh.Enabled = upload.Enabled = false;
-                Reject<InvalidOperationException>(delegate { adapter.CaptureWorkshop(); }, "capture during asynchronous Steam refresh is blocked");
+                CheckPartialWorkshop(adapter, project, "dialog", "refresh-in-progress");
+                Reject<InvalidOperationException>(() => adapter.ArchivePreview(archive, null), "archiving still waits for asynchronous refresh");
                 Set(steam, "Enabled", false);
                 Check(adapter.CaptureWorkshop().ModName == live.ModName, "disabled offline Workshop controls do not imply an in-progress refresh");
             }
@@ -658,13 +668,27 @@ internal static class IntegrationTests
                 finally { if (File.Exists(destination)) File.Delete(destination); }
             }
             using (var image = new Bitmap(2, 2)) image.Save(preview, ImageFormat.Bmp);
-            Reject<NotSupportedException>(delegate { adapter.CaptureWorkshop(); }, "unsupported preview encoding is explicit");
+            CheckPartialWorkshop(adapter, project, "preview", "unsupported");
+            WorkshopMetadata invalidPreview = adapter.CaptureWorkshop();
+            Check(invalidPreview.ModName == live.ModName && invalidPreview.Tags.SequenceEqual(live.Tags) &&
+                invalidPreview.Preview.Status == "unavailable" && !String.IsNullOrWhiteSpace(invalidPreview.Preview.UnavailableReason),
+                "invalid previews do not erase readable Workshop metadata and expose their reason");
+            Reject<NotSupportedException>(() => adapter.ArchivePreview(archive + ".bmp", null),
+                "unsupported previews still cannot be archived");
             var boundaryImage = new byte[1024 * 1024];
             Array.Copy(source, boundaryImage, source.Length);
             File.WriteAllBytes(preview, boundaryImage);
             Check(adapter.CaptureWorkshop().Preview.ByteLength == 1024 * 1024, "FCS's exact 1 MB preview limit is accepted");
             using (var oversized = new FileStream(preview, FileMode.Create)) oversized.SetLength(1024 * 1024 + 1);
-            Reject<NotSupportedException>(delegate { adapter.CaptureWorkshop(); }, "preview one byte over FCS's limit is rejected");
+            CheckPartialWorkshop(adapter, project, "preview", "unsupported");
+            Reject<NotSupportedException>(() => adapter.ArchivePreview(archive, null),
+                "oversized previews remain strict archive failures");
+            File.WriteAllText(preview, "not an encoded image");
+            CheckPartialWorkshop(adapter, project, "preview", "invalid-data");
+            Reject<InvalidDataException>(() => adapter.ArchivePreview(archive, null),
+                "malformed image decode errors are explicit archive failures");
+            using (var locked = new FileStream(preview, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+                CheckPartialWorkshop(adapter, project, "preview", "read-failed");
             File.Delete(preview);
             Put(dialog, "info", null);
             File.WriteAllText(cache, "<ModData><visibility>2</visibility></ModData>");
@@ -679,12 +703,58 @@ internal static class IntegrationTests
                 unknownVisibility.Warnings.Any(x => x.Contains("unpublished/default")),
                 "unknown visibility and explicit unpublished ID remain distinct from missing data");
             File.WriteAllText(cache, "<ModData>");
-            Reject<InvalidOperationException>(delegate { adapter.CaptureWorkshop(); }, "malformed cache errors are visible");
+            CheckPartialWorkshop(adapter, project, "cache", "invalid-data");
+            using (var image = new Bitmap(2, 2)) image.Save(preview, ImageFormat.Png);
+            WorkshopMetadata badCache = adapter.CaptureWorkshop();
+            Check(badCache.ModName == null && badCache.Preview.Status == "available" &&
+                badCache.Preview.Sha256 != null, "cache failure does not discard an independently readable preview");
+            string independentArchive = archive + ".cache.png";
+            try
+            {
+                adapter.ArchivePreview(independentArchive, badCache.Preview.Sha256);
+                Check(File.ReadAllBytes(independentArchive).SequenceEqual(File.ReadAllBytes(preview)),
+                    "a valid preview can still be archived while its optional metadata cache is invalid");
+            }
+            finally { if (File.Exists(independentArchive)) File.Delete(independentArchive); }
+            File.WriteAllText(preview, "invalid image while cache is also corrupt");
+            CheckPartialWorkshop(adapter, project, "cache", "invalid-data");
+            Check(adapter.CaptureWorkshop().Issues.Count == 2, "independent cache and preview failures are both reported");
+            File.Delete(preview);
             File.WriteAllText(cache, "<!DOCTYPE ModData [<!ENTITY x SYSTEM 'file:///not-read'>]><ModData><title>&x;</title></ModData>");
-            Reject<InvalidOperationException>(delegate { adapter.CaptureWorkshop(); }, "cache DTDs and external entities are rejected");
+            CheckPartialWorkshop(adapter, project, "cache", "invalid-data");
+            File.WriteAllText(cache, "<WrongRoot />");
+            CheckPartialWorkshop(adapter, project, "cache", "invalid-data");
+            File.WriteAllText(cache, "<ModData><id>invalid Steam ID</id></ModData>");
+            CheckPartialWorkshop(adapter, project, "cache", "invalid-data");
+            File.WriteAllText(cache, "<ModData><mod>different-mod</mod></ModData>");
+            CheckPartialWorkshop(adapter, project, "cache", "invalid-data");
+            using (var locked = new FileStream(cache, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+                CheckPartialWorkshop(adapter, project, "cache", "read-failed");
+            string savedFingerprint = project.Fingerprint;
+            int recordedCount = project.EntryCount;
+            Check(project.Compile() == recordedCount, "all recordings made during optional Workshop failures compile successfully");
+            project.Dispose(); project = null;
+            using (var reopened = JournalProject.Open(projectPath))
+            {
+                var choices = reopened.ExportRecordings(reopened.State);
+                Packet packet = RangeExport.Create(reopened.ProjectId, choices, 0, choices.Count - 1, reopened.State);
+                Check(reopened.Fingerprint == savedFingerprint && reopened.State.Workshop.CaptureStatus == "partial" &&
+                    packet.Recordings.Count == recordedCount && packet.Recordings.All(x => x.Packet.Context.Workshop.Issues.Count > 0),
+                    "partial availability, reasons and gameplay evidence replay and export across restart");
+            }
+            File.WriteAllText(cache, "<ModData>");
+            CheckWorkshopFailureWindow(adapter, editor, cache, cacheBytes);
+            bool originalMergeMode = (bool)FcsAdapter.Field(editor, "mergeModsMode");
+            try
+            {
+                Put(editor, "mergeModsMode", true);
+                Reject<NotSupportedException>(() => adapter.Capture(), "optional recovery does not bypass unsupported editor modes");
+            }
+            finally { Put(editor, "mergeModsMode", originalMergeMode); }
         }
         finally
         {
+            if (project != null) project.Dispose();
             Put(dialog, "info", originalInfo);
             Put(dialog, "uploading", false);
             ((TextBox)FcsAdapter.Field(dialog, "txtChangeNotes")).Clear();
@@ -695,6 +765,106 @@ internal static class IntegrationTests
             if (File.Exists(cache)) File.Delete(cache);
             if (File.Exists(preview)) File.Delete(preview);
             if (File.Exists(archive)) File.Delete(archive);
+        }
+    }
+
+    private static void CheckPartialWorkshop(FcsAdapter adapter, JournalProject project, string component, string code)
+    {
+        IDictionary items = (IDictionary)FcsAdapter.Field(adapter, "items");
+        object item = items.Values.Cast<object>().First();
+        string name = (string)FcsAdapter.Property(item, "Name");
+        string id = (string)FcsAdapter.Property(item, "stringID");
+        object header = FcsAdapter.Field(FcsAdapter.Field(adapter, "gameData"), "header");
+        try
+        {
+            Set(item, "Name", name + " During " + component + " failure " + project.EntryCount);
+            Snapshot captured = adapter.Capture();
+            WorkshopMetadata metadata = captured.Workshop;
+            Check(metadata.CaptureStatus == "partial" && metadata.Issues.Any(x => x.Component == component && x.Code == code) &&
+                captured.Warnings.Any(x => x.Contains("[" + code + "]") && x.Contains("unavailable")),
+                component + "/" + code + " is explicit in metadata and gameplay-capture warnings");
+            Check(metadata.Author == (string)FcsAdapter.Field(header, "Author") &&
+                metadata.Version == (int)FcsAdapter.Field(header, "Version") &&
+                metadata.Description == (string)FcsAdapter.Field(header, "Description") &&
+                captured.Records.Any(x => x.Id == id && x.Name != name),
+                component + "/" + code + " retains known header fields and unsaved gameplay");
+            Packet packet = project.Record(captured);
+            Check(packet.Changes.Any(x => x.RecordId == id && x.Path == "/name") && project.Fingerprint == captured.Fingerprint(),
+                component + "/" + code + " does not block durable gameplay recording");
+            int count = project.EntryCount;
+            project.Record(adapter.Capture());
+            Check(project.EntryCount == count, component + "/" + code + " repeats with a stable availability fingerprint");
+            NoteDraft draft = Json.Read<NoteDraft>(Json.Write(packet.ResponseTemplate));
+            foreach (NoteEntry entry in draft.Entries) entry.Text = "Recorded fixture name changes with explicit Workshop warnings.";
+            DraftValidation.Check(packet, draft, captured, target => "");
+            Check(true, component + "/" + code + " still permits validation against the known captured state");
+        }
+        finally { Set(item, "Name", name); }
+    }
+
+    private static void CheckWorkshopFailureWindow(FcsAdapter adapter, Form editor, string cache, byte[] healthyCache)
+    {
+        string path = Path.Combine(Directory.GetCurrentDirectory(), "window-partial-workshop.json");
+        object item = ((IDictionary)FcsAdapter.Field(adapter, "items")).Values.Cast<object>().First();
+        string name = (string)FcsAdapter.Property(item, "Name");
+        using (var host = new Form { IsMdiContainer = true, ShowInTaskbar = false, Opacity = 0 })
+        using (var window = new ScribeWindow(adapter, editor, Path.Combine(Directory.GetCurrentDirectory(), "partial-workshop-settings.json")))
+        {
+            try
+            {
+                window.MdiParent = host; host.Show(); window.Show();
+                RunWindow(window, "StartPath", path);
+                var project = (JournalProject)FcsAdapter.Field(window, "project");
+                Check(project.State.Workshop.CaptureStatus == "partial" && !(bool)FcsAdapter.Field(window, "automaticPaused") &&
+                    ((Label)FcsAdapter.Field(window, "status")).Text.Contains("PARTIAL Workshop") &&
+                    ((TextBox)FcsAdapter.Field(window, "review")).Text.Contains("cache unavailable"),
+                    "new tracking starts with visible availability warnings rather than aborting");
+                Set(item, "Name", name + " Automatic partial Workshop fixture");
+                var settings = (PluginSettings)FcsAdapter.Field(window, "settings");
+                var schedule = (JournalSchedule)FcsAdapter.Field(window, "schedule");
+                var clock = (System.Diagnostics.Stopwatch)FcsAdapter.Field(window, "clock");
+                var timer = (System.Windows.Forms.Timer)FcsAdapter.Field(window, "timer");
+                settings.ReviewSeconds = 30;
+                schedule.Reset(clock.ElapsedMilliseconds - 30000, 30);
+                FcsAdapter.Call(window, "ConfigureTimer");
+                FcsAdapter.Call(timer, "OnTick", EventArgs.Empty);
+                var timeout = System.Diagnostics.Stopwatch.StartNew();
+                while ((bool)FcsAdapter.Field(window, "busy") && timeout.Elapsed < TimeSpan.FromMinutes(3))
+                { Application.DoEvents(); Thread.Sleep(10); }
+                Check(!(bool)FcsAdapter.Field(window, "busy") && !(bool)FcsAdapter.Field(window, "automaticPaused") &&
+                    timer.Enabled && project.EntryCount == 1 && project.State.Workshop.CaptureStatus == "partial",
+                    "an actual automatic tick durably records gameplay without pausing for corrupt optional cache data");
+                Snapshot partial = adapter.Capture();
+                var choices = project.ExportRecordings(partial);
+                Packet packet = RangeExport.Create(project.ProjectId, choices, 0, choices.Count - 1, partial);
+                NoteDraft draft = Json.Read<NoteDraft>(Json.Write(packet.ResponseTemplate));
+                foreach (NoteEntry entry in draft.Entries) entry.Text = "Partial Workshop fixture.";
+                File.WriteAllBytes(cache, healthyCache);
+                Snapshot recovered = adapter.Capture();
+                Check(recovered.Workshop.CaptureStatus == null && recovered.Workshop.Issues == null &&
+                    recovered.Workshop.ModName == "Cached Workshop title", "readable metadata recovers automatically without restarting tracking");
+                Reject<InvalidOperationException>(() => DraftValidation.Check(packet, draft, recovered, adapter.Notes),
+                    "recovered Workshop availability stales the actual partial-capture range draft");
+                RunWindow(window, "Review");
+                Check(project.EntryCount == 2 && project.State.Workshop.CaptureStatus == null &&
+                    !(bool)FcsAdapter.Field(window, "automaticPaused") &&
+                    !((Label)FcsAdapter.Field(window, "status")).Text.Contains("PARTIAL Workshop"),
+                    "availability recovery is recorded as context without fabricating gameplay or retaining an obsolete failure status");
+                Check(File.ReadAllBytes(cache).SequenceEqual(healthyCache),
+                    "tracking does not rewrite a repaired Workshop cache");
+                string fingerprint = project.Fingerprint;
+                FcsAdapter.Call(window, "SetActionFailure", false);
+                Check(!(bool)FcsAdapter.Field(window, "automaticPaused") && timer.Enabled &&
+                    project.Fingerprint == fingerprint && ((Label)FcsAdapter.Field(window, "status")).Text.Contains("Workshop action failed"),
+                    "Workshop-only action failures retain active scheduling and report failure without changing tracking");
+                FcsAdapter.Call(window, "SetActionFailure", true);
+                Check((bool)FcsAdapter.Field(window, "automaticPaused") && !timer.Enabled,
+                    "ordinary model/journal action failures still pause automatic recording");
+                FcsAdapter.Call(window, "SetActionFailure", false);
+                Check((bool)FcsAdapter.Field(window, "automaticPaused") && !timer.Enabled,
+                    "a later Workshop-only failure does not clear an existing automatic pause");
+            }
+            finally { Set(item, "Name", name); }
         }
     }
 

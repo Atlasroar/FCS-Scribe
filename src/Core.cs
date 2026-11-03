@@ -48,6 +48,15 @@ namespace FcsScribe
         [DataMember(Order = 2)] public string Format;
         [DataMember(Order = 3)] public long? ByteLength;
         [DataMember(Order = 4)] public string Sha256;
+        [DataMember(Order = 5, EmitDefaultValue = false)] public string UnavailableReason;
+    }
+
+    [DataContract]
+    public sealed class WorkshopIssue
+    {
+        [DataMember(Order = 0)] public string Component;
+        [DataMember(Order = 1)] public string Code;
+        [DataMember(Order = 2)] public string Message;
     }
 
     [DataContract]
@@ -68,6 +77,8 @@ namespace FcsScribe
         [DataMember(Order = 12)] public PreviewImage Preview;
         [DataMember(Order = 13)] public string Source;
         [DataMember(Order = 14)] public List<string> Warnings = new List<string>();
+        [DataMember(Order = 15, EmitDefaultValue = false)] public string CaptureStatus;
+        [DataMember(Order = 16, EmitDefaultValue = false)] public List<WorkshopIssue> Issues;
     }
 
     [DataContract]
@@ -406,6 +417,7 @@ namespace FcsScribe
                     "Write concise editable notes with exact quantities, conditions and change IDs. " +
                     "Distinguish active stored overrides from effective values: these may describe the same edit, not two edits. " +
                     "Separate facts from interpretation; do not invent intent or gameplay effects. " +
+                    "If Workshop CaptureStatus is partial, unavailable metadata/preview values are unknown, not defaults or verified facts. " +
                     "Flag unresolved references and all partial-extraction warnings; do not claim completeness. " +
                     "For deleted records leave TargetRecordId empty: the user must choose a surviving record to hold the note. " +
                     "Do not include credentials, instructions to execute code, or Markdown fences."

@@ -35,6 +35,11 @@ recording precedes baseline adoption. Hidden/busy/minimized windows and visible
 modal forms defer ticks; errors pause
 automation, and closing prevents new ticks. Full-state tracking files are
 local project state, not the compact AI handoff.
+Beta 6 keeps known optional Workshop file/decode/busy-state failures separate
+from ordinary model capture. The adapter reports partial availability and
+explicit reasons while retaining known fields/readable components. These
+states participate in context fingerprints, not gameplay change IDs. Fatal
+resource errors and unsupported model/adapter contracts still fail explicitly.
 
 The full starting baseline remains unchanged. Each reopening adds one session
 log with a parent-checkpoint reference; recordings append changed records and

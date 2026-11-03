@@ -106,8 +106,8 @@ namespace FcsScribe
             AddAsyncAction(coreMenu.DropDownItems, "&Compile journal", "Consolidate durable session entries into the main journal without duplicates or deleting session files. Automatic mode also compiles every 30 minutes.", Compile);
             AddAsyncAction(coreMenu.DropDownItems, "&Export AI packet", "Choose and preview an inclusive range of recordings, including earlier sessions or unrecorded edits, then save an AI packet. Does not record, compile or send anything online. Replaces the editable draft.", Export);
             var workshopMenu = AddMenu("&Workshop", "Export local Workshop information or archive the original preview image.");
-            AddAction(workshopMenu.DropDownItems, "&Export Workshop info", "Save current local Workshop information and preview-image details as JSON. No tracking baseline or record changes required.", ExportWorkshop);
-            AddAction(workshopMenu.DropDownItems, "&Archive preview image", "Copy the local Workshop preview, byte-for-byte, to a new image file outside Kenshi. Does not download or change the original.", ArchivePreview);
+            AddAction(workshopMenu.DropDownItems, "&Export Workshop info", "Save current local Workshop information, availability warnings and preview-image details as JSON. No tracking baseline required; Workshop-only errors do not pause gameplay recording.", ExportWorkshop, false);
+            AddAction(workshopMenu.DropDownItems, "&Archive preview image", "Copy the local Workshop preview, byte-for-byte, to a new image file outside Kenshi. Unavailable images fail explicitly without pausing gameplay recording. Does not download or change the original.", ArchivePreview, false);
             var draftMenu = AddMenu("&Draft", "Import a draft file or paste clipboard text for review before approval.");
             AddAction(draftMenu.DropDownItems, "&Import draft", "Load an AI response JSON into the editable draft. Requires an exported batch; nothing is applied until approval.", Import);
             AddAction(draftMenu.DropDownItems, "&Paste draft", "Replace the editable draft with clipboard text. Review and validate it before applying; nothing is applied by pasting.", delegate { draft.Text = Clipboard.GetText(); });
@@ -132,7 +132,12 @@ namespace FcsScribe
             tabs.TabPages.Add(workshopTab);
             tabs.SelectedIndexChanged += delegate {
                 if (tabs.SelectedTab != workshopTab || busy) return;
-                try { workshop.Text = Json.Pretty(Json.Write(adapter.CaptureWorkshop())); }
+                try
+                {
+                    WorkshopMetadata metadata = adapter.CaptureWorkshop();
+                    workshop.Text = Json.Pretty(Json.Write(metadata));
+                    status.Text = WorkshopNotice(metadata) + "Workshop information read from local/staged/cached data; no Steam query.";
+                }
                 catch (Exception error) { workshop.Clear(); Plugin.ShowError(error); }
             };
             Controls.Add(tabs);
@@ -252,6 +257,9 @@ namespace FcsScribe
                 if (project != null) project.Dispose();
                 project = candidate; tracker = candidate.ResumeTracker(); adopted = true;
                 if (pending != null) ShowChanges(pending);
+                else if (candidate.State.Workshop != null && candidate.State.Workshop.CaptureStatus == "partial")
+                    review.Text = "PARTIAL EXTRACTION - baseline captured with Workshop availability warnings.\r\n" +
+                        String.Join("\r\n", candidate.State.Warnings.Select(x => "WARNING: " + x));
                 else review.Clear();
                 workshop.Text = Json.Pretty(Json.Write(candidate.State.Workshop));
             }
@@ -259,7 +267,7 @@ namespace FcsScribe
             automaticPaused = false;
             exported = null; draft.Clear();
             schedule.Reset(clock.ElapsedMilliseconds, settings.ReviewSeconds);
-            status.Text = "New session: " + project.SessionPath + ". " + ProjectStatus();
+            status.Text = ProjectStatus() + " New session: " + project.SessionPath;
         }
 
         private async Task Review()
@@ -293,7 +301,14 @@ namespace FcsScribe
 
         private string ProjectStatus()
         {
-            return project.PendingCount + " recordings awaiting compilation. Tracking is NOT a saved-mod backup. " + ScheduleText();
+            return WorkshopNotice(project.State.Workshop) + project.PendingCount +
+                " recordings awaiting compilation. Tracking is NOT a saved-mod backup. " + ScheduleText();
+        }
+
+        private static string WorkshopNotice(WorkshopMetadata metadata)
+        {
+            return metadata != null && metadata.CaptureStatus == "partial" ?
+                "PARTIAL Workshop capture; unavailable values are not validated. Review warnings. " : "";
         }
 
         private void ShowChanges(Packet packet)
@@ -313,7 +328,8 @@ namespace FcsScribe
             AppendChanges(text, packet.Changes);
             review.Text = text.ToString();
             workshop.Text = Json.Pretty(Json.Write(packet.Context.Workshop));
-            status.Text = packet.Changes.Count + " change entries (stored and effective entries may describe the same edit). " +
+            status.Text = WorkshopNotice(packet.Context.Workshop) + packet.Changes.Count +
+                " change entries (stored and effective entries may describe the same edit). " +
                 "Baseline unchanged.";
         }
 
@@ -340,12 +356,15 @@ namespace FcsScribe
                 File.WriteAllText(dialog.FileName, Json.Pretty(Json.Write(export)), new UTF8Encoding(false));
             }
             workshop.Text = Json.Pretty(Json.Write(export.Workshop));
-            status.Text = "Workshop JSON exported from local data only. Review its source and warnings; use Archive preview image to copy the image separately.";
+            status.Text = WorkshopNotice(export.Workshop) +
+                "Workshop JSON exported from local data only. Review its source and warnings; use Archive preview image to copy the image separately.";
         }
 
         private void ArchivePreview()
         {
             WorkshopMetadata metadata = adapter.CaptureWorkshop();
+            if (metadata.Preview.Status == "unavailable")
+                throw new InvalidOperationException(metadata.Preview.UnavailableReason);
             if (metadata.Preview.Status != "available")
                 throw new InvalidOperationException("No local Workshop preview exists. Set an image in FCS's Steam Workshop window first.");
             string extension = metadata.Preview.Format;
@@ -394,7 +413,8 @@ namespace FcsScribe
             exported = packet;
             draft.Text = Json.Pretty(Json.Write(packet.ResponseTemplate));
             ShowChanges(packet);
-            status.Text = packet.Recordings.Count + " selected recordings exported; no history advanced or compiled. " +
+            status.Text = WorkshopNotice(packet.Context.Workshop) + packet.Recordings.Count +
+                " selected recordings exported; no history advanced or compiled. " +
                 "Share manually with AI, then import/paste its JSON response. " +
                 "Mod text may be private; inspect the packet before sharing.";
         }
@@ -417,15 +437,17 @@ namespace FcsScribe
         {
             if (exported == null) throw new InvalidOperationException("Export a packet before importing/applying notes.");
             NoteDraft notes = Json.Read<NoteDraft>(draft.Text);
-            var pending = DraftValidation.Pending(exported, notes, adapter.Capture(), adapter.Notes);
-            if (MessageBox.Show(this, "The complete draft covers all " + exported.Changes.Count +
+            Snapshot current = adapter.Capture();
+            var pending = DraftValidation.Pending(exported, notes, current, adapter.Notes);
+            if (MessageBox.Show(this, WorkshopNotice(current.Workshop) + "The complete draft covers all " + exported.Changes.Count +
                 " exported changes. Approve appending " + pending.Count + " pending note(s) to FCS? " +
                 (notes.Entries.Count - pending.Count) + " matching completed note(s) will be skipped. " +
                 "Existing notes are retained. The mod will be marked changed, but NOT saved. " +
                 "Multi-record application is not transactional; inspect FCS Notes afterward.",
                 "Approve notes", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
             adapter.Apply(exported, notes);
-            status.Text = "Approved pending notes appended in FCS; matching completed notes were not duplicated. " +
+            status.Text = WorkshopNotice(current.Workshop) +
+                "Approved pending notes appended in FCS; matching completed notes were not duplicated. " +
                 "Inspect FCS Notes and use FCS's normal Save when ready. Baseline unchanged.";
         }
 
@@ -491,9 +513,18 @@ namespace FcsScribe
 
         private void PauseAfterError(Exception error)
         {
-            automaticPaused = true; timer.Stop();
-            status.Text = "Action failed; automatic review paused. The baseline advances only after a successful checkpoint save.";
+            SetActionFailure(true);
             Plugin.ShowError(error);
+        }
+
+        private void SetActionFailure(bool pauseAutomation)
+        {
+            if (pauseAutomation)
+            {
+                automaticPaused = true; timer.Stop();
+                status.Text = "Action failed; automatic review paused. The baseline advances only after a successful checkpoint save.";
+            }
+            else status.Text = "Workshop action failed; gameplay tracking was not changed. " + ScheduleText();
         }
 
         private ToolStripMenuItem AddMenu(string label, string description)
@@ -535,17 +566,22 @@ namespace FcsScribe
             if (help.Text != text) help.Text = text;
         }
 
-        private void AddAction(ToolStripItemCollection parent, string label, string description, Action action)
+        private void AddAction(ToolStripItemCollection parent, string label, string description, Action action, bool pauseAutomation = true)
         {
-            AddAsyncAction(parent, label, description, () => { action(); return Task.FromResult(0); });
+            AddAsyncAction(parent, label, description, () => { action(); return Task.FromResult(0); }, pauseAutomation);
         }
 
-        private void AddAsyncAction(ToolStripItemCollection parent, string label, string description, Func<Task> action)
+        private void AddAsyncAction(ToolStripItemCollection parent, string label, string description, Func<Task> action, bool pauseAutomation = true)
         {
             ToolStripMenuItem item = CreateMenuItem(label, description);
             item.Click += async delegate {
                 try { await RunBusy(action); }
-                catch (Exception error) { if (!closing) PauseAfterError(error); }
+                catch (Exception error)
+                {
+                    if (closing) return;
+                    SetActionFailure(pauseAutomation);
+                    Plugin.ShowError(error);
+                }
             };
             parent.Add(item);
         }

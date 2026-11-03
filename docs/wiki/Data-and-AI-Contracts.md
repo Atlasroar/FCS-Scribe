@@ -49,10 +49,44 @@ preserves FCS's round-trip timestamp and timezone kind, not file write time.
 The current change-notes control is an upload draft, not published history;
 it is unknown if the matching dialog has not been opened.
 
-`Preview` reports `Status` (`available` or `missing`), `SourceFileName`,
+`Preview` reports `Status` (`available`, `missing` or, since beta 6,
+`unavailable`), `SourceFileName`,
 `Format`, nullable `ByteLength`, and `Sha256`. It contains no local absolute
 path or embedded image bytes. Archive the image separately; compare its hash
 to the JSON to associate the two artifacts.
+
+Beta 6 adds optional `CaptureStatus = "partial"` and `Issues` when a known
+optional component fails or the matching Workshop dialog is busy. Each issue
+has `Component` (`cache`, `preview` or `dialog`), `Code` and a human-readable
+`Message`. Codes distinguish invalid data, unsupported encoding/size, access
+denial, read failure and upload/refresh in progress. Known header fields and
+FCS-derived dependency/reference lists remain available. Cache failure does
+not erase a readable preview; preview failure does not erase readable metadata.
+Unavailable values remain unknown rather than being replaced by old/default
+values. An unavailable preview also carries `UnavailableReason`.
+
+Expected absent files retain their existing missing/unknown warnings, without
+claiming a capture error. No-issue captures omit the new optional fields,
+preserving old metadata serialization. Schema-1/2 original packets, schema-3
+range exports and tracking/session storage keep their existing versions.
+New captures may legitimately differ from pre-beta-6 fingerprints where the
+older version could not represent a component failure.
+
+Issues appear in Workshop and snapshot warnings, UI status, exported context
+and AI instructions. File/decode errors are logged locally; metadata capture
+does not repair, truncate, fetch or overwrite the failing source. Busy captures
+skip staged dialog values and preview reads, not gameplay capture. Explicit
+preview archiving still requires a readable supported image and waits for
+an active upload/refresh to finish.
+
+Known fields, availability states/reasons and captured gameplay participate in
+the current-state fingerprint. Losing/recovering availability or changing a
+known value makes an existing draft stale. **Unreadable payloads themselves
+are not validated or fingerprinted:** one invalid/unreadable payload can change
+to another with the same reported state/reason without a new fingerprint.
+Partial capture is not verification of the unavailable data.
+Unexpected reflection/contract failures, unsupported editor modes, ordinary
+model extraction errors and fatal resource errors are not silently downgraded.
 
 Workshop context is background, not new-edit evidence. It is included in
 schema-2 stale-state fingerprints, but does not generate record change IDs or

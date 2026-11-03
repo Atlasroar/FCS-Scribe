@@ -141,6 +141,61 @@ internal static class CoreTests
             "new AI instructions require full nonduplicate evidence coverage");
     }
 
+    private static void CheckWorkshopAvailability()
+    {
+        Snapshot baseline = State();
+        baseline.Workshop = new WorkshopMetadata { Author = "Known author", Version = 3,
+            Source = "Active mod header + saved Workshop .info cache", Preview = new PreviewImage { Status = "missing" } };
+        Check(!Json.Write(baseline.Workshop).Contains("CaptureStatus") && !Json.Write(baseline.Workshop).Contains("Issues") &&
+            !Json.Write(baseline.Workshop.Preview).Contains("UnavailableReason"),
+            "optional availability fields do not change healthy legacy metadata serialization");
+        Snapshot healthy = Clone(baseline); healthy.Records[0].Cells[0].Value.Text = "11";
+        var tracker = new Tracker(baseline);
+        Packet available = tracker.Export(healthy);
+        Snapshot partial = Clone(healthy);
+        partial.Workshop.CaptureStatus = "partial";
+        partial.Workshop.Source = "Active mod header; Workshop cache unavailable";
+        partial.Workshop.Issues = new List<WorkshopIssue> { new WorkshopIssue {
+            Component = "cache", Code = "invalid-data", Message = "Workshop cache XML is invalid." } };
+        partial.Workshop.Preview.Status = "unavailable";
+        partial.Workshop.Preview.UnavailableReason = "Preview cannot be decoded.";
+        Packet unavailable = tracker.Export(partial);
+        Check(unavailable.BatchId == available.BatchId && unavailable.Changes.Count == available.Changes.Count,
+            "optional Workshop availability changes do not invent gameplay evidence or batch identity");
+        Reject(() => DraftValidation.Check(available, Draft(available), partial, id => ""),
+            "available-to-unavailable metadata stales existing drafts");
+        DraftValidation.Check(unavailable, Draft(unavailable), partial, id => "");
+        passed++;
+        Reject(() => DraftValidation.Check(unavailable, Draft(unavailable), healthy, id => ""),
+            "recovering Workshop availability stales a partial-capture draft");
+        Snapshot copy = Clone(partial);
+        Check(copy.Fingerprint() == partial.Fingerprint() && copy.Workshop.Issues[0].Code == "invalid-data" &&
+            copy.Workshop.Preview.UnavailableReason == "Preview cannot be decoded.",
+            "availability and explicit reasons round-trip with stable fingerprints");
+        copy.Workshop.Author = "Changed known author";
+        Reject(() => DraftValidation.Check(unavailable, Draft(unavailable), copy, id => ""),
+            "known header fields still stale drafts while optional data is unavailable");
+        copy = Clone(partial); copy.Workshop.Issues[0].Code = "read-failed";
+        Reject(() => DraftValidation.Check(unavailable, Draft(unavailable), copy, id => ""),
+            "availability reason changes affect stale-state fingerprints");
+        copy = Clone(partial); copy.Workshop.Preview.UnavailableReason = "Preview is too large.";
+        Reject(() => DraftValidation.Check(unavailable, Draft(unavailable), copy, id => ""),
+            "preview availability reasons participate in fingerprints");
+        copy = Clone(partial); copy.Records[0].Cells[0].Value.Text = "12";
+        Reject(() => DraftValidation.Check(unavailable, Draft(unavailable), copy, id => ""),
+            "gameplay changes still stale partial-capture drafts");
+        var recordings = new List<RecordingEvidence> { new RecordingEvidence {
+            EntryId = Guid.NewGuid().ToString("N"), SessionId = Guid.NewGuid().ToString("N"),
+            RecordedUtc = unavailable.ExportedUtc, Kind = "recorded", Packet = unavailable } };
+        Packet range = RangeExport.Create(Guid.NewGuid().ToString("N"), recordings, 0, 0, partial);
+        Check(range.Context.Workshop.CaptureStatus == "partial" && range.Recordings[0].Packet.Context.Workshop.Issues.Count == 1,
+            "range exports retain current and historical availability reasons");
+        Reject(() => DraftValidation.Check(range, Draft(range), healthy, id => ""),
+            "historical range drafts still stale when current Workshop availability recovers");
+        Check(unavailable.Instructions.Contains("unavailable metadata/preview values are unknown"),
+            "AI instructions forbid interpreting unavailable values as verified defaults");
+    }
+
     public static int Main()
     {
         try
@@ -286,6 +341,7 @@ internal static class CoreTests
             Reject(delegate { DraftValidation.Check(withContext, contextDraft, withMetadata, delegate { return ""; }); },
                 "Workshop context changed after export blocks stale drafts");
             CheckCompleteCoverage();
+            CheckWorkshopAvailability();
             passed += TrackingTests.Run();
             passed += JournalTests.Run();
             Console.WriteLine("PASS: " + passed + " core checks");
