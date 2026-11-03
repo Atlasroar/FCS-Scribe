@@ -1,9 +1,84 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Windows.Forms;
 
 namespace FcsScribe
 {
+    internal sealed class RecordingRangeDialog : Form
+    {
+        private readonly ComboBox first = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly ComboBox last = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly Label summary = new Label { Dock = DockStyle.Fill, AutoSize = true };
+        private readonly TextBox preview = new TextBox { Dock = DockStyle.Fill, Multiline = true, ReadOnly = true,
+            WordWrap = false, ScrollBars = ScrollBars.Both, MaxLength = Int32.MaxValue };
+        private readonly Button export = new Button { Text = "Export selected range...", AutoSize = true, DialogResult = DialogResult.OK };
+        private readonly IList<RecordingEvidence> recordings;
+        public int First { get { return first.SelectedIndex; } }
+        public int Last { get { return last.SelectedIndex; } }
+
+        public RecordingRangeDialog(IList<RecordingEvidence> recordings)
+        {
+            if (recordings == null || recordings.Count == 0) throw new ArgumentException("Recordings are required.", "recordings");
+            this.recordings = recordings;
+            Text = "Choose AI recording range";
+            Width = 980; Height = 680; MinimumSize = new System.Drawing.Size(660, 480);
+            StartPosition = FormStartPosition.CenterParent; MaximizeBox = false; MinimizeBox = false;
+            var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 8, Padding = new Padding(12) };
+            for (int i = 0; i < 8; i++) layout.RowStyles.Add(new RowStyle(i == 6 ? SizeType.Percent : SizeType.AutoSize, i == 6 ? 100 : 0));
+            layout.Controls.Add(new Label { AutoSize = true, Dock = DockStyle.Fill,
+                Text = "Choose first and last entries (inclusive). These are ordered observations, not a net diff. " +
+                    "Unrecorded edits are explicitly labelled; exporting never records or compiles them. " +
+                    "Notes will be validated against the CURRENT editor state, even for an older range. " +
+                    "Overlapping ranges can document the same evidence again; compare citations and existing notes." }, 0, 0);
+            layout.Controls.Add(new Label { Text = "First recording (inclusive):", AutoSize = true }, 0, 1);
+            layout.Controls.Add(first, 0, 2);
+            layout.Controls.Add(new Label { Text = "Last recording (inclusive):", AutoSize = true }, 0, 3);
+            layout.Controls.Add(last, 0, 4);
+            layout.Controls.Add(summary, 0, 5);
+            layout.Controls.Add(preview, 0, 6);
+            var buttons = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill };
+            var cancel = new Button { Text = "Cancel", AutoSize = true, DialogResult = DialogResult.Cancel };
+            buttons.Controls.Add(export); buttons.Controls.Add(cancel);
+            layout.Controls.Add(buttons, 0, 7);
+            foreach (RecordingEvidence recording in recordings)
+            {
+                string label = (first.Items.Count + 1) + " | " + recording.RecordedUtc + " | " +
+                    (recording.Kind == "pending" ? "UNRECORDED editor changes" : recording.Kind) +
+                    " | " + recording.Packet.Changes.Count + " change IDs | session " + (recording.SessionId ?? "(legacy)");
+                first.Items.Add(label); last.Items.Add(label);
+            }
+            first.SelectedIndex = 0; last.SelectedIndex = recordings.Count - 1;
+            first.SelectedIndexChanged += delegate { UpdateRange(); };
+            last.SelectedIndexChanged += delegate { UpdateRange(); };
+            Controls.Add(layout); AcceptButton = export; CancelButton = cancel;
+            UpdateRange();
+        }
+
+        private void UpdateRange()
+        {
+            bool valid = First >= 0 && Last >= First;
+            var selected = valid ? recordings.Skip(First).Take(Last - First + 1).ToList() : new List<RecordingEvidence>();
+            int changes = selected.Sum(x => x.Packet.Changes.Count);
+            export.Enabled = valid && changes > 0;
+            summary.Text = !valid ? "Choose a last recording at or after the first." :
+                selected.Count + " entries, " + changes + " change IDs, " + selected.Count(x => x.Kind == "pending") +
+                " unrecorded entry. " + (changes == 0 ? "Context-only updates are not record-change evidence." :
+                "Every change ID in this range must be covered exactly once in the draft.");
+            var text = new StringBuilder("PARTIAL EXTRACTION - inspect names, values and all warnings before sharing.\r\n");
+            foreach (RecordingEvidence recording in selected)
+            {
+                text.AppendLine("\r\n" + recording.EntryId + " | " + recording.RecordedUtc + " | " + recording.Kind +
+                    " | original batch " + recording.Packet.BatchId);
+                foreach (string warning in recording.Packet.Context.Warnings) text.AppendLine("WARNING: " + warning);
+                ScribeWindow.AppendChanges(text, RangeExport.Changes(new[] { recording }));
+            }
+            preview.Text = text.ToString();
+        }
+    }
+
     internal sealed class SettingsDialog : Form
     {
         private readonly ComboBox interval = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260 };

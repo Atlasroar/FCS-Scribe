@@ -8,7 +8,8 @@ It does not replace FCS or load an AI provider.
 | `src\Core.cs` | Typed snapshots, immutable baseline copy, deterministic changes, fingerprints, packets, and draft validation | Depend on FCS, WinForms, or a provider SDK |
 | `src\Tracking.cs` | Resumable documents, structural/history integrity checks, atomic checkpoint storage and settings | Read live FCS objects from worker threads or claim that legacy packets restore a full baseline |
 | `src\Journal.cs` | Replayable record deltas, timestamped session logs, durable-head marker, writer lease, idempotent compilation, explicit tail recovery and independent deadlines | Rewrite a full baseline each tick, discard uncompiled history or restore mod binaries |
-| `src\SettingsDialog.cs` | New/resume choice and manual/automatic review/export-directory settings | Automatically convert legacy evidence without approval |
+| `src\RangeExport.cs` | Selected original packets, stable range identity and collision-free qualified evidence in schema-3 AI handoffs | Rewrite saved batches, collapse observed reversals or treat a range as a resumable baseline |
+| `src\SettingsDialog.cs` | New/resume choice, recording-range preview and manual/automatic review/export-directory settings | Automatically convert legacy evidence or export a range without confirmation |
 | `src\FcsAdapter.cs` | Guard the FCS executable and read/update verified editor objects on the UI thread | Guess APIs, silently omit unsupported values, or write binary mods |
 | `src\WorkshopArchive.cs` | Known-field XML cache contract and bounded, lossless local preview archiving | Contact Steam, overwrite prior archives, or re-encode/replace source images |
 | `src\Plugin.cs` | Implement the upstream plugin interface, attach a toolbar action, and present review/import/approval UI | Automatically trust/apply AI text or save the mod |
@@ -63,6 +64,11 @@ Live FCS model -> guarded adapter -> explicit baseline / current snapshot
 Record identity uses stable IDs, not names. Base, active, locked, and effective
 cells remain distinct. The exported packet includes change evidence and
 context, not a full dump of the loaded record database.
+Beta 5 range exports combine selected original packets and uniquely qualified
+copied changes, not full snapshots/deltas. Source validation and range building
+use detached data on workers; live capture and preview stay on the UI thread.
+Export neither advances recording nor compiles sessions, and current-state
+fingerprints still govern note application for historical ranges.
 
 ## Planned extension point
 

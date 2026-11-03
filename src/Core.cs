@@ -229,6 +229,8 @@ namespace FcsScribe
         [DataMember(Order = 7)] public List<Change> Changes;
         [DataMember(Order = 8)] public string Instructions;
         [DataMember(Order = 9)] public NoteDraft ResponseTemplate;
+        [DataMember(Order = 10, EmitDefaultValue = false)] public string ProjectId;
+        [DataMember(Order = 11, EmitDefaultValue = false)] public List<RecordingEvidence> Recordings;
     }
 
     public static class Json
@@ -377,12 +379,18 @@ namespace FcsScribe
                 if (after.TryGetValue(change.ReferencedId, out target) || before.TryGetValue(change.ReferencedId, out target))
                     change.ReferencedName = target.Name;
             }
+            return CreatePacket(baselineId, captured, current, changes);
+        }
+
+        internal static Packet CreatePacket(string baselineId, string captured, Snapshot current, List<Change> changes)
+        {
             string fingerprint = current.Fingerprint();
             string batch = Json.Hash(baselineId + ":" + Json.Write(changes));
             var draft = new NoteDraft { BatchId = batch, SourceFingerprint = fingerprint };
+            var surviving = new HashSet<string>(current.Records.Select(x => x.Id), StringComparer.Ordinal);
             foreach (var group in changes.GroupBy(x => x.RecordId))
                 draft.Entries.Add(new NoteEntry {
-                    TargetRecordId = after.ContainsKey(group.Key) ? group.Key : "",
+                    TargetRecordId = surviving.Contains(group.Key) ? group.Key : "",
                     ChangeIds = group.Select(x => x.Id).ToList(),
                     Text = ""
                 });

@@ -135,6 +135,8 @@ namespace FcsScribe
         private readonly FileStream lease, anchor;
         private readonly Dictionary<string, Stamp> entries = new Dictionary<string, Stamp>(StringComparer.Ordinal);
         private readonly List<string> sessions = new List<string>();
+        private readonly Dictionary<string, string> sessionHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private readonly List<RecordingEvidence> evidence = new List<RecordingEvidence>();
         private string sessionHash, journalHash, markerHash;
         private bool disposed, faulted;
         public readonly string PathName, DirectoryName, JournalPath, ProjectId;
@@ -165,6 +167,15 @@ namespace FcsScribe
                 State = root.State; Fingerprint = root.StateFingerprint;
                 HeadId = root.BaselineId; CapturedUtc = root.ValidatedUtc;
                 LastEvidence = root.LatestEvidence(Fingerprint);
+                foreach (Packet packet in root.ImportedEvidence)
+                    evidence.Add(new RecordingEvidence { EntryId = "imported-" + packet.BatchId,
+                        Kind = "imported", RecordedUtc = packet.ExportedUtc, Packet = packet });
+                for (int i = 0; i < root.Entries.Count; i++)
+                {
+                    Packet packet = root.Entries[i].Packet;
+                    evidence.Add(new RecordingEvidence { EntryId = "checkpoint-" + i.ToString(CultureInfo.InvariantCulture) + "-" + packet.BatchId,
+                        Kind = "checkpoint", RecordedUtc = packet.ExportedUtc, Packet = packet });
+                }
                 entries.Add(HeadId, new Stamp { Fingerprint = Fingerprint, Compiled = true });
                 JournalMarker marker = null;
                 string markerPath = Path.Combine(DirectoryName, "project.json");
@@ -201,6 +212,7 @@ namespace FcsScribe
                         previous = line.Record.EntryId; fingerprint = line.Record.Packet.SourceFingerprint;
                     });
                     sessions.Add(next.Path);
+                    sessionHashes.Add(next.Path, TrackingStorage.HashFile(next.Path));
                     remaining.Remove(next);
                 }
                 if (marker != null && (!entries.ContainsKey(marker.HeadId) || entries[marker.HeadId].Fingerprint != marker.Fingerprint))
@@ -292,6 +304,7 @@ namespace FcsScribe
             finally { if (File.Exists(temporary)) File.Delete(temporary); }
             SessionPath = path; SessionId = id; sessionHash = TrackingStorage.HashFile(path);
             sessions.Add(path);
+            sessionHashes.Add(path, sessionHash);
         }
 
         public Packet Record(Snapshot current)
@@ -313,9 +326,31 @@ namespace FcsScribe
             }
             catch { faulted = true; throw; }
             entries.Add(record.EntryId, new Stamp { Hash = line.Hash, Fingerprint = packet.SourceFingerprint });
+            evidence.Add(Evidence(record));
+            sessionHashes[SessionPath] = sessionHash;
             State = current; Fingerprint = packet.SourceFingerprint; HeadId = record.EntryId; CapturedUtc = record.RecordedUtc;
             if (packet.Changes.Count > 0) LastEvidence = packet;
             return packet;
+        }
+
+        public List<RecordingEvidence> ExportRecordings(Snapshot current)
+        {
+            EnsureOpen();
+            Packet pending = ResumeTracker().Export(current);
+            TrackingStorage.Verify(JournalPath, journalHash);
+            TrackingStorage.Verify(Path.Combine(DirectoryName, "project.json"), markerHash);
+            foreach (var session in sessionHashes) TrackingStorage.Verify(session.Key, session.Value);
+            var result = evidence.ToList();
+            if (pending.SourceFingerprint != Fingerprint)
+                result.Add(new RecordingEvidence { EntryId = "pending-" + Json.Hash(HeadId + ":" + pending.SourceFingerprint),
+                    SessionId = SessionId, RecordedUtc = pending.ExportedUtc, Kind = "pending", Packet = pending });
+            return Json.Read<List<RecordingEvidence>>(Json.Write(result));
+        }
+
+        private static RecordingEvidence Evidence(JournalRecord record)
+        {
+            return new RecordingEvidence { EntryId = record.EntryId, SessionId = record.SessionId,
+                RecordedUtc = record.RecordedUtc, Kind = "recorded", Packet = record.Packet };
         }
 
         public int Compile()
@@ -378,6 +413,7 @@ namespace FcsScribe
                 throw new InvalidDataException("The replayed delta does not match its saved checkpoint.");
             entries.Add(record.EntryId, new Stamp { Hash = line.Hash,
                 Fingerprint = record.Packet.SourceFingerprint, Compiled = compiled });
+            evidence.Add(Evidence(record));
             State = next; Fingerprint = record.Packet.SourceFingerprint;
             HeadId = record.EntryId; CapturedUtc = record.RecordedUtc;
             if (record.Packet.Changes.Count > 0) LastEvidence = record.Packet;
