@@ -34,7 +34,7 @@ reusable for saved-data analysis and eventual wiki generation.
 | MVP | Safe notes insertion | Copy-based runtime checks pass; real FCS Extended approval/save workflow remains |
 | Requested follow-up | Workshop metadata and preview archive | Implemented and copy-tested; cached/local provenance explicit; interactive acceptance remains |
 | Requested follow-up | Embedded window and contextual help | Native MDI child and per-button bottom help implemented; construction/event checks pass; interactive acceptance remains |
-| Beta 2 | Resumable tracking and session journals | Full initial baseline, timestamped delta logs and durable replay implemented; beta 5 adds range selection for AI export, while broader history UI/draft persistence remain planned |
+| Beta 2 | Resumable tracking and session journals | Full initial baseline, timestamped delta logs and durable replay implemented; beta 5 adds range selection, beta 7 adds independent draft workspaces, and broader history management remains planned |
 | Beta 2 | Recording, compilation and export settings | Manual/30/60/300/600-second recording, explicit/30-minute compilation and active-mod defaults implemented |
 | Beta 3 stabilization | Grouped window menus | Core, Workshop and Draft dropdowns with standalone approval/settings implemented and disposable-copy checked; real FCS Extended UI acceptance remains |
 | Next | Markdown export | Planned; use the existing verified catalogue rather than a second diff engine |
@@ -125,13 +125,27 @@ Recorded checks: 215 core, 235 disposable vanilla FCS and 234
 representative-mod FCS checks passed. Real beta 5 Workshop journal compatibility
 also preserves original serialization/hashes. Storage/packet schemas are
 unchanged; availability fields are optional. Actual interactive Steam
-operations remain part of S09. S04 is the next stabilization item.
+operations remain part of S09. S04 is addressed separately in beta 7 below.
 
 ### S04. Medium: editable drafts and export associations are not durable
 
-- [ ] Preserve draft/packet associations or require explicit save/discard protection before close, session replacement, Import and Paste overwrite work.
-- [ ] Validate restored drafts against their original evidence and current editor state; never imply that tracking history already backs up draft text.
-- [ ] Cover cancellation, restart, unsaved edits during background work and stale or missing associated packets.
+The user selected **Save/Open draft-and-original-packet bundles plus
+save/discard prompts**, rather than window-local associations alone.
+
+- [x] Preserve draft/packet associations with explicit Save/Open workspace and protect close, Start/resume, Export, Import, Paste and Open with Save/Discard/Cancel.
+- [x] Validate restored original packets, retain exact unfinished text, report draft evidence/current-state errors and require fresh validation/approval for application; tracking history does not back up draft text.
+- [x] Cover cancellation, restart, edits during background save/load/session start, stale/missing/corrupt associated packets and observed external-file conflicts.
+
+S04 is addressed in beta 7. A versioned workspace embeds original schema-1/2/3
+packets with a consistency hash and opaque draft text; no external packet path
+is needed. Saves are flushed/atomic, retain a previous-file backup and refuse
+to replace unrelated JSON. Text-only recovery never invents evidence. Revision
+guards retain late edits and cancel destructive adoption; in-flight work blocks
+close until retried. Restoring is not applying, approval, tracking resume or
+mod recovery. Explicit saving is not autosave or forced-termination recovery.
+Recorded checks: 235 core, 260 disposable vanilla FCS and 259 representative-mod
+FCS checks passed. Native file dialogs and complete real FCS Extended interaction
+remain in S09. S05 is next.
 
 ### S05. Medium: failed project creation can leave an orphaned marker
 
@@ -337,7 +351,9 @@ coverage includes it. These results do not replace interactive acceptance.
 - [x] Warn that full-state tracking files are large/private and must not be used for AI handoff or Workshop distribution.
 - [x] Exercise background start/resume, actual timer dispatch, independent interval/30-minute deadlines, idempotent compilation, crash-tail recovery, missing storage/head, legacy compatibility, writer exclusion and copied-data defaults.
 - [ ] Manually exercise new/resume/conversion/settings dialogs, long-running validation/close, all intervals and restart recovery in FCS Extended.
-- [ ] Add history browsing, combined batch export and persisted draft/export associations.
+- [x] Select combined chronological recording ranges for AI exports (beta 5).
+- [x] Save/Open portable draft/export associations independently of tracking (beta 7).
+- [ ] Add broader history-management UI beyond the recording-range selector.
 
 ## 6. OpenConstructionSet integration
 

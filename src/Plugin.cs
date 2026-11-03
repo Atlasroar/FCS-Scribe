@@ -78,6 +78,11 @@ namespace FcsScribe
         private readonly MenuStrip actions = new MenuStrip { Dock = DockStyle.Top, AutoSize = true,
             AllowMerge = false, CanOverflow = true, TabStop = true };
         private Packet exported;
+        private string workspacePath, workspaceHash, savedDraftText;
+        private Packet savedPacket;
+        private long draftRevision;
+        private long? approvedCloseRevision;
+        private readonly Func<string, DialogResult> draftDecision;
         private readonly TextBox review = TextArea(true);
         private readonly TextBox draft = TextArea(false);
         private readonly TextBox workshop = TextArea(true);
@@ -92,6 +97,11 @@ namespace FcsScribe
         internal ScribeWindow(FcsAdapter adapter, Form editor, string settingsFile)
         {
             this.adapter = adapter;
+            draftDecision = operation => MessageBox.Show(this,
+                "Save the editable draft AND its original AI packet before " + operation + "?\r\n" +
+                "Yes: save a portable draft workspace. No: discard this window's unsaved work. Cancel: keep working.\r\n" +
+                "Tracking journals do not back up draft text. A saved workspace never saves the mod.",
+                "Unsaved draft workspace", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
             settingsPath = settingsFile;
             settings = PluginSettings.Load(settingsPath);
             settingsHash = File.Exists(settingsPath) ? TrackingStorage.HashFile(settingsPath) : null;
@@ -108,9 +118,11 @@ namespace FcsScribe
             var workshopMenu = AddMenu("&Workshop", "Export local Workshop information or archive the original preview image.");
             AddAction(workshopMenu.DropDownItems, "&Export Workshop info", "Save current local Workshop information, availability warnings and preview-image details as JSON. No tracking baseline required; Workshop-only errors do not pause gameplay recording.", ExportWorkshop, false);
             AddAction(workshopMenu.DropDownItems, "&Archive preview image", "Copy the local Workshop preview, byte-for-byte, to a new image file outside Kenshi. Unavailable images fail explicitly without pausing gameplay recording. Does not download or change the original.", ArchivePreview, false);
-            var draftMenu = AddMenu("&Draft", "Import a draft file or paste clipboard text for review before approval.");
-            AddAction(draftMenu.DropDownItems, "&Import draft", "Load an AI response JSON into the editable draft. Requires an exported batch; nothing is applied until approval.", Import);
-            AddAction(draftMenu.DropDownItems, "&Paste draft", "Replace the editable draft with clipboard text. Review and validate it before applying; nothing is applied by pasting.", delegate { draft.Text = Clipboard.GetText(); });
+            var draftMenu = AddMenu("&Draft", "Import/paste a response or save/open its portable workspace with the original AI packet.");
+            AddAsyncAction(draftMenu.DropDownItems, "&Import draft", "Load an AI response JSON into the editable draft. Requires an exported batch; save/discard protection keeps existing work safe.", Import);
+            AddAsyncAction(draftMenu.DropDownItems, "&Paste draft", "Replace the editable draft with clipboard text after save/discard protection. Nothing is applied by pasting.", Paste);
+            AddAsyncAction(draftMenu.DropDownItems, "&Save workspace", "Atomically save exact editable text, even unfinished JSON, together with its original AI packet. This is separate from tracking and does not save the mod.", SaveWorkspaceAction);
+            AddAsyncAction(draftMenu.DropDownItems, "&Open workspace", "Restore draft text and its original packet after restart. Validate the bundle, report stale/invalid drafts, and require fresh validation and approval before applying.", OpenWorkspace);
             AddAction(actions.Items, "&Apply approved notes", "Validate the draft and ask for approval, then append record Notes/TODO entries and mark FCS dirty. Does not save or edit Workshop notes.", Apply);
             AddAsyncAction(actions.Items, "&Settings", "Choose manual or automatic review (30 seconds, 1, 5 or 10 minutes) and the default JSON export folder. Existing tracking files stay at their chosen location.", Settings);
             MainMenuStrip = actions;
@@ -156,7 +168,30 @@ namespace FcsScribe
                 try { await RunBusy(AutomaticTick); }
                 catch (Exception error) { if (!closing) PauseAfterError(error); }
             };
-            FormClosing += delegate { closing = true; timer.Stop(); if (!busy && project != null) project.Dispose(); };
+            draft.TextChanged += delegate { draftRevision++; UpdateDraftTitle(); };
+            FormClosing += async delegate(object sender, FormClosingEventArgs args) {
+                if (busy)
+                {
+                    args.Cancel = true;
+                    status.Text = "An operation is still running. Draft work is retained; close again after it completes.";
+                    return;
+                }
+                if (DraftNeedsSave && approvedCloseRevision != draftRevision)
+                {
+                    args.Cancel = true;
+                    try
+                    {
+                        await RunBusy(async () => {
+                            if (!await ConfirmDraftReplacement("closing Scribe")) return;
+                            approvedCloseRevision = draftRevision;
+                            BeginInvoke(new Action(Close));
+                        });
+                    }
+                    catch (Exception error) { PauseAfterError(error); }
+                    return;
+                }
+                closing = true; timer.Stop(); if (project != null) project.Dispose();
+            };
             FormClosed += delegate { timer.Dispose(); };
             Disposed += delegate { closing = true; timer.Dispose(); if (!busy && project != null) project.Dispose(); };
         }
@@ -192,14 +227,18 @@ namespace FcsScribe
 
         private async Task StartPath(string path)
         {
+            if (!await ConfirmDraftReplacement("starting tracking")) return;
+            long revision = draftRevision;
             Snapshot current = adapter.Capture();
             status.Text = "Saving the project baseline and opening a timestamped session.";
             JournalProject candidate = await Task.Run(() => JournalProject.Create(path, current));
-            await Begin(candidate, null);
+            await Begin(candidate, null, revision);
         }
 
         private async Task ResumePath(string path)
         {
+            if (!await ConfirmDraftReplacement("resuming tracking")) return;
+            long revision = draftRevision;
             if (project != null && String.Equals(project.PathName, Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase))
             {
                 project.Dispose(); project = null; tracker = null;
@@ -241,19 +280,19 @@ namespace FcsScribe
                         "Continuing will record those differences on the next review; it will NOT restore the mod. Continue?",
                         "Confirm resumed state", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
                 JournalProject adopted = candidate; candidate = null;
-                await Begin(adopted, pending);
+                await Begin(adopted, pending, revision);
             }
             finally { if (candidate != null) candidate.Dispose(); }
         }
 
-        private async Task Begin(JournalProject candidate, Packet pending)
+        private async Task Begin(JournalProject candidate, Packet pending, long revision)
         {
             bool adopted = false;
             try
             {
-                if (closing) return;
+                if (closing || !DraftUnchanged(revision)) return;
                 await Task.Run(() => candidate.BeginSession());
-                if (closing) return;
+                if (closing || !DraftUnchanged(revision)) return;
                 if (project != null) project.Dispose();
                 project = candidate; tracker = candidate.ResumeTracker(); adopted = true;
                 if (pending != null) ShowChanges(pending);
@@ -265,7 +304,7 @@ namespace FcsScribe
             }
             finally { if (!adopted) candidate.Dispose(); }
             automaticPaused = false;
-            exported = null; draft.Clear();
+            AdoptWorkspace(null, "", null, null);
             schedule.Reset(clock.ElapsedMilliseconds, settings.ReviewSeconds);
             status.Text = ProjectStatus() + " New session: " + project.SessionPath;
         }
@@ -396,9 +435,7 @@ namespace FcsScribe
                 packet = await Task.Run(() => RangeExport.Create(project.ProjectId, recordings, first, last, current));
             }
             if (closing) return;
-            if (exported != null && !String.IsNullOrWhiteSpace(draft.Text) &&
-                MessageBox.Show(this, "Exporting replaces the editable draft with a blank response template. Continue?",
-                    "Replace draft", MessageBoxButtons.OKCancel) != DialogResult.OK) return;
+            if (!await ConfirmDraftReplacement("exporting a new AI packet")) return;
             using (var dialog = new SaveFileDialog { Filter = "JSON packet (*.json)|*.json", FileName = "fcs-scribe-ai-packet.json",
                 InitialDirectory = ExportDirectory(), RestoreDirectory = true })
             {
@@ -410,8 +447,7 @@ namespace FcsScribe
                     throw new InvalidOperationException("The editor changed while selecting the range. Export again to review the current recordings and pending edits.");
                 File.WriteAllText(dialog.FileName, Json.Pretty(Json.Write(packet)), new UTF8Encoding(false));
             }
-            exported = packet;
-            draft.Text = Json.Pretty(Json.Write(packet.ResponseTemplate));
+            AdoptWorkspace(packet, Json.Pretty(Json.Write(packet.ResponseTemplate)), null, null);
             ShowChanges(packet);
             status.Text = WorkshopNotice(packet.Context.Workshop) + packet.Recordings.Count +
                 " selected recordings exported; no history advanced or compiled. " +
@@ -419,23 +455,142 @@ namespace FcsScribe
                 "Mod text may be private; inspect the packet before sharing.";
         }
 
-        private void Import()
+        private async Task Import()
         {
-            if (exported == null) throw new InvalidOperationException("Export a packet in this tracking session first.");
+            if (exported == null) throw new InvalidOperationException("Export an AI packet or Open workspace with its original packet first.");
             using (var dialog = new OpenFileDialog { Filter = "JSON draft (*.json)|*.json|All files (*.*)|*.*",
                 InitialDirectory = ExportDirectory(), RestoreDirectory = true })
             {
                 if (dialog.ShowDialog(this) != DialogResult.OK) return;
-                string text = File.ReadAllText(dialog.FileName);
-                Json.Read<NoteDraft>(text);
+                string path = dialog.FileName;
+                string text = await Task.Run(() => File.ReadAllText(path));
+                if (Json.Read<NoteDraft>(text) == null) throw new InvalidDataException("The response draft is empty.");
+                if (!await ConfirmDraftReplacement("importing another draft")) return;
                 draft.Text = text;
             }
             status.Text = "Imported as an editable draft, not applied. Review TargetRecordId, Text and ChangeIds before approval.";
         }
 
+        private async Task Paste()
+        {
+            string text = Clipboard.GetText();
+            if (!await ConfirmDraftReplacement("pasting another draft")) return;
+            draft.Text = text;
+            status.Text = exported == null ?
+                "Pasted as unassociated text; it cannot be applied without an AI packet. Save workspace can preserve this text-only work." :
+                "Pasted as editable text, not applied. Save workspace preserves the original packet with this text.";
+        }
+
+        private bool DraftNeedsSave
+        {
+            get
+            {
+                return workspacePath == null ? exported != null || draft.Text.Length > 0 :
+                    draft.Text != savedDraftText || !Object.ReferenceEquals(exported, savedPacket);
+            }
+        }
+
+        private void UpdateDraftTitle()
+        {
+            Text = "FCS-Scribe - experimental documentation" + (DraftNeedsSave ? " * unsaved draft workspace" : "");
+        }
+
+        private bool DraftUnchanged(long revision)
+        {
+            if (revision == draftRevision) return true;
+            status.Text = "Draft changed during the operation. Replacement cancelled; the latest text and original packet were retained.";
+            return false;
+        }
+
+        private async Task<bool> ConfirmDraftReplacement(string operation)
+        {
+            long revision = draftRevision;
+            if (!DraftNeedsSave) return true;
+            DialogResult decision = draftDecision(operation);
+            if (decision != DialogResult.Yes && decision != DialogResult.No) return false;
+            if (decision == DialogResult.Yes && !await SaveWorkspace()) return false;
+            return DraftUnchanged(revision);
+        }
+
+        private void AdoptWorkspace(Packet packet, string text, string path, string hash)
+        {
+            exported = packet; workspacePath = path; workspaceHash = hash;
+            savedPacket = path == null ? null : packet;
+            savedDraftText = path == null ? null : text;
+            draftRevision++;
+            draft.Text = text;
+            UpdateDraftTitle();
+        }
+
+        private async Task SaveWorkspaceAction() { await SaveWorkspace(); }
+
+        private async Task<bool> SaveWorkspace()
+        {
+            using (var dialog = new SaveFileDialog { Filter = "Draft workspace JSON (*.json)|*.json",
+                FileName = workspacePath ?? "fcs-scribe-draft-workspace.json",
+                InitialDirectory = ExportDirectory(), RestoreDirectory = true,
+                Title = "Save draft workspace - original packet and exact editable text" })
+            {
+                if (dialog.ShowDialog(this) != DialogResult.OK) return false;
+                return await SaveWorkspacePath(dialog.FileName);
+            }
+        }
+
+        private async Task<bool> SaveWorkspacePath(string path)
+        {
+            path = Path.GetFullPath(path);
+            ProtectTrackingFile(path);
+            long revision = draftRevision;
+            Packet packet = exported;
+            DraftWorkspace snapshot = DraftWorkspace.Create(packet, draft.Text);
+            bool same = String.Equals(path, workspacePath, StringComparison.OrdinalIgnoreCase);
+            string expectedHash = same ? workspaceHash : null;
+            string hash = await Task.Run(() => {
+                // A workspace must never replace a tracking anchor, AI packet or unrelated JSON.
+                if (!same && File.Exists(path)) expectedHash = DraftWorkspace.Load(path).FileHash;
+                return TrackingStorage.WriteAtomic(path, snapshot, expectedHash);
+            });
+            if (Object.ReferenceEquals(exported, packet))
+            {
+                workspacePath = path; workspaceHash = hash;
+                savedDraftText = snapshot.DraftText; savedPacket = packet;
+                UpdateDraftTitle();
+            }
+            bool unchanged = revision == draftRevision;
+            status.Text = "Draft workspace saved. " + (unchanged ? "Original evidence retained; nothing applied or saved in FCS." :
+                "The saved snapshot does not include edits made during saving; the latest text remains unsaved.");
+            return unchanged;
+        }
+
+        private async Task OpenWorkspace()
+        {
+            using (var dialog = new OpenFileDialog { Filter = "Draft workspace JSON (*.json)|*.json",
+                InitialDirectory = ExportDirectory(), RestoreDirectory = true })
+            {
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                await OpenWorkspacePath(dialog.FileName);
+            }
+        }
+
+        private async Task OpenWorkspacePath(string path)
+        {
+            path = Path.GetFullPath(path);
+            long revision = draftRevision;
+            DraftWorkspace loaded = await Task.Run(() => DraftWorkspace.Load(path));
+            if (closing || !DraftUnchanged(revision)) return;
+            if (!await ConfirmDraftReplacement("opening another draft workspace")) return;
+            await Task.Run(() => TrackingStorage.Verify(path, loaded.FileHash));
+            if (closing || !DraftUnchanged(revision)) return;
+            string validation = loaded.Review(adapter.Capture(), adapter.Notes);
+            AdoptWorkspace(loaded.Packet, loaded.DraftText, path, loaded.FileHash);
+            if (exported != null) ShowChanges(exported);
+            else review.Clear();
+            status.Text = "Workspace restored, not applied. " + validation;
+        }
+
         private void Apply()
         {
-            if (exported == null) throw new InvalidOperationException("Export a packet before importing/applying notes.");
+            if (exported == null) throw new InvalidOperationException("Export an AI packet or Open workspace with its original packet before applying notes.");
             NoteDraft notes = Json.Read<NoteDraft>(draft.Text);
             Snapshot current = adapter.Capture();
             var pending = DraftValidation.Pending(exported, notes, current, adapter.Notes);

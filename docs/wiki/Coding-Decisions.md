@@ -152,6 +152,23 @@ targets with one matching completed block, and append the remaining targets.
 The existing append format is shared between writing and retry comparison;
 conflicting blocks fail explicitly rather than being treated as completed.
 
+## Keep draft workspaces independent of tracking (beta 7)
+
+The user selected explicit Save/Open of draft text plus its original packet,
+with save/discard protection rather than window-local associations alone.
+A single versioned JSON avoids broken external packet-path links after restart.
+The original packet is integrity-checked and never rebuilt from today's history.
+Raw draft text remains opaque so an unfinished response is not lost merely
+because it cannot yet validate; text-only recovery is explicit, never evidence.
+
+Atomic writes and observed-file hashes reuse existing storage primitives.
+Save captures a snapshot while the editor remains usable; a changed revision
+stays dirty. Open/Start checks revisions before adoption, and close is cancelled
+while an operation runs. Discard approval is local to that replacement, not a
+permanent clean flag. Failed or cancelled operations retain existing work.
+Restoring is not approval: current-state, evidence and existing-notes validation
+still gate every application. Explicit saving is not autosave or crash recovery.
+
 ## Separate future saved-data analysis
 
 OCS is useful complementary research, not a substitute for live-model access.
