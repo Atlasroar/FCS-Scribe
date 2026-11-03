@@ -90,6 +90,8 @@ namespace FcsScribe
         private readonly Label status = new Label { Dock = DockStyle.Bottom, Height = 48 };
         private readonly Label settingsNotice = new Label { Dock = DockStyle.Top, AutoSize = true,
             BorderStyle = BorderStyle.FixedSingle, MaximumSize = new System.Drawing.Size(1040, 0) };
+        private readonly Label compilationNotice = new Label { Dock = DockStyle.Bottom, AutoSize = true,
+            Visible = false, BorderStyle = BorderStyle.FixedSingle };
         private const string HelpHint = "Hover over a menu action, or select it with the keyboard, to see what it does.";
         private readonly Label help = new Label { Dock = DockStyle.Bottom, Height = 48, Text = HelpHint,
             BorderStyle = BorderStyle.FixedSingle };
@@ -115,7 +117,7 @@ namespace FcsScribe
             var coreMenu = AddMenu("&Core", "Start or resume tracking, review changes, compile the journal or export an AI packet.");
             AddAsyncAction(coreMenu.DropDownItems, "&Start tracking", "Create or resume a tracking project and begin a new timestamped session log. Replaces the editable draft; does not save or restore the mod.", Start);
             AddAsyncAction(coreMenu.DropDownItems, "&Review changes", "Record new changes since the last durable entry into this session log. Automatic intervals are available in Settings.", Review);
-            AddAsyncAction(coreMenu.DropDownItems, "&Compile journal", "Consolidate durable session entries into the main journal without duplicates or deleting session files. Automatic mode also compiles every 30 minutes.", Compile);
+            AddAsyncAction(coreMenu.DropDownItems, "&Compile journal", "Consolidate durable session entries without duplicates or deleting originals. Automatic mode compiles once the oldest pending recording is 30 minutes old, including time closed or manual.", Compile);
             AddAsyncAction(coreMenu.DropDownItems, "&Export AI packet", "Choose and preview an inclusive range of recordings, including earlier sessions or unrecorded edits, then save an AI packet. Does not record, compile or send anything online. Replaces the editable draft.", Export);
             var workshopMenu = AddMenu("&Workshop", "Export local Workshop information or archive the original preview image.");
             AddAction(workshopMenu.DropDownItems, "&Export Workshop info", "Save current local Workshop information, availability warnings and preview-image details as JSON. No tracking baseline required; Workshop-only errors do not pause gameplay recording.", ExportWorkshop, false);
@@ -157,15 +159,20 @@ namespace FcsScribe
             Controls.Add(tabs);
             Controls.Add(settingsNotice);
             Controls.Add(actions);
+            Controls.Add(compilationNotice);
             Controls.Add(help);
             Controls.Add(status);
             ClientSizeChanged += delegate {
                 settingsNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
+                compilationNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
             };
             settingsNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
+            compilationNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
             status.Text = "Start or resume a project. Recordings go to timestamped session logs; compiling never saves the mod.";
             timer.Tick += async delegate {
-                if (busy || closing || automaticPaused || settingsError != null || !Visible || tracker == null ||
+                if (busy || closing) return;
+                RefreshCompilationNotice();
+                if (automaticPaused || settingsError != null || !Visible || tracker == null ||
                     WindowState == FormWindowState.Minimized ||
                     (MdiParent != null && MdiParent.WindowState == FormWindowState.Minimized) ||
                     actions.OverflowButton.DropDown.Visible ||
@@ -312,7 +319,7 @@ namespace FcsScribe
             finally { if (!adopted) candidate.Dispose(); }
             automaticPaused = false;
             AdoptWorkspace(null, "", null, null);
-            schedule.Reset(clock.ElapsedMilliseconds, settings.ReviewSeconds);
+            schedule.Start(clock.ElapsedMilliseconds, DateTime.UtcNow, settings.ReviewSeconds, project.OldestPendingUtc);
             status.Text = ProjectStatus() + " New session: " + project.SessionPath;
         }
 
@@ -325,6 +332,7 @@ namespace FcsScribe
             if (closing) return;
             tracker = project.ResumeTracker();
             schedule.Reviewed(clock.ElapsedMilliseconds);
+            schedule.UpdatePending(clock.ElapsedMilliseconds, DateTime.UtcNow, project.OldestPendingUtc);
             ShowChanges(packet);
             status.Text = packet.Changes.Count + " evidence entries reviewed; session recording saved/unchanged. " + ProjectStatus();
         }
@@ -335,13 +343,13 @@ namespace FcsScribe
             status.Text = "Compiling durable session entries into the main journal.";
             int count = await Task.Run(() => project.Compile());
             if (closing) return;
-            schedule.Compiled(clock.ElapsedMilliseconds);
+            schedule.UpdatePending(clock.ElapsedMilliseconds, DateTime.UtcNow, project.OldestPendingUtc);
             status.Text = count + " new entries compiled. Session files retained. " + ProjectStatus();
         }
 
         private async Task AutomaticTick()
         {
-            if (settingsError != null) return;
+            if (settingsError != null || settings.ReviewSeconds == 0 || automaticPaused) return;
             if (schedule.ReviewDue(clock.ElapsedMilliseconds)) await Review();
             if (!closing && schedule.CompilationDue(clock.ElapsedMilliseconds)) await Compile();
         }
@@ -645,6 +653,7 @@ namespace FcsScribe
                 throw new InvalidOperationException("The settings loader returned neither settings nor a recovery error.");
             settingsError = loaded.Error; settingsHash = loaded.FileHash;
             settings = settingsError == null ? loaded.Value : new PluginSettings();
+            schedule.Configure(clock.ElapsedMilliseconds, settings.ReviewSeconds);
             settingsNotice.Visible = settingsError != null;
             settingsNotice.Text = settingsError == null ? "" :
                 "SETTINGS RECOVERY - automatic recording disabled. Safe manual mode uses the active mod's export folder. " +
@@ -661,7 +670,6 @@ namespace FcsScribe
             if (settingsError == null)
             {
                 automaticPaused = false;
-                schedule.Reset(clock.ElapsedMilliseconds, settings.ReviewSeconds);
                 status.Text = "Settings reloaded and validated. Existing tracking files were not moved. " + ScheduleText();
             }
             else status.Text = "Settings could not be loaded. Original file retained; safe manual recovery mode remains active.";
@@ -675,7 +683,6 @@ namespace FcsScribe
             if (closing) return;
             AdoptSettings(new LoadedSettings { Value = next, FileHash = saved.FileHash });
             automaticPaused = false;
-            schedule.Reset(clock.ElapsedMilliseconds, settings.ReviewSeconds);
             status.Text = "Settings saved. " + (saved.RecoveryBackup == null ? "" :
                 "Original bytes preserved at " + saved.RecoveryBackup + ". ") +
                 "Existing tracking files were not moved. " + ScheduleText();
@@ -686,12 +693,30 @@ namespace FcsScribe
             if (settingsError != null) return "Settings recovery: safe manual mode; use Settings to reload or save a repair.";
             return automaticPaused ? "Automatic review paused after an error; resume or save settings to re-enable." :
                 settings.ReviewSeconds == 0 ? "Manual recording/compilation." : "Automatic recording: " +
-                    settings.ReviewSeconds + " seconds; compilation: 30 minutes while Scribe is visible.";
+                    settings.ReviewSeconds + " seconds; compilation: oldest pending age 30 minutes, on the next eligible tick.";
+        }
+
+        private void RefreshCompilationNotice()
+        {
+            DateTime? oldest = schedule.OldestPendingUtc;
+            compilationNotice.Visible = project != null && oldest.HasValue;
+            if (project == null || !oldest.HasValue) { compilationNotice.Text = ""; return; }
+            long remaining = Math.Max(0, schedule.NextCompilation - clock.ElapsedMilliseconds);
+            string due = remaining == 0 ? "due now/overdue" : "due " + DateTime.UtcNow.AddMilliseconds(remaining).ToString("u");
+            string hold = settingsError != null ? "Settings recovery: automatic compilation held; use Compile journal." :
+                settings.ReviewSeconds == 0 ? "Manual mode: use Compile journal; debt is retained." :
+                automaticPaused ? "Automatic work paused; debt is retained. Compile manually or resolve the error." :
+                "Automatic compilation waits for the next eligible visible, unblocked tick.";
+            compilationNotice.Text = "Pending compilation: " + project.PendingCount + " recordings; oldest " +
+                oldest.Value.ToString("u") + "; " + due + ". " +
+                (oldest.Value > DateTime.UtcNow ? (remaining == 0 ? "Timestamp ahead of local UTC: treated as due now. " :
+                "Local UTC moved behind the recording; the existing countdown is retained. ") : "") + hold;
         }
 
         private void ConfigureTimer()
         {
             timer.Stop();
+            RefreshCompilationNotice();
             if (closing || automaticPaused || settingsError != null || tracker == null || settings.ReviewSeconds == 0) return;
             timer.Interval = 1000;
             timer.Start();
@@ -724,6 +749,7 @@ namespace FcsScribe
                 status.Text = "Action failed; automatic review paused. The baseline advances only after a successful checkpoint save.";
             }
             else status.Text = "Workshop action failed; gameplay tracking was not changed. " + ScheduleText();
+            RefreshCompilationNotice();
         }
 
         private ToolStripMenuItem AddMenu(string label, string description)

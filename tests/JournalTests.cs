@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Globalization;
 using FcsScribe;
 
 internal static class JournalTests
@@ -184,23 +185,113 @@ internal static class JournalTests
                     TrackingStorage.HashFile(legacyPath + ".legacy.bak") == legacyHash,
                     "approved conversion preserves legacy bytes and starts from current state");
 
-            foreach (int seconds in PluginSettings.Intervals)
-            {
-                var schedule = new JournalSchedule(); schedule.Reset(0, seconds);
-                Check(seconds == 0 ? !schedule.ReviewDue(Int64.MaxValue) && !schedule.CompilationDue(Int64.MaxValue) :
-                    !schedule.ReviewDue(seconds * 1000 - 1) && schedule.ReviewDue(seconds * 1000),
-                    "manual/automatic deadline boundary " + seconds);
-                if (seconds == 0) continue;
-                schedule.Reviewed(1000000);
-                Check(!schedule.CompilationDue(1799999) && schedule.CompilationDue(1800000),
-                    "recordings do not postpone the thirty-minute compilation deadline " + seconds);
-                schedule.Compiled(1800000);
-                Check(!schedule.CompilationDue(3599999) && schedule.CompilationDue(3600000),
-                    "successful compilation sets one subsequent deadline " + seconds);
-            }
+            CheckScheduling(directory);
             return passed;
         }
         finally { Directory.Delete(directory, true); }
+    }
+
+    private static void CheckScheduling(string directory)
+    {
+        DateTime utc = new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc);
+        foreach (int seconds in PluginSettings.Intervals)
+        {
+            var schedule = new JournalSchedule();
+            schedule.Start(0, utc, seconds, null);
+            Check(!schedule.CompilationDue(Int64.MaxValue) && schedule.NextCompilation == Int64.MaxValue &&
+                (seconds == 0 ? !schedule.ReviewDue(Int64.MaxValue) :
+                !schedule.ReviewDue(seconds * 1000 - 1) && schedule.ReviewDue(seconds * 1000)),
+                "review boundaries and no empty compilation timer " + seconds);
+            schedule.UpdatePending(5000, utc.AddSeconds(5), utc.AddSeconds(5));
+            long deadline = 1805000;
+            Check(schedule.NextCompilation == deadline && schedule.OldestPendingUtc == utc.AddSeconds(5),
+                "first durable recording starts one thirty-minute age deadline " + seconds);
+            schedule.Reviewed(1000000);
+            long review = schedule.NextReview;
+            for (int i = 0; i < 100; i++) schedule.Configure(1100000 + i * 1000, seconds);
+            Check(schedule.NextCompilation == deadline && schedule.NextReview == review,
+                "repeated same-interval configuration preserves both deadlines " + seconds);
+            schedule.UpdatePending(1300000, utc.AddDays(-1), utc.AddSeconds(5));
+            Check(schedule.NextCompilation == deadline,
+                "unchanged pending identity does not re-anchor on wall-clock rollback " + seconds);
+            Check(seconds == 0 ? !schedule.CompilationDue(Int64.MaxValue) :
+                !schedule.CompilationDue(deadline - 1) && schedule.CompilationDue(deadline),
+                "compilation becomes eligible exactly at thirty minutes, never in manual mode " + seconds);
+            schedule.Configure(deadline + 1, 0);
+            Check(schedule.NextCompilation == deadline && !schedule.CompilationDue(Int64.MaxValue),
+                "manual transition retains overdue debt without compiling " + seconds);
+            schedule.Configure(deadline + 1000, 60);
+            Check(schedule.CompilationDue(deadline + 1000) && schedule.NextReview == deadline + 61000,
+                "automatic re-enable exposes overdue debt before its independent new review deadline " + seconds);
+            for (int i = 0; i < 10; i++) schedule.CompilationDue(deadline + 2000 + i);
+            Check(schedule.NextCompilation == deadline, "deferred overdue observations never advance debt " + seconds);
+            review = schedule.NextReview;
+            schedule.UpdatePending(deadline + 3000, utc.AddMinutes(31), null);
+            Check(!schedule.CompilationDue(Int64.MaxValue) && schedule.OldestPendingUtc == null &&
+                schedule.NextReview == review, "successful emptying clears debt but not the recording deadline " + seconds);
+            schedule.UpdatePending(deadline + 4000, utc.AddMinutes(32), utc.AddMinutes(32));
+            Check(schedule.NextCompilation == deadline + 4000 + JournalSchedule.CompilationMilliseconds,
+                "a later first pending recording gets its own full age deadline " + seconds);
+        }
+        foreach (int minutes in new[] { 1, 5, 10, 20, 29, 30, 45, 120 })
+        {
+            var resumed = new JournalSchedule();
+            resumed.Start(100, utc.AddMinutes(minutes), 30, utc);
+            Check(resumed.NextCompilation == 100 + Math.Max(0, (30 - minutes) * 60000) &&
+                resumed.CompilationDue(100) == (minutes >= 30),
+                "reopening after " + minutes + " minutes retains original recording age");
+        }
+        var pending = new JournalSchedule();
+        pending.Start(0, utc.AddHours(1), 0, utc);
+        pending.Configure(100, 300);
+        Check(pending.NextCompilation == 0 && pending.CompilationDue(100),
+            "time closed and manual counts toward overdue compilation, without resetting to thirty minutes");
+        pending.Start(99, utc.AddMinutes(30), 30, utc.AddTicks(1));
+        Check(!pending.CompilationDue(99) && pending.CompilationDue(100),
+            "sub-millisecond age is rounded up, not compiled before the thirty-minute boundary");
+        pending.Start(100, utc, 30, utc.AddYears(1));
+        Check(pending.CompilationDue(100), "future recording timestamps are due immediately rather than deferred indefinitely");
+        Reject<ArgumentException>(() => pending.Start(0, DateTime.SpecifyKind(utc, DateTimeKind.Unspecified), 30, utc),
+            "schedule refuses ambiguous non-UTC clocks");
+        Reject<ArgumentException>(() => pending.UpdatePending(0, utc, DateTime.SpecifyKind(utc, DateTimeKind.Local)),
+            "schedule refuses non-UTC pending timestamps");
+        Reject<ArgumentOutOfRangeException>(() => pending.Configure(0, 42), "schedule rejects unsupported intervals");
+        Check(pending.NextCompilation == 100, "invalid schedule input retains existing debt");
+        pending.Start(0, utc, 30, utc);
+        pending.UpdatePending(60000, utc.AddMinutes(1), utc.AddSeconds(30));
+        Check(pending.NextCompilation == 1800000, "a later pending timestamp cannot postpone existing debt");
+        pending.UpdatePending(120000, utc.AddMinutes(2), utc.AddMinutes(-5));
+        Check(pending.NextCompilation == 1500000 && pending.NextReview == 30000,
+            "an earlier pending timestamp can only bring compilation forward, independently of recording");
+
+        string path = Path.Combine(directory, "pending-age.json");
+        DateTime first, last;
+        using (var project = JournalProject.Create(path, State("10")))
+        {
+            Check(project.OldestPendingUtc == null, "an empty project has no pending timestamp");
+            project.BeginSession(); project.Record(State("11"));
+            first = project.OldestPendingUtc.Value;
+            JournalLine line = Json.Read<JournalLine>(File.ReadAllLines(project.SessionPath)[1]);
+            Check(first == DateTime.Parse(line.Record.RecordedUtc, CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind), "pending age comes from the actual durable record timestamp");
+            project.BeginSession(); project.Record(State("12"));
+            Check(project.OldestPendingUtc == first, "new sessions and later recordings retain the earliest pending timestamp");
+        }
+        string[] sources = Directory.GetFiles(path + ".scribe", "*", SearchOption.AllDirectories)
+            .Where(x => Path.GetFileName(x) != "writer.lock").Concat(new[] { path }).ToArray();
+        string[] hashes = sources.Select(TrackingStorage.HashFile).ToArray();
+        using (var reopened = JournalProject.Open(path))
+        {
+            Check(reopened.OldestPendingUtc == first && sources.Select(TrackingStorage.HashFile).SequenceEqual(hashes),
+                "replay restores original pending age without modifying any stored contracts or bytes");
+            Check(reopened.Compile() == 2 && reopened.OldestPendingUtc == null,
+                "compilation clears age only after all durable pending entries are consolidated");
+            reopened.BeginSession(); reopened.Record(State("13"));
+            last = reopened.OldestPendingUtc.Value;
+        }
+        using (var reopened = JournalProject.Open(path))
+            Check(reopened.PendingCount == 1 && reopened.OldestPendingUtc == last,
+                "compiled duplicates do not become pending again when session originals are replayed");
     }
 
     private static LegacyTrackingException Legacy(string path)

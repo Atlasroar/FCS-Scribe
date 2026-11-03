@@ -6,15 +6,16 @@ complete editor compatibility.
 
 ## Automated and disposable-copy evidence
 
-The recorded beta 9 checks passed. These retain session-journal, grouped-menu,
+The recorded beta 10 checks passed. These retain session-journal, grouped-menu,
 complete-coverage/safe-retry, recording-range, optional Workshop isolation and
-portable draft and recoverable initialization checks while adding settings recovery:
+portable draft, recoverable initialization and settings recovery checks while
+adding stable compilation scheduling:
 
 | Check | Result | Boundary |
 | --- | --- | --- |
-| Dependency-free core checks | 458 passed | Adds malformed/required/schema/interval/path cases, unavailable folders, actual read/replace sharing denial, unique original-byte backups, stale/deleted sources and two simultaneous cooperating saves |
-| Actual FCS methods on copied vanilla data | 266 existing + 16 settings recovery passed | Adds actual corrupt/locked startup, persistent warning, manual recording with automatic work gated, reload/repair/cancel and draft/packet/project retention in a separate fresh host |
-| Actual FCS methods on a representative copied mod | 265 existing + 16 settings recovery passed | Same coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
+| Dependency-free core checks | 518 passed | Adds exact/sub-millisecond age boundaries, repeated configuration, interval/manual transitions, deferred overdue debt, short-session age restoration, UTC/future-clock rules and byte-preserving replay of pending timestamps |
+| Actual FCS methods on copied vanilla data | 266 existing + 16 settings + 24 scheduling passed | Adds real settings save/reload loops, interval changes, aged short-session resumes, manual/recovery holds, deferred/failed compilation, wrapping pending notice and independent review timing in fresh hosts |
+| Actual FCS methods on a representative copied mod | 265 existing + 16 settings + 24 scheduling passed | Same coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
 
 The integration host initializes actual FCS forms without launching the complete
 interactive editor/mod-selector workflow. It exercises unsaved overrides,
@@ -91,6 +92,20 @@ JIT lifetimes exhausted the host's address space. The final runner uses
 PDB-only symbols and separate hosts, not a production memory fix. Large-model
 and history performance remains S12. These cases do not establish exhaustive
 ACL/disk-full/network-filesystem or physical-power-loss behavior.
+
+Beta 10's scheduling checks use explicit UTC/monotonic clock inputs for exact
+30-minute boundaries and synthesize an older valid session timestamp/hash in
+disposable history to exercise repeated real Resume paths without a wall-clock
+wait. Hidden/minimized/busy windows, menus and modal forms defer overdue work;
+manual/recovery modes hold it; a journal conflict leaves its deadline intact.
+Actual automatic work compiles it once, clears the notice and leaves recording
+timing and originals intact. Future UTC timestamps do not create unbounded
+resume delays; already-running monotonic countdowns survive clock adjustments.
+These cases do not establish an authenticated clock or complete real-editor
+acceptance.
+A separate check generated compiled/uncompiled history using the **released
+beta 9 binary**, then verified beta 10 replay/export retained exact evidence,
+captured state, the original oldest pending timestamp and every source hash.
 
 ## Reproduce
 

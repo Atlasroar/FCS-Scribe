@@ -46,7 +46,7 @@ internal static class IntegrationTests
         {
             host.Shown += delegate {
                 host.BeginInvoke(new Action(delegate {
-                    try { result = Run(args.Contains("--settings-recovery")); }
+                    try { result = Run(args.Contains("--settings-recovery"), args.Contains("--schedule")); }
                     finally { host.Close(); }
                 }));
             };
@@ -55,7 +55,7 @@ internal static class IntegrationTests
         return result;
     }
 
-    private static int Run(bool settingsOnly)
+    private static int Run(bool settingsOnly, bool scheduleOnly)
     {
         Form editor = null;
         try
@@ -87,6 +87,12 @@ internal static class IntegrationTests
             object todo = FcsAdapter.Field(editor, "todoList");
             FcsAdapter.Call(todo, "LoadAll");
             var adapter = new FcsAdapter(assembly, editor);
+            if (scheduleOnly)
+            {
+                CheckSchedulingWindow(adapter, editor);
+                Console.WriteLine("PASS: " + passed + " compilation scheduling integration checks");
+                return 0;
+            }
             if (settingsOnly)
             {
                 CheckSettingsWindow(adapter, editor);
@@ -513,7 +519,7 @@ internal static class IntegrationTests
             {
                 var settings = (PluginSettings)FcsAdapter.Field(window, "settings");
                 settings.ReviewSeconds = 30;
-                ((JournalSchedule)FcsAdapter.Field(window, "schedule")).Reset(-JournalSchedule.CompilationMilliseconds, 30);
+                ((JournalSchedule)FcsAdapter.Field(window, "schedule")).Configure(-JournalSchedule.CompilationMilliseconds, 30);
                 FcsAdapter.Call(window, "ConfigureTimer");
                 Put(header, "Author", "Settings recovery manual recording fixture");
                 FcsAdapter.Call(timer, "OnTick", EventArgs.Empty);
@@ -582,6 +588,151 @@ internal static class IntegrationTests
         }
     }
 
+    private static void CheckSchedulingWindow(FcsAdapter adapter, Form editor)
+    {
+        string directory = Directory.GetCurrentDirectory();
+        string settingsPath = Path.Combine(directory, "scheduling-settings.json");
+        string path = Path.Combine(directory, "mods", "scheduling-project.json");
+        TrackingStorage.WriteAtomic(settingsPath, new PluginSettings { ReviewSeconds = 30 }, null);
+        object header = FcsAdapter.Field(FcsAdapter.Field(FcsAdapter.Field(
+            FcsAdapter.Field(editor, "nav"), "ou"), "gameData"), "header");
+        string author = (string)FcsAdapter.Field(header, "Author");
+        using (var host = new Form { IsMdiContainer = true, ShowInTaskbar = false, Opacity = 0, Width = 1200, Height = 900 })
+        using (var window = new ScribeWindow(adapter, editor, settingsPath))
+        {
+            try
+            {
+                window.MdiParent = host; host.Show(); window.Show();
+                RunWindow(window, "StartPath", path);
+                var schedule = (JournalSchedule)FcsAdapter.Field(window, "schedule");
+                var clock = (System.Diagnostics.Stopwatch)FcsAdapter.Field(window, "clock");
+                var timer = (System.Windows.Forms.Timer)FcsAdapter.Field(window, "timer");
+                var notice = (Label)FcsAdapter.Field(window, "compilationNotice");
+                var project = (JournalProject)FcsAdapter.Field(window, "project");
+                Check(schedule.NextCompilation == Int64.MaxValue && !notice.Visible,
+                    "empty tracking has no phantom compilation deadline or debt notice");
+                Put(header, "Author", "Compilation scheduling fixture");
+                RunWindow(window, "Review");
+                string anchorHash = TrackingStorage.HashFile(path);
+                long deadline = schedule.NextCompilation, review = schedule.NextReview;
+                Check(project.PendingCount == 1 && notice.Visible && notice.Text.Contains("Pending compilation: 1") &&
+                    notice.Text.Contains(project.OldestPendingUtc.Value.ToString("u")),
+                    "actual recording exposes a persistent count, oldest UTC and pending deadline");
+                string custom = Path.Combine(directory, "schedule-custom"); Directory.CreateDirectory(custom);
+                for (int i = 0; i < 8; i++)
+                {
+                    RunWindow(window, "SaveSettings", new PluginSettings { ReviewSeconds = 30,
+                        ExportDirectory = i % 2 == 0 ? custom : null });
+                    RunWindow(window, "ReloadSettings");
+                }
+                Check(schedule.NextCompilation == deadline && schedule.NextReview == review,
+                    "repeated real settings saves/reloads and folder-only edits preserve both deadlines");
+                RunWindow(window, "SaveSettings", new PluginSettings { ReviewSeconds = 60 });
+                Check(schedule.NextCompilation == deadline && schedule.NextReview > clock.ElapsedMilliseconds &&
+                    schedule.NextReview != review, "interval changes re-arm only the recording deadline");
+                RunWindow(window, "SaveSettings", new PluginSettings());
+                Check(!timer.Enabled && schedule.NextCompilation == deadline && notice.Text.Contains("Manual mode"),
+                    "manual transition holds debt visibly without automatic work");
+                window.Width = 340; window.PerformLayout();
+                Check(notice.Width <= window.ClientSize.Width && notice.Bottom <= ((Label)FcsAdapter.Field(window, "help")).Top,
+                    "pending debt wraps inside narrow windows above contextual help");
+                window.Width = 1080;
+                File.WriteAllText(settingsPath, "{ invalid settings");
+                RunWindow(window, "ReloadSettings");
+                RunWindow(window, "AutomaticTick");
+                Check(FcsAdapter.Field(window, "settingsError") != null && schedule.NextCompilation == deadline &&
+                    !timer.Enabled && project.PendingCount == 1 && notice.Text.Contains("Settings recovery"),
+                    "failed reload preserves debt while recovery independently blocks automatic work");
+                RunWindow(window, "SaveSettings", new PluginSettings());
+
+                timer.Stop(); project.Dispose();
+                string[] lines = File.ReadAllLines(project.SessionPath);
+                var session = Json.Read<SessionHeader>(lines[0]);
+                var line = Json.Read<JournalLine>(lines[1]);
+                DateTime aged = DateTime.UtcNow.AddMinutes(-31);
+                session.StartedUtc = aged.AddSeconds(-1).ToString("o");
+                line.Record.RecordedUtc = aged.ToString("o"); line.Hash = Json.StreamHash(line.Record);
+                File.WriteAllLines(project.SessionPath, new[] { Json.Write(session), Json.Write(line) });
+                for (int i = 0; i < 3; i++)
+                {
+                    RunWindow(window, "ResumePath", path);
+                    project = (JournalProject)FcsAdapter.Field(window, "project");
+                    Check(project.OldestPendingUtc == aged && project.PendingCount == 1 &&
+                        schedule.NextCompilation <= clock.ElapsedMilliseconds &&
+                        !schedule.CompilationDue(Int64.MaxValue) && notice.Text.Contains("due now/overdue") &&
+                        notice.Text.Contains("Manual mode") && !File.Exists(project.JournalPath),
+                        "short-session resume " + i + " retains aged debt without compiling in manual mode");
+                }
+                RunWindow(window, "AutomaticTick");
+                Check(project.PendingCount == 1 && !File.Exists(project.JournalPath),
+                    "even a direct automatic-work call cannot compile overdue manual-mode debt");
+                window.Hide();
+                RunWindow(window, "SaveSettings", new PluginSettings { ReviewSeconds = 30 });
+                timer.Stop();
+                long overdue = schedule.NextCompilation;
+                review = schedule.NextReview;
+                Check(schedule.CompilationDue(clock.ElapsedMilliseconds) && review > clock.ElapsedMilliseconds,
+                    "automatic re-enable retains overdue debt with an independent future recording deadline");
+                FcsAdapter.Call(timer, "OnTick", EventArgs.Empty);
+                Check(project.PendingCount == 1 && schedule.NextCompilation == overdue,
+                    "hidden-window deferral does not consume compilation debt");
+                window.Show(); window.WindowState = FormWindowState.Minimized;
+                FcsAdapter.Call(timer, "OnTick", EventArgs.Empty);
+                Check(project.PendingCount == 1 && schedule.NextCompilation == overdue,
+                    "minimized-window deferral does not consume compilation debt");
+                window.WindowState = FormWindowState.Normal;
+                Put(window, "busy", true);
+                FcsAdapter.Call(timer, "OnTick", EventArgs.Empty);
+                Put(window, "busy", false);
+                Check(project.PendingCount == 1 && schedule.NextCompilation == overdue,
+                    "busy deferral does not consume compilation debt");
+                var core = (ToolStripMenuItem)window.MainMenuStrip.Items[0];
+                core.ShowDropDown(); FcsAdapter.Call(timer, "OnTick", EventArgs.Empty); core.HideDropDown();
+                Check(project.PendingCount == 1 && schedule.NextCompilation == overdue,
+                    "open menus defer overdue compilation without resetting it");
+                using (var modal = new Form())
+                {
+                    modal.Shown += delegate {
+                        modal.BeginInvoke(new Action(() => {
+                            FcsAdapter.Call(timer, "OnTick", EventArgs.Empty);
+                            Check(project.PendingCount == 1 && schedule.NextCompilation == overdue,
+                                "modal deferral retains overdue compilation");
+                            modal.Close();
+                        }));
+                    };
+                    modal.ShowDialog(window);
+                }
+                File.WriteAllText(project.JournalPath, "external journal conflict");
+                bool failed = false;
+                try { RunWindow(window, "Compile"); }
+                catch (IOException) { failed = true; }
+                timer.Stop();
+                Check(failed && project.PendingCount == 1 && schedule.NextCompilation == overdue,
+                    "a failed compilation never clears or moves the pending deadline");
+                FcsAdapter.Call(window, "SetActionFailure", true);
+                FcsAdapter.Call(window, "SetActionFailure", false);
+                Check(notice.Text.Contains("Automatic work paused") && !timer.Enabled &&
+                    schedule.NextCompilation == overdue, "failure notice preserves paused debt through later Workshop-only errors");
+                File.Delete(project.JournalPath);
+                RunWindow(window, "ReloadSettings"); timer.Stop();
+                Check(schedule.NextCompilation == overdue && schedule.NextReview == review,
+                    "explicit validated reload unpauses without postponing compilation or recording");
+                RunWindow(window, "AutomaticTick");
+                timer.Stop();
+                Check(project.PendingCount == 0 && schedule.OldestPendingUtc == null &&
+                    schedule.NextCompilation == Int64.MaxValue && schedule.NextReview == review &&
+                    !notice.Visible && TrackingStorage.HashFile(path) == anchorHash &&
+                    File.Exists(project.SessionPath) && File.ReadAllLines(project.JournalPath).Length == 1,
+                    "eligible automatic work compiles retained debt once, clears its notice and preserves originals/review timing");
+                string compiled = TrackingStorage.HashFile(project.JournalPath);
+                RunWindow(window, "AutomaticTick");
+                Check(TrackingStorage.HashFile(project.JournalPath) == compiled && project.EntryCount == 1,
+                    "empty follow-up automatic work does not recompile or record unchanged history");
+            }
+            finally { Put(header, "Author", author); }
+        }
+    }
+
     private static void CheckTrackingWindow(FcsAdapter adapter, Form editor)
     {
         string directory = Directory.GetCurrentDirectory();
@@ -606,7 +757,7 @@ internal static class IntegrationTests
             {
                 settings.ReviewSeconds = seconds;
                 long now = clock.ElapsedMilliseconds;
-                schedule.Reset(now, seconds);
+                schedule.Configure(now, seconds);
                 FcsAdapter.Call(window, "ConfigureTimer");
                 Check(timer.Enabled && timer.Interval == 1000 && schedule.NextReview == now + seconds * 1000L,
                     "automatic deadline is exactly " + seconds + " seconds with independent UI polling");
@@ -643,7 +794,8 @@ internal static class IntegrationTests
                     window.MdiParent = host;
                     host.Show(); window.Show();
                     settings.ReviewSeconds = 30;
-                    schedule.Reset(clock.ElapsedMilliseconds - 30000, 30);
+                    schedule.Configure(clock.ElapsedMilliseconds - 30000, 30);
+                    schedule.Reviewed(clock.ElapsedMilliseconds - 30000);
                     Put(window, "automaticPaused", false);
                     FcsAdapter.Call(window, "ConfigureTimer");
                     Put(header, "Author", "Automatic checkpoint fixture");
@@ -675,7 +827,7 @@ internal static class IntegrationTests
                     long compilationDeadline = schedule.NextCompilation;
                     RunWindow(window, "Review");
                     Check(schedule.NextCompilation == compilationDeadline, "recording does not postpone compilation");
-                    schedule.Reset(clock.ElapsedMilliseconds - JournalSchedule.CompilationMilliseconds, 30);
+                    schedule.Start(clock.ElapsedMilliseconds, DateTime.UtcNow.AddMinutes(31), 30, saved.OldestPendingUtc);
                     RunWindow(window, "AutomaticTick");
                     Check(saved.PendingCount == 0 && File.ReadAllLines(saved.JournalPath).Length == 1 &&
                         File.Exists(saved.SessionPath), "thirty-minute automatic compilation retains the original session");
@@ -780,7 +932,8 @@ internal static class IntegrationTests
             for (int i = 0; i < 2; i++)
             {
                 Set(item, "Name", name + " Recorded tick " + i);
-                schedule.Reset(clock.ElapsedMilliseconds - 30000, 30);
+                schedule.Configure(clock.ElapsedMilliseconds - 30000, 30);
+                schedule.Reviewed(clock.ElapsedMilliseconds - 30000);
                 Put(window, "automaticPaused", false);
                 FcsAdapter.Call(window, "ConfigureTimer");
                 FcsAdapter.Call(timer, "OnTick", EventArgs.Empty);
@@ -1099,7 +1252,8 @@ internal static class IntegrationTests
                 var clock = (System.Diagnostics.Stopwatch)FcsAdapter.Field(window, "clock");
                 var timer = (System.Windows.Forms.Timer)FcsAdapter.Field(window, "timer");
                 settings.ReviewSeconds = 30;
-                schedule.Reset(clock.ElapsedMilliseconds - 30000, 30);
+                schedule.Configure(clock.ElapsedMilliseconds - 30000, 30);
+                schedule.Reviewed(clock.ElapsedMilliseconds - 30000);
                 FcsAdapter.Call(window, "ConfigureTimer");
                 FcsAdapter.Call(timer, "OnTick", EventArgs.Empty);
                 var timeout = System.Diagnostics.Stopwatch.StartNew();

@@ -53,9 +53,18 @@ resource errors and unsupported model/adapter contracts still fail explicitly.
 The full starting baseline remains unchanged. Each reopening adds one session
 log with a parent-checkpoint reference; recordings append changed records and
 context. A small atomic marker records the durable head. Automatic compilation
-appends missing entries to the main journal every 30 minutes independently of
-recording deadlines; manual mode exposes Compile journal. Session originals
+appends missing entries once the oldest pending recording is 30 minutes old,
+independently of recording deadlines; manual mode exposes Compile journal. Session originals
 are retained and interrupted tails are never discarded without approval.
+
+Beta 10 derives pending age from validated `RecordedUtc` values already present
+in journal/session entries. Only in-memory stamps gain the timestamp; no stored
+schema or marker changes. Replay restores the earliest uncompiled timestamp,
+excluding compiled duplicates. A monotonic countdown runs within the window;
+Resume restores elapsed age from UTC, including time closed/manual.
+Configuration changes cannot re-anchor that countdown, and only successful
+compilation can clear debt. A persistent notice is independent of operation
+status and explains deferral/hold rather than silently compiling in manual mode.
 
 ## Evidence flow
 

@@ -1,9 +1,11 @@
 param(
     [Parameter(Mandatory = $true)][string]$FcsDirectory,
     [Parameter(Mandatory = $true)][string]$FixtureMod,
-    [switch]$SettingsOnly
+    [switch]$SettingsOnly,
+    [switch]$ScheduleOnly
 )
 $ErrorActionPreference = 'Stop'
+if ($SettingsOnly -and $ScheduleOnly) { throw 'Choose at most one targeted integration suite.' }
 $root = Split-Path $PSScriptRoot -Parent
 $fixture = Join-Path $root ('build\integration-fixtures\' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $fixture | Out-Null
@@ -25,12 +27,18 @@ $sources = @(Get-ChildItem (Join-Path $root 'src') -Filter '*.cs' | ForEach-Obje
 if ($LASTEXITCODE -ne 0) { throw 'Integration test compilation failed.' }
 Push-Location $fixture
 try {
-    if (-not $SettingsOnly) {
+    if (-not $SettingsOnly -and -not $ScheduleOnly) {
         & (Join-Path $fixture 'IntegrationTests.exe')
         if ($LASTEXITCODE -ne 0) { throw "Integration tests failed; disposable fixture retained at $fixture" }
     }
-    & (Join-Path $fixture 'IntegrationTests.exe') --settings-recovery
-    if ($LASTEXITCODE -ne 0) { throw "Settings recovery tests failed; disposable fixture retained at $fixture" }
+    if (-not $ScheduleOnly) {
+        & (Join-Path $fixture 'IntegrationTests.exe') --settings-recovery
+        if ($LASTEXITCODE -ne 0) { throw "Settings recovery tests failed; disposable fixture retained at $fixture" }
+    }
+    if (-not $SettingsOnly) {
+        & (Join-Path $fixture 'IntegrationTests.exe') --schedule
+        if ($LASTEXITCODE -ne 0) { throw "Scheduling tests failed; disposable fixture retained at $fixture" }
+    }
 }
 finally { Pop-Location }
 Write-Output "Disposable fixture retained for inspection: $fixture"

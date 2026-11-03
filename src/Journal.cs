@@ -138,6 +138,7 @@ namespace FcsScribe
         {
             public string Hash, Fingerprint;
             public bool Compiled;
+            public DateTime RecordedUtc;
         }
 
         private readonly FileStream lease, anchor;
@@ -157,6 +158,10 @@ namespace FcsScribe
         public Packet LastEvidence { get; private set; }
         public int EntryCount { get { return entries.Count - 1; } }
         public int PendingCount { get { return entries.Values.Count(x => !x.Compiled); } }
+        public DateTime? OldestPendingUtc
+        {
+            get { return entries.Values.Where(x => !x.Compiled).Select(x => (DateTime?)x.RecordedUtc).Min(); }
+        }
 
         private JournalProject(string path)
         {
@@ -477,7 +482,8 @@ namespace FcsScribe
                 WriteMarker(record.EntryId, packet.SourceFingerprint);
             }
             catch { faulted = true; throw; }
-            entries.Add(record.EntryId, new Stamp { Hash = line.Hash, Fingerprint = packet.SourceFingerprint });
+            entries.Add(record.EntryId, new Stamp { Hash = line.Hash, Fingerprint = packet.SourceFingerprint,
+                RecordedUtc = DateTime.Parse(record.RecordedUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind) });
             evidence.Add(Evidence(record));
             sessionHashes[SessionPath] = sessionHash;
             State = current; Fingerprint = packet.SourceFingerprint; HeadId = record.EntryId; CapturedUtc = record.RecordedUtc;
@@ -564,7 +570,8 @@ namespace FcsScribe
                 Json.StreamHash(next.Context()) != Json.StreamHash(record.Packet.Context))
                 throw new InvalidDataException("The replayed delta does not match its saved checkpoint.");
             entries.Add(record.EntryId, new Stamp { Hash = line.Hash,
-                Fingerprint = record.Packet.SourceFingerprint, Compiled = compiled });
+                Fingerprint = record.Packet.SourceFingerprint, Compiled = compiled,
+                RecordedUtc = DateTime.Parse(record.RecordedUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind) });
             evidence.Add(Evidence(record));
             State = next; Fingerprint = record.Packet.SourceFingerprint;
             HeadId = record.EntryId; CapturedUtc = record.RecordedUtc;
@@ -710,16 +717,58 @@ namespace FcsScribe
         public const long CompilationMilliseconds = 30 * 60 * 1000;
         public long NextReview { get; private set; }
         public long NextCompilation { get; private set; }
+        public DateTime? OldestPendingUtc { get; private set; }
         private int seconds;
-        public void Reset(long now, int intervalSeconds)
+        public JournalSchedule() { NextReview = NextCompilation = Int64.MaxValue; }
+
+        public void Start(long now, DateTime utcNow, int intervalSeconds, DateTime? oldestPendingUtc)
+        {
+            ValidateInterval(intervalSeconds);
+            ValidateTimes(utcNow, oldestPendingUtc);
+            seconds = intervalSeconds;
+            Reviewed(now);
+            OldestPendingUtc = null; NextCompilation = Int64.MaxValue;
+            UpdatePending(now, utcNow, oldestPendingUtc);
+        }
+
+        public void Configure(long now, int intervalSeconds)
+        {
+            ValidateInterval(intervalSeconds);
+            if (seconds == intervalSeconds) return;
+            seconds = intervalSeconds;
+            Reviewed(now);
+        }
+
+        public void UpdatePending(long now, DateTime utcNow, DateTime? oldestPendingUtc)
+        {
+            ValidateTimes(utcNow, oldestPendingUtc);
+            if (!oldestPendingUtc.HasValue)
+            {
+                OldestPendingUtc = null; NextCompilation = Int64.MaxValue;
+                return;
+            }
+            if (OldestPendingUtc == oldestPendingUtc) return;
+            long ageTicks = utcNow.Ticks - oldestPendingUtc.Value.Ticks;
+            long remaining = ageTicks < 0 ? 0 :
+                Math.Max(0, CompilationMilliseconds - ageTicks / TimeSpan.TicksPerMillisecond);
+            long deadline = checked(now + remaining);
+            NextCompilation = OldestPendingUtc.HasValue ? Math.Min(NextCompilation, deadline) : deadline;
+            OldestPendingUtc = oldestPendingUtc;
+        }
+
+        public bool ReviewDue(long now) { return seconds > 0 && now >= NextReview; }
+        public bool CompilationDue(long now) { return seconds > 0 && OldestPendingUtc.HasValue && now >= NextCompilation; }
+        public void Reviewed(long now) { NextReview = seconds == 0 ? Int64.MaxValue : checked(now + seconds * 1000L); }
+
+        private static void ValidateInterval(int intervalSeconds)
         {
             if (!PluginSettings.Intervals.Contains(intervalSeconds)) throw new ArgumentOutOfRangeException("intervalSeconds");
-            seconds = intervalSeconds;
-            Reviewed(now); Compiled(now);
         }
-        public bool ReviewDue(long now) { return seconds > 0 && now >= NextReview; }
-        public bool CompilationDue(long now) { return seconds > 0 && now >= NextCompilation; }
-        public void Reviewed(long now) { NextReview = seconds == 0 ? Int64.MaxValue : now + seconds * 1000L; }
-        public void Compiled(long now) { NextCompilation = seconds == 0 ? Int64.MaxValue : now + CompilationMilliseconds; }
+        private static void ValidateTimes(DateTime utcNow, DateTime? oldestPendingUtc)
+        {
+            if (utcNow.Kind != DateTimeKind.Utc ||
+                (oldestPendingUtc.HasValue && oldestPendingUtc.Value.Kind != DateTimeKind.Utc))
+                throw new ArgumentException("Compilation scheduling requires UTC timestamps.");
+        }
     }
 }
