@@ -8,6 +8,8 @@ Interactive FCS Extended acceptance remains open. Planned features at the end
 are not implemented.
 **v0.1.0-beta.3** groups the window actions into menus as described below.
 The earlier beta 2 archive uses the flat button row.
+**v0.1.0-beta.4** requires complete draft evidence coverage and supports safe
+retries of matching completed notes.
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).
@@ -174,8 +176,11 @@ combine entries intended for the same target.
 A deleted record cannot hold a new note. Its template target is left empty
 so you can explicitly select a surviving record to hold the documentation.
 Empty or malformed note entries and unknown cited change IDs are rejected.
-Validation does **not yet require every exported change to be cited**: review
-the draft's evidence coverage explicitly. This gap is tracked as S01 in the
+In beta 4, every exported change ID must appear **exactly once across the whole
+draft**, including stored/effective entries. Omitting a record or change, or
+repeating a citation within/across notes, rejects the entire draft before any
+notes are appended. Combine deleted-record evidence onto a surviving target
+without dropping its citations. This closes S01 in the
 [stabilization plan](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/plan.md#s01-high-incomplete-evidence-coverage-can-pass-draft-validation).
 
 No evidence-ID check can establish that the assistant's prose is correct.
@@ -185,15 +190,15 @@ See [Data and AI contracts](Data-and-AI-Contracts) for the exact draft shape.
 ## 6. Apply approved notes: append through FCS
 
 Select **Apply approved notes** after reviewing the draft. Scribe checks
-batch/fingerprint identity, current captured state, known evidence IDs,
+batch/fingerprint identity, current captured state, complete nonduplicate evidence coverage,
 nonempty note text and unique surviving targets. Changes to captured gameplay
 or Workshop context after export can make the draft stale; review and export
 again rather than editing identifiers to bypass the check.
 
-An explicit confirmation asks you to approve the append. Existing active and
-inherited text is retained, and an existing TODO category is preserved.
-Scribe adds a batch marker/evidence IDs and marks FCS dirty. The same batch
-cannot be applied twice to the same target.
+An explicit confirmation shows the pending notes to append and the matching
+completed notes to skip. Existing active and inherited text is retained, and an
+existing TODO category is preserved. Scribe adds a batch marker/evidence IDs
+and marks FCS dirty. A fully applied batch is rejected rather than duplicated.
 
 Inspect FCS Notes afterward, then use **FCS's normal Save** when ready.
 Scribe never silently saves. Ordinary saving can refresh declared dependency
@@ -205,6 +210,13 @@ Distributing a mod alone does not distribute these annotations.
 
 Multi-record application is not transactional. If an error reports possible
 partial in-memory application, inspect Notes before retrying or saving.
+Keep the **original complete draft**, including already-completed entries.
+When the captured state still matches, retry skips targets containing exactly
+one matching completed note block and appends only pending targets. Matching
+requires the same text and ordered citations; line-ending normalization is
+allowed. Conflicting/partial blocks or multiple same-batch markers stop the
+retry for inspection, not silent skipping. Do not remove completed entries
+from the draft or edit identifiers to bypass validation.
 
 ## 7. Workshop info: inspect and export local publishing context
 

@@ -6,20 +6,24 @@ complete editor compatibility.
 
 ## Automated and disposable-copy evidence
 
-The recorded beta 3 checks passed. These retain beta 2's session-journal and
-checkpoint coverage and add grouped-menu coverage:
+The recorded beta 4 checks passed. These retain the session-journal and
+grouped-menu checks and add full draft-coverage/safe-retry regressions:
 
 | Check | Result | Boundary |
 | --- | --- | --- |
-| Dependency-free core checks | 138 passed | Includes session deltas/replay, idempotent compilation, explicit interrupted-tail recovery, complete-corruption rejection, missing history/storage, old-format compatibility, writer exclusion, target protection and independent deadlines |
-| Actual FCS methods on copied vanilla data | 136 passed | Includes exact menu grouping, hover/keyboard help, overflow access, serialized menu dispatch and deferral while menus are open, alongside background start/resume, durable recording and compilation |
-| Actual FCS methods on a representative copied mod | 135 passed | Same coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
+| Dependency-free core checks | 157 passed | Adds omitted/duplicate evidence rejection, deleted-record coverage, matching completed-note detection, line-ending normalization, conflicting blocks, stale retries and unchanged note format |
+| Actual FCS methods on copied vanilla data | 141 passed | Adds rejection before notes/dirty-state mutation, duplicate evidence rejection and retry of a real FCS-completed note with save/reload; retains grouped-menu, background tracking and journal coverage |
+| Actual FCS methods on a representative copied mod | 140 passed | Same coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
 
 The integration host initializes actual FCS forms without launching the complete
 interactive editor/mod-selector workflow. It exercises unsaved overrides,
 active/inherited note preservation, existing TODO category preservation,
 duplicate rejection, no save on apply, normal save/reopen, unchanged captured
 gameplay records, and baseline retention.
+The retry fixture seeds one completed note through FCS's actual API, then
+retries the full draft and verifies that target is unchanged while the pending
+target is appended and survives save/reload. This does not establish rollback
+or exhaustively inject failures within FCS's nontransactional methods.
 Workshop checks cover every requested field, staged values versus cached data,
 unknown and unpublished values, current required/reference lists without header
 mutation, malformed/partial XML and DTD rejection, PNG/JPEG/GIF byte preservation,

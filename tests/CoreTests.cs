@@ -59,6 +59,88 @@ internal static class CoreTests
         };
     }
 
+    private static void CheckCompleteCoverage()
+    {
+        Snapshot before = State();
+        before.Records.Add(new Record { Id = "stable-2", Type = "ITEM", Name = "Shield" });
+        Snapshot after = Clone(before);
+        after.Records[0].Cells[0].Value.Text = "11";
+        after.Records[0].Cells[1].Value.Text = "11";
+        after.Records[1].Name = "Renamed shield";
+        Packet packet = new Tracker(before).Export(after);
+        NoteDraft complete = Json.Read<NoteDraft>(Json.Write(packet.ResponseTemplate));
+        foreach (NoteEntry entry in complete.Entries) entry.Text = "Reviewed documentation for " + entry.TargetRecordId + ".";
+        Func<NoteDraft> copy = () => Json.Read<NoteDraft>(Json.Write(complete));
+        Check(DraftValidation.Pending(packet, complete, after, delegate { return ""; }).Count == 2,
+            "a complete multi-record draft covers stored/effective changes exactly once");
+        NoteDraft invalid = copy();
+        invalid.Entries[0].ChangeIds.RemoveAt(0);
+        Reject(delegate { DraftValidation.Check(packet, invalid, after, delegate {
+            throw new Exception("Incomplete coverage reached notes lookup.");
+        }); }, "omitted field evidence rejected before notes lookup");
+        invalid = copy(); invalid.Entries.RemoveAt(1);
+        Reject(delegate { DraftValidation.Check(packet, invalid, after, delegate { return ""; }); },
+            "omitted changed record rejected");
+        invalid = copy(); invalid.Entries[0].ChangeIds.Add(invalid.Entries[0].ChangeIds[0]);
+        Reject(delegate { DraftValidation.Check(packet, invalid, after, delegate { return ""; }); },
+            "duplicate citation inside a note rejected");
+        invalid = copy(); invalid.Entries[1].ChangeIds.Add(invalid.Entries[0].ChangeIds[0]);
+        Reject(delegate { DraftValidation.Check(packet, invalid, after, delegate { return ""; }); },
+            "duplicate citation across distinct targets rejected");
+        invalid = copy(); invalid.Entries[0].ChangeIds.Add(null);
+        Reject(delegate { DraftValidation.Check(packet, invalid, after, delegate { return ""; }); },
+            "null evidence rejected");
+        NoteDraft reordered = copy(); reordered.Entries[0].ChangeIds.Reverse();
+        Check(DraftValidation.Pending(packet, reordered, after, delegate { return ""; }).Count == 2,
+            "initial complete coverage does not require citation ordering");
+
+        NoteEntry first = complete.Entries[0], second = complete.Entries[1];
+        string applied = DraftValidation.NoteText(packet.BatchId, first);
+        Check(applied == "\r\n\r\n" + DraftValidation.Marker(packet.BatchId) + "\r\n" + first.Text +
+            "\r\nChanges: " + String.Join(", ", first.ChangeIds) + "\r\n",
+            "canonical note text preserves the existing append format");
+        Func<string, string> partiallyApplied = id => id == first.TargetRecordId ? "Previous notes." + applied : "";
+        List<NoteEntry> pending = DraftValidation.Pending(packet, complete, after, partiallyApplied);
+        Check(pending.Count == 1 && pending[0] == second && complete.Entries.Count == 2,
+            "retry skips a matching completed note without removing full draft coverage");
+        Check(DraftValidation.Pending(packet, complete, after, id =>
+            partiallyApplied(id).Replace("\r\n", "\n")).Count == 1,
+            "completed notes tolerate normalized line endings");
+        invalid = copy(); invalid.Entries[0].Text += " Changed after partial application.";
+        Reject(delegate { DraftValidation.Check(packet, invalid, after, partiallyApplied); },
+            "changed completed prose blocks unsafe retry");
+        invalid = copy(); invalid.Entries[0].ChangeIds.Reverse();
+        Reject(delegate { DraftValidation.Check(packet, invalid, after, partiallyApplied); },
+            "changed completed citation block requires inspection before retry");
+        Reject(delegate { DraftValidation.Check(packet, complete, after, id =>
+            id == first.TargetRecordId ? applied + applied : ""); },
+            "multiple same-batch markers block ambiguous retry");
+        Reject(delegate { DraftValidation.Check(packet, complete, after, id =>
+            id == first.TargetRecordId ? DraftValidation.Marker(packet.BatchId) : ""); },
+            "marker without a complete matching note cannot be skipped");
+        Reject(delegate { DraftValidation.Check(packet, complete, after, id =>
+            DraftValidation.NoteText(packet.BatchId, complete.Entries.Single(x => x.TargetRecordId == id))); },
+            "fully applied drafts still reject repeat application");
+        invalid = copy(); invalid.Entries.RemoveAt(0);
+        Reject(delegate { DraftValidation.Check(packet, invalid, after, partiallyApplied); },
+            "retry must retain already-applied entries for full evidence coverage");
+        Snapshot stale = Clone(after); stale.Records[0].Name = "Changed after export";
+        Reject(delegate { DraftValidation.Check(packet, complete, stale, partiallyApplied); },
+            "partial retry still rejects stale editor state");
+
+        Snapshot deleted = Clone(after); deleted.Records.RemoveAt(1);
+        Packet deletion = new Tracker(before).Export(deleted);
+        var combined = new NoteDraft { BatchId = deletion.BatchId, SourceFingerprint = deletion.SourceFingerprint,
+            Entries = new List<NoteEntry> { new NoteEntry {
+                TargetRecordId = "stable-1", Text = "Reviewed edits and deleted shield.",
+                ChangeIds = deletion.Changes.Select(x => x.Id).ToList()
+            }} };
+        Check(DraftValidation.Pending(deletion, combined, deleted, delegate { return ""; }).Count == 1,
+            "deleted-record evidence can be combined on a surviving target without dropping changes");
+        Check(packet.Instructions.Contains("EVERY exported change exactly once"),
+            "new AI instructions require full nonduplicate evidence coverage");
+    }
+
     public static int Main()
     {
         try
@@ -203,6 +285,7 @@ internal static class CoreTests
             withMetadata.Workshop.ChangeNotes = "New staged notes";
             Reject(delegate { DraftValidation.Check(withContext, contextDraft, withMetadata, delegate { return ""; }); },
                 "Workshop context changed after export blocks stale drafts");
+            CheckCompleteCoverage();
             passed += TrackingTests.Run();
             passed += JournalTests.Run();
             Console.WriteLine("PASS: " + passed + " core checks");

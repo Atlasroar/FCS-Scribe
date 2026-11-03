@@ -121,6 +121,11 @@ categories are preserved rather than repurposed.
 There is no custom binary writer, silent save, or attempt to embed the sidecar
 format into a `.mod`. The notes interface has no verified transaction contract;
 multi-target errors report possible partial in-memory application.
+Beta 4 validates full, exactly-once evidence coverage before mutation. Safe
+retry does not mean rollback: keep the complete original draft, skip only
+targets with one matching completed block, and append the remaining targets.
+The existing append format is shared between writing and retry comparison;
+conflicting blocks fail explicitly rather than being treated as completed.
 
 ## Separate future saved-data analysis
 

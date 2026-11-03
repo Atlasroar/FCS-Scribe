@@ -352,7 +352,7 @@ namespace FcsScribe
         {
             EnsureReady();
             Snapshot current = Capture();
-            DraftValidation.Check(packet, draft, current, Notes);
+            List<NoteEntry> pending = DraftValidation.Pending(packet, draft, current, Notes);
             object todo = Field(form, "todoList");
             string notesFile = (string)Field(todo, "activeFile");
             if (String.IsNullOrEmpty(notesFile))
@@ -361,10 +361,9 @@ namespace FcsScribe
             int applied = 0;
             try
             {
-                foreach (NoteEntry entry in draft.Entries)
+                foreach (NoteEntry entry in pending)
                 {
-                    string text = "\r\n\r\n" + DraftValidation.Marker(packet.BatchId) + "\r\n" +
-                        entry.Text.Trim() + "\r\nChanges: " + String.Join(", ", entry.ChangeIds) + "\r\n";
+                    string text = DraftValidation.NoteText(packet.BatchId, entry);
                     Call(todo, "AddItem", Item(entry.TargetRecordId), text, Enum.Parse(noteType, "NOTE"), null, true, false);
                     applied++;
                     // AddItem marks new notes dirty, but not its existing-note append branch.
@@ -375,7 +374,8 @@ namespace FcsScribe
             catch (Exception error)
             {
                 throw new InvalidOperationException("Notes application stopped after " + applied +
-                    " completed record(s). FCS may contain partial notes; inspect them before retrying or saving. " +
+                    " newly completed record(s). FCS may contain partial notes; inspect them before retrying or saving. " +
+                    "Keep the original complete draft: matching completed notes will be skipped on retry. " +
                     "Nothing was saved by FCS-Scribe.", error);
             }
         }

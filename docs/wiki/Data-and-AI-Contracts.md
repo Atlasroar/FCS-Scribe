@@ -79,13 +79,25 @@ An assistant returns the packet's response template filled with prose:
 The placeholders above are illustrative, not valid evidence for a real batch.
 Each target must appear only once. If documentation is about a deleted record,
 the user must choose a surviving target instead of inventing a global note.
+In beta 4, `ChangeIds` across all entries must cover every exported change
+exactly once. Combining several records' evidence on one surviving target is
+allowed; omitting or duplicating evidence is not.
 
 ## Validation and approval
 
 Drafts must match the exported batch and source fingerprint, cite known change
-IDs, contain nonempty text without NUL, and target existing records. The
-current captured state must still match export, and the target must not already
-contain that batch's marker.
+IDs with complete, nonduplicate coverage, contain nonempty text without NUL,
+and target unique existing records. Coverage validation finishes before any
+notes are appended. The current captured state must still match export.
+
+For a partial-application retry, retain the original complete draft. A target
+is skipped only when its existing notes contain one matching completed block
+for this batch, including the original text and ordered change IDs. Line
+endings are normalized for comparison; conflicting/incomplete blocks and
+multiple same-batch markers are rejected. Only remaining targets are appended.
+An entirely applied draft is still rejected as a duplicate. The append format
+and packet/tracking schema versions are unchanged; older drafts must also meet
+the complete-coverage rule. Restart persistence remains outside this fix.
 
 These checks do **not** establish that the assistant interpreted evidence
 correctly. The user must verify names, quantities, conditions, and wording
