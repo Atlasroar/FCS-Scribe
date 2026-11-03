@@ -12,6 +12,8 @@ The earlier beta 2 archive uses the flat button row.
 retries of matching completed notes.
 **v0.1.0-beta.5** adds previewable, inclusive recording-range AI exports across
 sessions, with original evidence identities and current-state validation.
+**v0.1.0-beta.6** keeps ordinary tracking available through known optional
+Workshop/cache/preview failures, with explicit partial-capture reasons.
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).
@@ -285,9 +287,31 @@ FCS's unpublished/default ID, not an assigned listing. Unknown visibility
 codes retain their numeric value without an invented label.
 
 Capture does not contact Steam or invoke Refresh, Save or Upload. Cached
-values do **not** prove the current published listing's state. Capture is
-blocked during an existing upload or connected Workshop refresh to avoid
-reading changing data; offline capture remains supported.
+values do **not** prove the current published listing's state.
+
+In beta 6, malformed/locked caches and invalid, unsupported, oversized or
+unreadable previews do not stop ordinary gameplay capture or recording.
+Known header values and dependency/reference lists remain; readable metadata
+and preview components are kept independently. During an active upload or
+connected refresh, staged Workshop values and preview reads are skipped.
+Offline disabled controls alone do not imply an active refresh.
+
+Failures are not silently ignored: `CaptureStatus: "partial"` and structured
+`Issues` identify the unavailable component/code/reason. They also appear in
+snapshot/Workshop warnings, the bottom status, AI context and approval guidance.
+Standalone Workshop export may therefore intentionally contain partial data;
+inspect its status and warnings rather than treating nulls as verified defaults.
+Expected missing files remain explicitly missing/unknown, not fabricated data.
+
+Captures retry on subsequent actions/ticks and recover when data becomes
+readable. Known fields and availability transitions still affect stale-draft
+checks; recovered metadata can require re-export even without gameplay edits.
+Unavailable payload contents cannot be validated merely because their error
+status stayed unchanged. Fatal resource/contract/model failures still stop
+the action; this is not a broad exception-suppression policy.
+Workshop-only export/archive action failures still show an error, but do not
+pause gameplay automation or clear a pause caused by an earlier tracking
+failure. Ordinary tracking/model/journal errors retain their pause behavior.
 
 ## 8. Archive preview image: preserve the original bytes
 

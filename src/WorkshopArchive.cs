@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Xml.Serialization;
 
@@ -43,15 +44,20 @@ namespace FcsScribe
             }
             catch (FileNotFoundException) { return new WorkshopPreview(null, info); }
             catch (DirectoryNotFoundException) { return new WorkshopPreview(null, info); }
-            using (var stream = new MemoryStream(bytes, false))
-            using (var image = Image.FromStream(stream, false, true))
+            try
             {
-                Guid format = image.RawFormat.Guid;
-                if (format == ImageFormat.Png.Guid) info.Format = "png";
-                else if (format == ImageFormat.Jpeg.Guid) info.Format = "jpg";
-                else if (format == ImageFormat.Gif.Guid) info.Format = "gif";
-                else throw new NotSupportedException("The Workshop preview is not a supported PNG, JPEG or GIF image.");
+                using (var stream = new MemoryStream(bytes, false))
+                using (var image = Image.FromStream(stream, false, true))
+                {
+                    Guid format = image.RawFormat.Guid;
+                    if (format == ImageFormat.Png.Guid) info.Format = "png";
+                    else if (format == ImageFormat.Jpeg.Guid) info.Format = "jpg";
+                    else if (format == ImageFormat.Gif.Guid) info.Format = "gif";
+                    else throw new NotSupportedException("The Workshop preview is not a supported PNG, JPEG or GIF image.");
+                }
             }
+            catch (ArgumentException error) { throw new InvalidDataException("The Workshop preview image could not be decoded.", error); }
+            catch (ExternalException error) { throw new InvalidDataException("The Workshop preview image decoder failed.", error); }
             using (var sha = SHA256.Create())
                 info.Sha256 = BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-", "").ToLowerInvariant();
             info.ByteLength = bytes.LongLength;

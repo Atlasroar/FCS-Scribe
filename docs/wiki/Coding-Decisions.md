@@ -47,6 +47,15 @@ the original bytes and SHA-256. Respect FCS's 1 MB bound in the 32-bit process.
 Use a new destination outside the installation, never a mod or existing archive.
 This is not a Steam image downloader or a generic external-file tracker.
 
+Beta 6 isolates known optional file/parse/decode failures at the cache/preview
+boundaries. It reports structured partial-capture issues and retains readable
+components rather than aborting gameplay capture or using stale cached values
+as substitutes. Busy dialog capture skips unstable staged fields/preview while
+retaining known header/dependency context. Archiving remains a strict operation.
+Known state and availability reasons still affect fingerprints; inaccessible
+payload bytes are explicitly outside validation. Unexpected adapter-contract,
+model and fatal resource failures remain errors rather than silent fallbacks.
+
 ## Make the baseline explicit and immutable
 
 Comparison means "changed since Start tracking," not "different from vanilla."
