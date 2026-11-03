@@ -203,6 +203,8 @@ internal static class CoreTests
             withMetadata.Workshop.ChangeNotes = "New staged notes";
             Reject(delegate { DraftValidation.Check(withContext, contextDraft, withMetadata, delegate { return ""; }); },
                 "Workshop context changed after export blocks stale drafts");
+            passed += TrackingTests.Run();
+            passed += JournalTests.Run();
             Console.WriteLine("PASS: " + passed + " core checks");
             return 0;
         }

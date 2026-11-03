@@ -13,6 +13,8 @@ history, changelogs, saved-data analysis, and eventual wiki-ready exports.
 
 ## Start here
 
+- [Feature list and behavior](Feature-List): what each feature does, how to
+  operate it, expected outputs, safeguards, and what remains planned.
 - [Installation and workflow](Installation-and-Workflow): prerequisites, tracking,
   AI handoff, approval, and normal saving.
 - [Architecture](Architecture): the reusable core, managed FCS adapter, and UI.
@@ -29,10 +31,17 @@ history, changelogs, saved-data analysis, and eventual wiki-ready exports.
 
 ## Current status
 
-The first release is an experimental prerelease restricted to the inspected
-Steam FCS 2.14.2 executable hash. Live-model extraction and disposable
-save/reopen checks exist; the full interactive FCS Extended workflow still
-requires acceptance.
+The current [v0.1.0-beta.2 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.2)
+remains experimental and restricted to the inspected Steam FCS 2.14.2 executable
+hash. It includes local Workshop metadata, preview-image archiving, embedded
+MDI hosting and contextual button help alongside change documentation.
+Live-model extraction and disposable save/reopen checks exist; the full
+interactive FCS Extended workflow still requires acceptance.
+
+Beta 2 also includes resumable tracking, automatic
+delta session recording, manual/30-minute journal compilation and export-folder
+settings. Feature/workflow pages explain the session files, recovery and
+privacy boundaries.
 
 **FCS notes are per-record editor-side annotations**, stored in
 `data\__TODO__<user>.txt`, not inside the mod file. Distributing only a `.mod`

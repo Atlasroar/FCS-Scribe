@@ -112,17 +112,32 @@ The current runs also exercise all Workshop fields, unsaved/staged and cached
 sources, unknown and unpublished values, missing/malformed XML and DTD rejection,
 lossless preview archiving in three formats, source/overwrite protection and
 the exact 1 MB bound, asynchronous refresh/upload blocking with offline capture
-preserved, real MDI parenting, and all eight buttons' hover/focus
+preserved, real MDI parenting, and all ten current buttons' hover/focus
 events without erasing persistent status. No real Steam upload is invoked.
 
-The final local runs passed 47 core checks, 88 integration checks on the vanilla
-data copy, and 87 on the representative mod copy. The latter explicitly skipped
+The final local runs passed 138 core checks, 116 integration checks on the vanilla
+data copy, and 115 on the representative mod copy. The latter explicitly skipped
 instance mutation because that fixture contains no instances; the vanilla run
 covers it.
 
 This uncovered two important implementation details: ordinary save refreshes
 declared dependency headers without advancing the baseline, and large snapshots
 must use streaming fingerprints in the 32-bit editor.
+
+Beta 2 adds a full starting baseline plus timestamped delta session
+logs and manual or 30/60/300/600-second recordings. Each recording is durable
+before baseline advancement. Automatic compilation appends missing entries
+to the main journal every 30 minutes independently; manual mode compiles on
+request. Full baselines are not rewritten per tick. Validation, replay,
+comparison and disk work use workers; live capture stays on the UI thread.
+Checks cover replay, idempotent compilation, interrupted-tail recovery, missing
+storage/head detection, writer exclusion, actual timer dispatch, preserved
+session originals and active/custom defaults.
+
+Legacy AI packets lack complete baselines: explicit migration retains original
+bytes/evidence but starts a fresh current-state checkpoint. Full-state tracking
+files and backups contain loaded dependency records and are not for AI or
+Workshop distribution. Editable drafts remain window-local.
 
 ## Remaining uncertainty and limitations
 
@@ -143,6 +158,8 @@ must use streaming fingerprints in the 32-bit editor.
 - Applying multiple notes cannot be made transactional through this verified
   interface. Errors explicitly warn about partial in-memory application. FCS
   remains responsible for its own save/error dialogs.
-- Baselines are session-only. No automatic baseline advancement, persistence,
-  wiki/Markdown export, direct provider integration, or custom binary writing is
-  included.
+- Checkpoint history is persisted, but no history browser, combined batch export
+  or persisted editable drafts are included. Wiki/Markdown export, direct
+  provider integration and custom binary writing remain unimplemented.
+- Checkpoint hashes establish self-consistency and detect observed external
+  writes, not digital signatures or a fully locked cross-process transaction.

@@ -6,6 +6,8 @@ using System.Linq;
 using System.Reflection;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using FcsScribe;
 
@@ -39,6 +41,22 @@ internal static class IntegrationTests
     [STAThread]
     public static int Main()
     {
+        int result = 1;
+        using (var host = new Form { ShowInTaskbar = false, Opacity = 0 })
+        {
+            host.Shown += delegate {
+                host.BeginInvoke(new Action(delegate {
+                    try { result = Run(); }
+                    finally { host.Close(); }
+                }));
+            };
+            Application.Run(host);
+        }
+        return result;
+    }
+
+    private static int Run()
+    {
         Form editor = null;
         try
         {
@@ -71,6 +89,7 @@ internal static class IntegrationTests
             var adapter = new FcsAdapter(assembly, editor);
             CheckWorkshop(adapter, editor, data, nav, assembly);
             CheckScribeWindow(adapter, editor);
+            CheckTrackingWindow(adapter, editor);
             Snapshot initial = adapter.Capture();
             Check(initial.Records.Count > 0, "capture real loaded records");
             var tracker = new Tracker(initial);
@@ -164,19 +183,22 @@ internal static class IntegrationTests
             return 0;
         }
         catch (Exception error) { Console.Error.WriteLine(error); return 1; }
-        finally { if (editor != null) editor.Dispose(); }
+        finally
+        {
+            if (editor != null) editor.Dispose();
+        }
     }
 
     private static void CheckScribeWindow(FcsAdapter adapter, Form editor)
     {
-        using (var window = new ScribeWindow(adapter, editor))
+        using (var window = new ScribeWindow(adapter, editor, Path.Combine(Directory.GetCurrentDirectory(), "plugin-settings.json")))
         {
             Check(window.IsMdiChild && window.MdiParent == editor, "Scribe uses FCS's actual MDI container");
             var actions = window.Controls.OfType<FlowLayoutPanel>().Single();
             var help = (Label)FcsAdapter.Field(window, "help");
             var status = (Label)FcsAdapter.Field(window, "status");
             string originalStatus = status.Text;
-            Check(actions.Controls.OfType<Button>().Count() == 8, "all eight actions are available");
+            Check(actions.Controls.OfType<Button>().Count() == 10, "all ten actions are available");
             foreach (Button button in actions.Controls.OfType<Button>())
             {
                 typeof(Control).GetMethod("OnMouseEnter", Flags).Invoke(button, new object[] { EventArgs.Empty });
@@ -188,11 +210,149 @@ internal static class IntegrationTests
                 Check(help.Text == button.AccessibleDescription, button.Text + " keyboard focus explains action");
                 typeof(Control).GetMethod("OnLeave", Flags).Invoke(button, new object[] { EventArgs.Empty });
             }
+
             Check(window.Controls.OfType<TabControl>().Single().TabPages.Cast<TabPage>().Any(x => x.Text == "Workshop info"),
                 "Workshop context has a read-only review tab");
             window.PerformLayout();
             Check(help.Dock == DockStyle.Bottom && help.Bottom <= status.Top, "hover help is at the window bottom above persistent status");
         }
+    }
+
+    private static void AwaitUi(Task task)
+    {
+        var timeout = System.Diagnostics.Stopwatch.StartNew();
+        while (!task.IsCompleted && timeout.Elapsed < TimeSpan.FromMinutes(3))
+        {
+            Application.DoEvents();
+            Thread.Sleep(10);
+        }
+        if (!task.IsCompleted) throw new TimeoutException("Background tracking operation did not complete.");
+        task.GetAwaiter().GetResult();
+    }
+
+    private static void CheckTrackingWindow(FcsAdapter adapter, Form editor)
+    {
+        string directory = Directory.GetCurrentDirectory();
+        string path = Path.Combine(directory, "mods", "tracking.json");
+        using (var window = new ScribeWindow(adapter, editor, Path.Combine(directory, "automation-settings.json")))
+        {
+            Check(adapter.ActiveModDirectory() == Path.Combine(directory, "mods"),
+                "default project output is the active mod file's actual directory");
+            Check((string)FcsAdapter.Call(window, "ExportDirectory") == adapter.ActiveModDirectory(),
+                "all JSON choosers use the active mod default");
+            var settings = (PluginSettings)FcsAdapter.Field(window, "settings");
+            var timer = (System.Windows.Forms.Timer)FcsAdapter.Field(window, "timer");
+            Check(settings.ReviewSeconds == 0 && !timer.Enabled, "automatic review is opt-in and waits for tracking");
+            RunWindow(window, "StartPath", path);
+            JournalProject first = (JournalProject)FcsAdapter.Field(window, "project");
+            Check(first.EntryCount == 0 && File.Exists(path) && File.Exists(first.SessionPath),
+                "Start saves one full baseline and opens an empty timestamped session");
+            string originalSession = first.SessionPath, anchorHash = TrackingStorage.HashFile(path);
+            var schedule = (JournalSchedule)FcsAdapter.Field(window, "schedule");
+            var clock = (System.Diagnostics.Stopwatch)FcsAdapter.Field(window, "clock");
+            foreach (int seconds in PluginSettings.Intervals.Where(x => x > 0))
+            {
+                settings.ReviewSeconds = seconds;
+                long now = clock.ElapsedMilliseconds;
+                schedule.Reset(now, seconds);
+                FcsAdapter.Call(window, "ConfigureTimer");
+                Check(timer.Enabled && timer.Interval == 1000 && schedule.NextReview == now + seconds * 1000L,
+                    "automatic deadline is exactly " + seconds + " seconds with independent UI polling");
+            }
+            settings.ReviewSeconds = 0;
+            FcsAdapter.Call(window, "ConfigureTimer");
+            Check(!timer.Enabled, "manual review disables scheduling");
+            RunWindow(window, "Review");
+            Check(first.EntryCount == 0, "unchanged reviews do not append duplicate checkpoints");
+            RunWindow(window, "ResumePath", path);
+            JournalProject resumed = (JournalProject)FcsAdapter.Field(window, "project");
+            Check(resumed.Fingerprint == first.Fingerprint && resumed.SessionPath != originalSession,
+                "background resume retains validated state and starts a distinct session");
+            bool protectedFile = false;
+            try { FcsAdapter.Call(window, "ProtectTrackingFile", path); }
+            catch (TargetInvocationException error) { protectedFile = error.InnerException is InvalidOperationException; }
+            Check(protectedFile, "manual packet/Workshop exports cannot overwrite the active tracking JSON");
+            object nav = FcsAdapter.Field(editor, "nav");
+            object header = FcsAdapter.Field(FcsAdapter.Field(FcsAdapter.Field(nav, "ou"), "gameData"), "header");
+            string originalAuthor = (string)FcsAdapter.Field(header, "Author");
+            try
+            {
+                using (var host = new Form { IsMdiContainer = true, ShowInTaskbar = false, Opacity = 0 })
+                {
+                    window.MdiParent = host;
+                    host.Show(); window.Show();
+                    settings.ReviewSeconds = 30;
+                    schedule.Reset(clock.ElapsedMilliseconds - 30000, 30);
+                    Put(window, "automaticPaused", false);
+                    FcsAdapter.Call(window, "ConfigureTimer");
+                    Put(header, "Author", "Automatic checkpoint fixture");
+                    FcsAdapter.Call(timer, "OnTick", EventArgs.Empty);
+                    var timeout = System.Diagnostics.Stopwatch.StartNew();
+                    while ((bool)FcsAdapter.Field(window, "busy") && timeout.Elapsed < TimeSpan.FromMinutes(3))
+                    {
+                        Application.DoEvents(); Thread.Sleep(10);
+                    }
+                    JournalProject saved = (JournalProject)FcsAdapter.Field(window, "project");
+                    Check(!(bool)FcsAdapter.Field(window, "busy") && saved.EntryCount == 1 && saved.PendingCount == 1 &&
+                        File.ReadAllLines(saved.SessionPath).Length == 2 && !File.Exists(saved.JournalPath),
+                        "the actual automatic tick flushes a changed session delta before compilation (entries=" +
+                        saved.EntryCount + ", visible=" + window.Visible + ", state=" + window.WindowState +
+                        ", parent=" + host.WindowState + ", closing=" + FcsAdapter.Field(window, "closing") +
+                        ", due=" + schedule.NextReview + ", now=" + clock.ElapsedMilliseconds + ", modal=" +
+                        String.Join(",", Application.OpenForms.Cast<Form>().Where(x => x.Modal).Select(x => x.Name)) + ")");
+                    Check(saved.ResumeTracker().Export(adapter.Capture()).Changes.Count == 0 &&
+                        saved.Fingerprint == adapter.Capture().Fingerprint() && TrackingStorage.HashFile(path) == anchorHash,
+                        "automatic review advances only to the successfully saved current state");
+                    long compilationDeadline = schedule.NextCompilation;
+                    RunWindow(window, "Review");
+                    Check(schedule.NextCompilation == compilationDeadline, "recording does not postpone compilation");
+                    schedule.Reset(clock.ElapsedMilliseconds - JournalSchedule.CompilationMilliseconds, 30);
+                    RunWindow(window, "AutomaticTick");
+                    Check(saved.PendingCount == 0 && File.ReadAllLines(saved.JournalPath).Length == 1 &&
+                        File.Exists(saved.SessionPath), "thirty-minute automatic compilation retains the original session");
+                    string compiledHash = TrackingStorage.HashFile(saved.JournalPath);
+                    RunWindow(window, "Compile");
+                    Check(TrackingStorage.HashFile(saved.JournalPath) == compiledHash, "explicit compilation is available and idempotent");
+                    Put(window, "busy", true);
+                    FcsAdapter.Call(timer, "OnTick", EventArgs.Empty);
+                    Check(saved.EntryCount == 1,
+                        "automatic ticks do not overlap an active operation");
+                    Put(window, "busy", false);
+                    Put(window, "automaticPaused", true);
+                    FcsAdapter.Call(window, "ConfigureTimer");
+                    Check(!timer.Enabled, "automatic scheduling remains suspended after an error (thread=" +
+                        Thread.CurrentThread.ManagedThreadId + ", paused=" + FcsAdapter.Field(window, "automaticPaused") +
+                        ", context=" + (SynchronizationContext.Current == null ? "null" : SynchronizationContext.Current.GetType().Name) + ")");
+                    string preserved = File.ReadAllText(saved.SessionPath);
+                    string fingerprint = saved.Fingerprint;
+                    File.WriteAllText(saved.SessionPath, "external edit");
+                    Put(header, "Author", "A later unsaved fixture edit");
+                    bool conflict = false;
+                    try { RunWindow(window, "Review"); }
+                    catch (IOException) { conflict = true; }
+                    Check(conflict && saved.Fingerprint == fingerprint && File.ReadAllText(saved.SessionPath) == "external edit",
+                        "failed recordings preserve both the external session content and the previous baseline");
+                    File.WriteAllText(saved.SessionPath, preserved);
+                    window.Hide(); window.MdiParent = editor;
+                }
+            }
+            finally { Put(header, "Author", originalAuthor); }
+            string custom = Path.Combine(directory, "custom-json");
+            Directory.CreateDirectory(custom);
+            settings = (PluginSettings)FcsAdapter.Field(window, "settings");
+            settings.ExportDirectory = custom;
+            Check((string)FcsAdapter.Call(window, "ExportDirectory") == custom, "custom JSON default is configurable without moving the project");
+            settings.ReviewSeconds = 30;
+            FcsAdapter.Call(window, "ConfigureTimer");
+            window.Dispose();
+            Check(!timer.Enabled, "disposing the window stops automatic scheduling");
+        }
+    }
+
+    private static void RunWindow(ScribeWindow window, string method, params object[] args)
+    {
+        AwaitUi((Task)FcsAdapter.Call(window, "RunBusy", new Func<Task>(() =>
+            (Task)FcsAdapter.Call(window, method, args))));
     }
 
     private static void CheckWorkshop(FcsAdapter adapter, Form editor, object data, object nav, Assembly assembly)

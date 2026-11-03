@@ -51,8 +51,30 @@ This is not a Steam image downloader or a generic external-file tracker.
 
 Comparison means "changed since Start tracking," not "different from vanilla."
 The baseline is copied so later caller/editor mutation cannot rewrite history.
-Only starting a new baseline advances it: applying notes or saving does not.
-Earlier edits are explicitly out of scope.
+Starting a new tracking file establishes it; beta 2 checkpoint review
+advances it only after the reviewed state is saved successfully. Applying notes
+or ordinary FCS saving does not. Earlier edits are explicitly out of scope.
+
+Legacy AI packets cannot restore a baseline because their context omits loaded
+records. Conversion preserves their original bytes/evidence and explicitly
+starts a fresh current-state checkpoint. New tracking documents stream full
+captured state to disk rather than building giant JSON strings in the 32-bit
+process. They are private local state, not an AI/Workshop distribution format.
+
+Background workers operate only on detached snapshots. Live capture stays on
+the editor thread; a busy gate prevents timer/user action overlap. A full
+baseline is written once; timestamped session logs append changed records and
+context instead of repeatedly rewriting that baseline/history. Flush success
+and a small atomic head marker precede baseline adoption. The journal tracker
+shares ownership of detached snapshots rather than duplicating them.
+
+Compilation is distinct from recording: automatic mode consolidates every
+30 minutes on a separate monotonic deadline; manual mode uses an explicit
+action. Stable IDs/hashes make retrying compilation idempotent. Complete
+session originals remain under user control. An incomplete final line requires
+approval and a preserved recovery copy; complete corruption is never skipped.
+An exclusive lease coordinates Scribe writers, with hashes for observed
+external changes. These are not signatures or a universal filesystem lock.
 
 Stable IDs define identity; renaming a display name must not create a fictitious
 deletion/addition. Changing an actual stable ID remains a different identity.

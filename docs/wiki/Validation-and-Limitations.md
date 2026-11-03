@@ -6,13 +6,14 @@ complete editor compatibility.
 
 ## Automated and disposable-copy evidence
 
-The recorded checks passed:
+The recorded beta 2 checks passed. These include session-journal and checkpoint
+automation coverage added since v0.1.0-beta.1:
 
 | Check | Result | Boundary |
 | --- | --- | --- |
-| Dependency-free core checks | 47 passed | Deterministic changes, immutable baseline, typed values, references, Workshop context, stale drafts, schema compatibility and serialization |
-| Actual FCS methods on copied vanilla data | 88 passed | Includes Workshop/cache/preview/MDI/help coverage plus real fields, references, instance tombstones, notes, dirty state and save/reopen |
-| Actual FCS methods on a representative copied mod | 87 passed | Same follow-up coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
+| Dependency-free core checks | 138 passed | Includes session deltas/replay, idempotent compilation, explicit interrupted-tail recovery, complete-corruption rejection, missing history/storage, old-format compatibility, writer exclusion, target protection and independent deadlines |
+| Actual FCS methods on copied vanilla data | 116 passed | Includes background start/resume, new-session identities, durable recording, automatic/manual compilation, ten-button help, defaults and error handling alongside previous coverage |
+| Actual FCS methods on a representative copied mod | 115 passed | Same follow-up coverage; no instances in this fixture, so that mutation was explicitly skipped and covered by vanilla |
 
 The integration host initializes actual FCS forms without launching the complete
 interactive editor/mod-selector workflow. It exercises unsaved overrides,
@@ -25,7 +26,8 @@ mutation, malformed/partial XML and DTD rejection, PNG/JPEG/GIF byte preservatio
 new-file/source protection, stale previews, the exact 1 MB boundary and refresh/
 upload blocking with offline capture preserved. Actual
 FCS MDI parenting and every action button's hover/focus help are exercised
-without running the full interactive message loop.
+under a generic WinForms message loop so async continuations stay on the UI
+thread. This does not launch FCS's complete startup/mod-selector workflow.
 
 Original game/mod files are only copied; test saves go to a fresh ignored
 `build\integration-fixtures` directory. The Framework test host is explicitly
@@ -54,6 +56,10 @@ messages, notes inspection, and normal save/restart.
 Also check embedded resize/minimize/restore/close behavior, bottom help layout,
 Workshop tab refresh, field agreement with a real Workshop dialog and preview
 archive selection/cancellation.
+New/resume/legacy-conversion/settings dialogs, every timer interval, long-running
+validation/close and restart recovery also need interactive acceptance.
+Also exercise the 30-minute schedule, discrepancy confirmation, recovery
+approval/cancellation, two editor instances and manual session archiving.
 
 Broader dependency stacks, other extensions, unsupported/read-only modes, and
 visible failure handling also need the checks recorded in the
@@ -72,8 +78,18 @@ An experimental prerelease does not mark those checkboxes complete.
 - Notes are shared editor-side record annotations, not `.mod` content or
   Workshop release notes.
 - Multi-record note application has no verified transaction/rollback contract.
-- Baselines/draft-export associations do not survive closing the plugin window.
+- Saved baselines/history can be resumed, but drafts/export associations remain
+  window-local; there is no history browser or combined multi-batch AI export.
 - Capture runs synchronously on the editor thread; large stacks can pause UI.
+- Interval sampling misses changes reverted between ticks. Record deltas still
+  contain complete changed records; they are not a full editor event stream.
+- History is unpruned and replay validation grows with it. Manual AI export
+  still compares on the UI thread. Very large stacks/histories remain a
+  32-bit memory/latency risk despite fewer copies and smaller disk writes.
+- Full-state tracking files/backups may be large and private; they are not AI
+  handoffs or Workshop distribution files. Fingerprint/hash checks detect
+  self-consistency and observed external edits, not cryptographic authorship or
+  an absolute cross-process transaction.
 - Matching evidence IDs does not establish that AI prose is factually correct.
-- OCS integration, persistent history, Markdown exports, wiki-ready gameplay
+- OCS integration, Markdown exports, wiki-ready gameplay
   exports, and direct AI-provider connections are planned, not implemented.

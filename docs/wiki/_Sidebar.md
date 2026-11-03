@@ -1,6 +1,7 @@
 ## FCS-Scribe
 
 - [Home](Home)
+- [Feature list and behavior](Feature-List)
 - [Installation and workflow](Installation-and-Workflow)
 - [Architecture](Architecture)
 - [Coding decisions](Coding-Decisions)

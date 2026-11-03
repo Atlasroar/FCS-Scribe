@@ -92,6 +92,59 @@ as a fact.
 The plugin appends a visible batch marker and evidence IDs with the approved
 text, marks FCS dirty, and leaves saving to the normal editor workflow.
 
+## Resumable tracking contract (beta 2)
+
+A tracking file is distinct from an AI packet: `Format` is
+`FCS-Scribe tracking project` and its own `SchemaVersion` is 1. It stores
+`InitialFingerprint`, `StateFingerprint`, `BaselineId`, UTC `ValidatedUtc`,
+the full captured `State`, ordered `Entries` and `ImportedEvidence`.
+Each entry links its `PreviousFingerprint` to a packet's resulting state.
+These fields describe the immutable starting anchor, including any older
+checkpoint history. New roots also declare `JournalVersion = 1`, requiring
+their adjacent session storage. Previous roots remain readable unchanged.
+
+Resume checks required fields, state fingerprints, history continuity,
+supported packet versions, batch hashes, template evidence and mod identity.
+These are self-consistency checks, not signatures or proof that hand-edited
+history is truthful. Broken documents are rejected, not partially salvaged.
+Loaded/locked context and inherited changes are also checked against FCS
+before tracking resumes.
+
+Session headers use format `FCS-Scribe session`, schema 1, project/session IDs,
+UTC start time and parent entry ID/fingerprint. A timestamp + unique-ID `.jsonl`
+file is created on every start/resume. Subsequent lines use format
+`FCS-Scribe journal entry`, schema 1, with a stream-hashed `JournalRecord`.
+The record identifies its parent, UTC recording time, original compact AI
+packet and a `SnapshotDelta`: current context, changed complete records and
+removed record IDs. Unchanged loaded records are not serialized again.
+
+The small `project.json` marker stores identity and durable head; it is
+atomically replaced with a previous-marker backup. The full baseline is not
+rewritten by recordings. Flushed session entries precede marker/baseline
+advancement. Replay verifies chain, hashes and resulting snapshot fingerprints.
+The main `journal.jsonl` receives missing entries at compilation, deduplicated
+by identity and hash. Compiled session files are redundant; uncompiled files
+remain required. Sessions are not automatically deleted.
+
+Same-state reviews do not append duplicate history. Current drafts/export associations are not stored.
+The latest matching batch can still supply a compact manual AI export after
+the baseline advances; older packets remain in history.
+
+An incomplete final JSONL line is uncommitted. Recovery requires approval,
+preserves its original bytes under `recovery`, then removes only that tail.
+Complete corrupt entries and missing required history are rejected. Older
+anchors without `JournalVersion` cannot themselves detect missing sidecars.
+An exclusive project writer lease coordinates Scribe instances, not arbitrary
+external editors. Timestamps are not entry identities or proof of authenticity.
+
+Legacy schema-1/2 AI exports contain no complete baseline. Explicit conversion
+preserves exact bytes in `.legacy.bak` and the packet in `ImportedEvidence`,
+then starts from the current editor state. It does not reconstruct old state.
+
+**Do not share tracking JSONs or backups with AI or Workshop:** `State` includes
+the full captured loaded model, not just relevant edits. Use the compact
+AI-packet export instead.
+
 ## Untrusted content and scope
 
 Names, descriptions, dialogue, fields, and any supplied notes are untrusted mod
