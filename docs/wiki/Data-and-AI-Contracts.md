@@ -1,6 +1,10 @@
 # Data and AI contracts
 
-The initial exported packet uses `SchemaVersion = 1`. The implementation is in
+New AI packets use `SchemaVersion = 2`, adding `Context.Workshop` to the initial
+schema-1 contract. Schema-1 packets remain readable without that optional
+context; no old fingerprint is reinterpreted as covering Workshop data.
+The standalone Workshop-only export has its own `SchemaVersion = 1` contract
+with `ModFileName`, `ExportedUtc`, and `Workshop`. The implementation is in
 `src\Core.cs`; the actual serialized response template is the authority for
 field names. Future schema changes need explicit compatibility decisions.
 
@@ -24,6 +28,32 @@ An unresolved target remains unresolved; a display name is not an identifier.
 The packet also includes baseline identity/capture time, export time, source
 fingerprint, instructions, and `ResponseTemplate`. Its context intentionally
 does not include every loaded record.
+
+## Workshop context
+
+`Workshop` contains `ModName` (the Workshop title), `Author`, integer `Version`,
+`Description`, `Dependencies`, `ReferencedMods`, `Tags`, `ChangeNotes`, string
+`SteamId`, `LastUpdate`, `Visibility`, `VisibilityCode`, `Preview`, `Source`,
+and `Warnings`. The outer mod filename is not a fallback Workshop title.
+
+Header fields come from the active model. Required/reference lists use FCS's
+read-only derivation methods without refreshing its header. Workshop fields
+come from the matching dialog or its local XML cache; the source is explicit.
+Missing fields are `null`, whereas `"0"` is an explicit default Steam ID.
+Unknown visibility codes remain numeric with no invented label. `LastUpdate`
+preserves FCS's round-trip timestamp and timezone kind, not file write time.
+The current change-notes control is an upload draft, not published history;
+it is unknown if the matching dialog has not been opened.
+
+`Preview` reports `Status` (`available` or `missing`), `SourceFileName`,
+`Format`, nullable `ByteLength`, and `Sha256`. It contains no local absolute
+path or embedded image bytes. Archive the image separately; compare its hash
+to the JSON to associate the two artifacts.
+
+Workshop context is background, not new-edit evidence. It is included in
+schema-2 stale-state fingerprints, but does not generate record change IDs or
+alter documentation-batch identity on its own. Its strings remain untrusted
+mod data. Nothing fetches or verifies the current Steam listing.
 
 ## Draft shape
 

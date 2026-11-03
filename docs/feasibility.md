@@ -61,9 +61,19 @@ FCS binaries and proprietary method bodies are not included in this repository.
 | Notes scope | `ToDo.items` keyed by record `stringID`, `NotesItem.active`/`locked`, NOTE/TODO category | One existing entry may already be a TODO; append preserves that category and inherited text |
 | Notes update | `ToDo.AddItem(Item, string, Type, Item, bool, bool)` with append enabled and show disabled | Existing-note append does not mark dirty itself; adapter explicitly sets `navigation.HasChanges = true` |
 | Persistence | `baseForm.saveFile()` invokes `ToDo.SaveData()` before the normal mod save | FCS writes editor-side `data\__TODO__<user>.txt`; notes are not stored inside `.mod` |
+| Embedded UI | `baseForm` is an MDI container; native forms set `MdiParent` | Scribe uses the same standard WinForms child-window mechanism; complete interactive layout acceptance remains |
+| Workshop metadata | `GameData.header` and matching `ModInfo.info`; `txtChangeNotes` holds the staged upload draft | Title/tags/visibility/ID/update can be local or cached, not verified current Steam state; upload notes are not record notes or published history |
+| Workshop fallback | `ModData.GetFileName()` identifies `_<mod>.info` under `navigation.ModPath` | Read known XML fields with DTD/external resolution disabled; do not invoke `Load`'s silent fallback |
+| Workshop dependency list | `GameData.getRequiredMods()` and `getReferencedMods()` | Read the methods without `ModInfo.refreshDependencies()`, which rewrites header lists |
+| Workshop preview | `ModData.GetAbsoluteImagePath()` identifies `_<mod>.img` | PNG/JPEG/GIF bytes are copied unchanged to a new archive outside the installation; no Steam image download |
 
 `ModData.changeNotes` is a separate Workshop-related member, not used as a
-substitute for the editor Notes/TODO facility.
+substitute for the editor Notes/TODO facility. The Workshop upload handler
+copies `txtChangeNotes.Text` into it only during upload; extraction must read
+the current control, not invoke that handler (which also saves the mod).
+FCS's cache loader does not reload this draft. `SteamManager` converts remote
+update timestamps to local time; exports preserve the cached round-trip
+date/time and its timezone kind rather than inventing a UTC suffix.
 
 ## Safety and verification
 
@@ -98,8 +108,15 @@ dirty state, duplicate prevention, no save on apply, normal save/reopen,
 unchanged captured gameplay records, baseline retention, live record lifecycle,
 reference quantities/removal, and instance tombstones.
 
-The final local runs passed 41 core checks, 30 integration checks on the vanilla
-data copy, and 29 on the representative mod copy. The latter explicitly skipped
+The current runs also exercise all Workshop fields, unsaved/staged and cached
+sources, unknown and unpublished values, missing/malformed XML and DTD rejection,
+lossless preview archiving in three formats, source/overwrite protection and
+the exact 1 MB bound, asynchronous refresh/upload blocking with offline capture
+preserved, real MDI parenting, and all eight buttons' hover/focus
+events without erasing persistent status. No real Steam upload is invoked.
+
+The final local runs passed 47 core checks, 88 integration checks on the vanilla
+data copy, and 87 on the representative mod copy. The latter explicitly skipped
 instance mutation because that fixture contains no instances; the vanilla run
 covers it.
 
@@ -109,14 +126,17 @@ must use streaming fingerprints in the 32-bit editor.
 
 ## Remaining uncertainty and limitations
 
-- The real FCS Extended startup/toolbar/draft-dialog workflow still needs a
+- The real FCS Extended startup/toolbar/draft-dialog and embedded-window workflow still needs a
   manual interactive acceptance pass. Automated checks invoke actual FCS forms
   and save methods, not the complete loader/message-loop workflow.
 - Copy-based dependency tests establish layering behavior, not exhaustive
   compatibility with every real-world mod stack or third-party extension.
-- Per-field source provenance, full dependency resolution, external data files,
-  mod metadata, and pending dialogue/control buffers are not fully extracted.
+- Per-field source provenance, full dependency resolution, general external data
+  files, metadata change history, and pending dialogue/control buffers are not fully extracted.
   Every packet warns against claiming completeness.
+- Workshop information is local/staged/cached context, not a current Steam
+  query, published changelog or metadata change history. Only the local preview
+  image is supported for external-file archiving.
 - Notes are shared editor-side record annotations. Distributing a `.mod` alone
   does not distribute these notes. No unknown global/mod-specific note storage
   format was invented.

@@ -172,8 +172,37 @@ internal static class CoreTests
             string original = "{\"Text\":\"quotes: \\\"hi\\\", slash: \\\\, newline: \\n, Unicode: \\u2603\"}";
             Check(Json.Read<NoteEntry>(Json.Pretty(original)).Text == Json.Read<NoteEntry>(original).Text, "JSON formatting preserves data");
             Packet roundtrip = Json.Read<Packet>(Json.Pretty(Json.Write(packet)));
-            Check(roundtrip.Changes[0].Before.Text == "10" && roundtrip.SchemaVersion == 1, "versioned packet roundtrip");
+            Check(roundtrip.Changes[0].Before.Text == "10" && roundtrip.SchemaVersion == 2, "versioned packet roundtrip");
             Check(packet.Instructions.Contains("UNTRUSTED DATA") && packet.Instructions.Contains("do not claim completeness"), "AI evidence safeguards");
+            var oldPacket = Json.Read<Packet>("{\"SchemaVersion\":1,\"Context\":{\"ModId\":\"legacy\",\"ModName\":\"legacy.mod\"}}");
+            Check(oldPacket.SchemaVersion == 1 && oldPacket.Context.Workshop == null, "schema 1 packets remain readable without Workshop context");
+            var metadata = new WorkshopMetadata {
+                ModName = "Workshop title", Author = "Author", Version = 12, Description = "Untrusted \"description\"",
+                Dependencies = new List<string> { "base.mod" }, ReferencedMods = new List<string> { "reference.mod" },
+                Tags = new List<string> { "Buildings" }, ChangeNotes = "Staged notes",
+                SteamId = "18446744073709551614", Visibility = "Private", VisibilityCode = 2,
+                LastUpdate = "2026-11-03T12:00:00.0000000Z",
+                Preview = new PreviewImage { Status = "missing" }, Source = "test", Warnings = new List<string> { "cached" }
+            };
+            Snapshot withMetadata = State();
+            withMetadata.Workshop = metadata;
+            Packet metadataOnly = tracker.Export(withMetadata);
+            Check(metadataOnly.Changes.Count == 0 && metadataOnly.BatchId == tracker.Export(State()).BatchId,
+                "Workshop context is not invented gameplay evidence or a new documentation batch");
+            WorkshopMetadata copied = Json.Read<WorkshopMetadata>(Json.Write(metadataOnly.Context.Workshop));
+            Check(Json.Write(copied) == Json.Write(metadata) && copied.SteamId == "18446744073709551614",
+                "all Workshop fields round-trip with lossless Steam ID strings");
+            metadata.ModName = "Changed after export";
+            metadata.Tags.Add("Other");
+            Check(metadataOnly.Context.Workshop.ModName == "Workshop title" && metadataOnly.Context.Workshop.Tags.Count == 1,
+                "exported Workshop context is independent of later mutations");
+            Check(withMetadata.Fingerprint() != metadataOnly.SourceFingerprint, "Workshop changes affect stale-context fingerprints");
+            withMetadata.Records[0].Cells[0].Value.Text = "11";
+            Packet withContext = tracker.Export(withMetadata);
+            NoteDraft contextDraft = Draft(withContext);
+            withMetadata.Workshop.ChangeNotes = "New staged notes";
+            Reject(delegate { DraftValidation.Check(withContext, contextDraft, withMetadata, delegate { return ""; }); },
+                "Workshop context changed after export blocks stale drafts");
             Console.WriteLine("PASS: " + passed + " core checks");
             return 0;
         }

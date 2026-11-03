@@ -7,6 +7,8 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Windows.Forms;
+using System.Xml;
+using System.Xml.Serialization;
 
 namespace FcsScribe
 {
@@ -74,13 +76,15 @@ namespace FcsScribe
                 LoadOrder = Strings(Field(form, "activeMods")),
                 Dependencies = Strings(Field(Field(gameData, "header"), "Dependencies")),
                 LockedMods = Strings(Field(gameData, "lockedMods")),
+                Workshop = CaptureWorkshop(),
                 Warnings = new List<string> {
                     "Experimental in-memory extraction, not a complete catalogue of all FCS editor state.",
                     "Base and locked field-level source mod provenance is unresolved; load order is reported as editor context.",
                     "Earlier edits made before Start tracking are outside this baseline.",
                     "Uncommitted UI controls may not yet be in the model. Finish editing the field before reviewing changes.",
                     "Names, scalar fields, layered references and instances are captured; external files, layouts, " +
-                        "dialogue editor buffers and mod metadata are outside this catalogue."
+                        "dialogue editor buffers and metadata change history are outside this catalogue. " +
+                        "Workshop metadata is current context, not a list of new edits."
                 }
             };
             foreach (DictionaryEntry pair in items)
@@ -102,6 +106,126 @@ namespace FcsScribe
             snapshot.Warnings = snapshot.Warnings.Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList();
             snapshot.Validate();
             return snapshot;
+        }
+
+        private object WorkshopLocation()
+        {
+            return Activator.CreateInstance(assembly.GetType("forgotten_construction_set.ModData", true),
+                new[] { Field(gameData, "header"), Property(nav, "ModPath"),
+                    Path.GetFileNameWithoutExtension((string)Property(nav, "ActiveFile")) });
+        }
+
+        public WorkshopMetadata CaptureWorkshop()
+        {
+            EnsureReady();
+            object header = Field(gameData, "header");
+            object dialog = Field(form, "modInfo");
+            object live = Field(dialog, "info");
+            object location = WorkshopLocation();
+            string file = (string)Call(location, "GetFileName");
+            bool matching = live != null && Object.ReferenceEquals(Field(live, "header"), header) &&
+                String.Equals(Path.GetFullPath((string)Call(live, "GetFileName")), Path.GetFullPath(file),
+                    StringComparison.OrdinalIgnoreCase);
+            if (matching && (bool)Field(dialog, "uploading"))
+                throw new InvalidOperationException("Wait for the Workshop upload to finish before capturing its metadata.");
+            if (matching)
+            {
+                object steam = assembly.GetType("forgotten_construction_set.SteamManager", true)
+                    .GetField("instance", Flags).GetValue(null);
+                if (steam != null && (bool)Property(steam, "Enabled") &&
+                    !((Button)Field(dialog, "btnRefreshFromSteam")).Enabled &&
+                    !((Button)Field(dialog, "btnUpload")).Enabled)
+                    throw new InvalidOperationException("Wait for the Workshop refresh to finish before capturing its metadata.");
+            }
+            var result = new WorkshopMetadata {
+                Author = (string)Field(header, "Author"),
+                Version = (int)Field(header, "Version"),
+                Description = (string)Field(header, "Description"),
+                Dependencies = Strings(Call(gameData, "getRequiredMods")),
+                ReferencedMods = Strings(Call(gameData, "getReferencedMods")),
+                Preview = WorkshopPreview.Read((string)Call(location, "GetAbsoluteImagePath")).Info
+            };
+            result.Warnings.Add("Workshop values are local/staged or cached, not a fresh Steam query. No Save, Refresh or Upload was invoked.");
+            result.Warnings.Add("Dependencies are FCS's current required mods; ReferencedMods are the additional parenthesized entries shown by FCS.");
+            if (matching)
+            {
+                result.Source = "Active mod header + current FCS Workshop dialog";
+                result.ModName = (string)Field(live, "title");
+                result.Tags = Strings(Field(live, "tags"));
+                result.ChangeNotes = ((TextBox)Field(dialog, "txtChangeNotes")).Text;
+                result.SteamId = ((ulong)Field(live, "id")).ToString(CultureInfo.InvariantCulture);
+                result.VisibilityCode = (int)Field(live, "visibility");
+                result.LastUpdate = FormatUpdate(Field(live, "lastUpdate"));
+                result.Warnings.Add("ChangeNotes is the dialog's current upload draft, not published Workshop changelog history.");
+            }
+            else
+            {
+                result.Source = "Active mod header; Workshop cache unavailable";
+                WorkshopFile saved = null;
+                try
+                {
+                    using (var input = File.OpenRead(file))
+                    using (var reader = XmlReader.Create(input, new XmlReaderSettings {
+                        DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 4 * 1024 * 1024
+                    }))
+                        saved = (WorkshopFile)new XmlSerializer(typeof(WorkshopFile)).Deserialize(reader);
+                }
+                catch (FileNotFoundException) { result.Warnings.Add("No saved Workshop .info cache exists; Workshop-only fields are unknown."); }
+                catch (DirectoryNotFoundException) { result.Warnings.Add("No saved Workshop cache directory exists; Workshop-only fields are unknown."); }
+                if (saved != null)
+                {
+                    if (saved.mod != null && saved.mod != (string)Field(location, "mod"))
+                        throw new InvalidDataException("The Workshop .info cache identifies a different mod.");
+                    result.Source = "Active mod header + saved Workshop .info cache";
+                    result.ModName = saved.title;
+                    result.Tags = saved.tags == null ? null : saved.tags.ToList();
+                    result.SteamId = saved.id.HasValue ? saved.id.Value.ToString(CultureInfo.InvariantCulture) : null;
+                    result.VisibilityCode = saved.visibility;
+                    result.LastUpdate = FormatUpdate(saved.lastUpdate);
+                }
+                result.Warnings.Add("Open the active mod's Steam Workshop window to capture staged title/tags/visibility and its change-notes draft.");
+                result.Warnings.Add("ChangeNotes is unavailable without a matching Workshop dialog; FCS does not reload it from the .info cache.");
+            }
+            if (result.VisibilityCode.HasValue)
+            {
+                var choices = ((ComboBox)Field(dialog, "cbVisiblity")).Items;
+                int code = result.VisibilityCode.Value;
+                if (code >= 0 && code < choices.Count) result.Visibility = choices[code].ToString();
+                else result.Warnings.Add("Unrecognized Workshop visibility code: " + code.ToString(CultureInfo.InvariantCulture) + ".");
+            }
+            if (result.SteamId == null || result.SteamId == "0")
+                result.Warnings.Add("No assigned Steam Workshop ID is known; zero is FCS's unpublished/default ID.");
+            if (result.LastUpdate == null)
+                result.Warnings.Add("No last-update timestamp is known. Null does not mean the mod has never been updated.");
+            else result.Warnings.Add("LastUpdate preserves FCS's cached round-trip date/time and timezone kind; it is not the local file modification time.");
+            if (result.Preview.Status == "missing")
+                result.Warnings.Add("No local Workshop preview image exists; no image was downloaded from Steam.");
+            return result;
+        }
+
+        private static string FormatUpdate(object value)
+        {
+            return value == null ? null : ((DateTime)value).ToString("o", CultureInfo.InvariantCulture);
+        }
+
+        public WorkshopExport CaptureWorkshopExport()
+        {
+            EnsureReady();
+            return new WorkshopExport {
+                ModFileName = Path.GetFileName((string)Property(nav, "ActiveFile")),
+                ExportedUtc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture),
+                Workshop = CaptureWorkshop()
+            };
+        }
+
+        public PreviewImage ArchivePreview(string destination, string expectedHash)
+        {
+            EnsureReady();
+            WorkshopPreview preview = WorkshopPreview.Read((string)Call(WorkshopLocation(), "GetAbsoluteImagePath"));
+            if (preview.Info.Sha256 != expectedHash)
+                throw new InvalidOperationException("The preview changed while choosing an archive location. Review it and try again.");
+            preview.Save(destination, Path.GetDirectoryName(assembly.Location));
+            return preview.Info;
         }
 
         private void CaptureItem(object item, Record record, string prefix, Snapshot snapshot, int depth)

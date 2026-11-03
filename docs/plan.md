@@ -32,6 +32,8 @@ reusable for saved-data analysis and eventual wiki generation.
 | MVP | AI handoff | Versioned JSON and instructions implemented; real manual handoff acceptance remains |
 | MVP | Documentation preview/import | Editable JSON draft, file import, and paste implemented; interactive acceptance remains |
 | MVP | Safe notes insertion | Copy-based runtime checks pass; real FCS Extended approval/save workflow remains |
+| Requested follow-up | Workshop metadata and preview archive | Implemented and copy-tested; cached/local provenance explicit; interactive acceptance remains |
+| Requested follow-up | Embedded window and contextual help | Native MDI child and per-button bottom help implemented; construction/event checks pass; interactive acceptance remains |
 | Next | Session history | Planned; no cross-restart baseline/history persistence yet |
 | Next | Markdown export | Planned; use the existing verified catalogue rather than a second diff engine |
 | Next, staged | OCS integration | Repository assessment complete; optional read-only saved-data backend planned, not installed or implemented |
@@ -93,6 +95,7 @@ Evidence: `src\Core.cs`, `src\FcsAdapter.cs`, `tests\CoreTests.cs`, and
 - [x] Require unresolved-reference and partial-catalogue caveats; do not claim complete extraction.
 - [x] Provide a fully manual export/import workflow with no network calls by the plugin.
 - [x] Warn users to inspect potentially private mod content before sharing it externally.
+- [x] Inspect the user's first real schema-1 export for its catalogue/template shape without committing private mod content.
 - [ ] Exercise a real exported packet through an external assistant and verify the returned draft against its evidence.
 - [ ] Review the usability/readability of the packet and editable JSON draft with realistic documentation batches.
 
@@ -127,10 +130,26 @@ is complete. Use disposable mods and notes files for manual checks.
 - [ ] Test unsupported-build, read-only, merge/translation-mode, malformed-draft, and notes-save failure behavior visibly.
 - [ ] Re-run relevant automated checks after fixes, update documentation, and explicitly decide whether the MVP is ready for normal use.
 
-Recorded implementation evidence: 41 core checks, 30 disposable vanilla
-integration checks, and 29 representative-mod integration checks passed. The
+Recorded implementation evidence: 47 core checks, 88 disposable vanilla
+integration checks, and 87 representative-mod integration checks passed. The
 mod fixture had no instances and explicitly skipped that mutation; vanilla
 coverage includes it. These results do not replace interactive acceptance.
+
+### 5A. First-export follow-up: Workshop and window workflow
+
+- [x] Inspect the guarded FCS Workshop dialog's data lifecycle, sidecar paths, preview handling, dependencies, and MDI hosting.
+- [x] Capture Workshop mod title, author, integer version, description, required/reference dependency lists, tags, staged change notes, Steam ID, cached last update, and visibility.
+- [x] Read a matching live dialog or saved XML cache; identify source and unknowns, preserve precision, and never query Steam or invoke refresh/save/upload.
+- [x] Read staged change notes from the control rather than stale `ModData.changeNotes`; keep them separate from record Notes/TODO and published history.
+- [x] Add schema-2 AI packet context while retaining schema-1 readability; metadata is background, not new gameplay evidence.
+- [x] Export Workshop-only JSON without a baseline or record changes and show it in a read-only review tab.
+- [x] Archive the local preview byte-for-byte, detect PNG/JPEG/GIF encoding despite `.img`, report size/hash, and preserve the original.
+- [x] Require a new archive outside Kenshi, reject overwrite/mod targets/stale previews, and exercise the exact 1 MB size boundary.
+- [x] Embed Scribe as a native MDI child of FCS rather than an owned desktop window.
+- [x] Give all eight action buttons bottom-of-window hover and keyboard-focus descriptions without erasing operation status.
+- [x] Exercise missing/partial/corrupt caches, stale dialogs, explicit unpublished/unknown values, dependency reads without mutation, upload/refresh blocking without disabling offline capture, image formats, archive failures, MDI parenting and help events on disposable FCS copies.
+- [ ] Manually verify embedded resizing, minimize/restore, close/reopen, hover/focus help, and Workshop tab behavior in FCS Extended.
+- [ ] Manually compare all fields with the actual Workshop window, archive a real preview, and verify offline/cache/unknown warnings.
 
 ## 6. OpenConstructionSet integration
 

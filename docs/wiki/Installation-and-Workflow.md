@@ -18,7 +18,9 @@ inspect and validate its integration first. GOG compatibility is not claimed.
 Close FCS. Extract the release archive, then copy its `FCS-Scribe` folder into
 `<Kenshi>\mods\FCS-Scribe`. Launch FCS Extended normally, enable FCS-Scribe in
 the extension selector, and open a writable `.mod` in normal editing mode.
-The plugin adds an FCS-Scribe toolbar button.
+The plugin adds an FCS-Scribe toolbar button and opens as an embedded MDI child.
+Hover over action buttons, or focus them with Tab, to see descriptions at the
+bottom; operation status stays visible separately.
 
 Install FCS Extended from its upstream distribution; this project's archive
 does not include or replace upstream binaries. Start with disposable mods and
@@ -54,6 +56,26 @@ under `build\FCS-Scribe` without installing anything.
 Existing active and inherited notes are preserved. An existing TODO stays a
 TODO rather than being silently reclassified. Applying notes marks the editor
 dirty but does not save or advance the tracking baseline.
+
+## Capture Workshop information and the preview
+
+Open the active mod's FCS **Steam Workshop** window to make its staged values
+and change-notes draft available. Scribe's **Workshop info** tab shows the
+current local metadata, source and warnings. **Export Workshop info** writes
+JSON without requiring a tracking baseline or gameplay edits. AI packets also
+include Workshop context, but do not treat it as new record changes.
+
+If that dialog has not been opened for the active mod, header fields and any
+saved `.info` cache remain readable; staged change notes are unknown. No Steam
+query, refresh, save or upload occurs. Title/author/version/description,
+required and referenced mods, tags, change-notes draft, Steam ID, cached update
+time, visibility and preview details are all represented, including unknowns.
+
+Use **Archive preview image** for a separate, byte-identical image copy.
+Choose a new PNG/JPEG/GIF filename outside Kenshi; existing archives are not
+overwritten. The preview hash in JSON associates it with the copied image.
+Missing images and unsupported/oversized encodings fail explicitly. Local
+metadata is not proof of the current published Steam listing or its changelog.
 
 ## Recovery and lifecycle
 
