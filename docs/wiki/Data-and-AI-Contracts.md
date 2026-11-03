@@ -13,6 +13,9 @@ field names. Future schema changes need explicit compatibility decisions.
 Snapshots identify the active mod, loaded-mod order, declared dependencies,
 locked mods, capture scope, records, and warnings. Each record has a stable ID,
 type, display name, and typed cells with paths and layers.
+JSON-pointer-style path segments escape `~` as `~0` and `/` as `~1`.
+Missing/null, zero/false/empty, numeric types and removal markers remain
+distinct; unsupported scalar types stop extraction rather than invent values.
 
 | Layer | Meaning |
 | --- | --- |

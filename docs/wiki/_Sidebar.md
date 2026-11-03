@@ -3,6 +3,7 @@
 - [Home](Home)
 - [Feature list and behavior](Feature-List)
 - [Installation and workflow](Installation-and-Workflow)
+- [Building and releases](Building-and-Releases)
 - [Architecture](Architecture)
 - [Coding decisions](Coding-Decisions)
 - [Data and AI contracts](Data-and-AI-Contracts)

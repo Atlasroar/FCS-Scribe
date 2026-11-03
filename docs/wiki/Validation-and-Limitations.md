@@ -35,17 +35,9 @@ Original game/mod files are only copied; test saves go to a fresh ignored
 
 ## Reproduce
 
-Run in Windows PowerShell 5.1 from the repository root:
-
-```powershell
-.\scripts\Test.ps1 -FcsDirectory '<Kenshi>'
-.\scripts\Integration-Test.ps1 -FcsDirectory '<Kenshi>' -FixtureMod '<record-bearing.mod>'
-.\scripts\Integration-Test.ps1 -FcsDirectory '<Kenshi>' -FixtureMod '<Kenshi>\data\gamedata.base'
-.\scripts\Inspect-Fcs.ps1 -FcsDirectory '<Kenshi>'
-```
-
-Builds/inspection do not install the plugin. Source binaries used for local
-checks must come from an appropriate installed FCS/FCS Extended distribution.
+See [Building and releases](Building-and-Releases#run-checks-and-inspect-the-supported-build)
+for the core/integration commands, inspection command and required local files.
+Builds/inspection do not install the plugin or replace interactive acceptance.
 
 ## Remaining acceptance gate
 

@@ -269,6 +269,8 @@ another existing default directory in settings or another location in an
 individual dialog. Changing defaults does not move the active tracking file.
 Manual exports cannot overwrite that file. Settings persist at
 `%LOCALAPPDATA%\FCS-Scribe\settings.json`.
+File dialogs restore FCS's working directory. AI/Workshop exports also reject
+destinations inside the active project's reserved storage folder.
 
 ## 10. Compile journal: consolidate without deleting sessions
 

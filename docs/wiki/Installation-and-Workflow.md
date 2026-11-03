@@ -18,7 +18,9 @@ inspect and validate its integration first. GOG compatibility is not claimed.
 
 ## Install a release
 
-Close FCS. Extract the release archive, then copy its `FCS-Scribe` folder into
+Download a release from [GitHub releases](https://github.com/Atlasroar/FCS-Scribe/releases)
+and verify its ZIP against the matching SHA-256 checksum. Close FCS.
+Extract `FCS-Scribe-v<version>.zip`, then copy its `FCS-Scribe` folder into
 `<Kenshi>\mods\FCS-Scribe`. Launch FCS Extended normally, enable FCS-Scribe in
 the extension selector, and open a writable `.mod` in normal editing mode.
 The plugin adds an FCS-Scribe toolbar button and opens as an embedded MDI child.
@@ -32,15 +34,9 @@ before using the experimental plugin on important work.
 
 ## Build from source
 
-Run in Windows PowerShell 5.1 from the repository root:
-
-```powershell
-.\scripts\Build.ps1 -FcsDirectory '<Kenshi>'
-```
-
-The build uses the installed FCS Extended plugin contract and the Framework
-C# compiler; it needs no .NET SDK or provider credentials. Output is written
-under `build\FCS-Scribe` without installing anything.
+See [Building and releases](Building-and-Releases) for requirements, the build
+command, output files, validation and packaging. Building does not install
+anything or modify your game. Do not replace FCS Extended's own contract DLL.
 
 ## Document a batch
 
@@ -70,7 +66,6 @@ is visible, not minimized/busy or blocked by visible modal forms; they never
 save the mod or apply AI notes. A separate 30-minute deadline compiles entries
 into the main journal. Manual mode uses **Compile journal** explicitly.
 Errors pause automation; reopen/validate after a journal write failure.
-Close stops new ticks; an already-running save can finish.
 
 JSON save dialogs default to the active mod's actual directory. Settings can
 choose another existing default; dialogs still allow individual locations.
@@ -81,6 +76,30 @@ The selected JSON is a full baseline, not a per-tick rewrite. Adjacent
 `<file>.json.scribe\project.json` tracks identity/head, `sessions` holds one UTC
 timestamp + unique-ID JSONL log per start/resume, and `journal.jsonl` receives
 compiled entries. Compilation is idempotent and keeps session originals.
+For example:
+
+```text
+fcs-scribe-tracking.json                  Initial full captured baseline
+fcs-scribe-tracking.json.scribe\
+  project.json                           Project identity and durable head
+  journal.jsonl                          Compiled change entries
+  sessions\<UTC timestamp>_<ID>.jsonl     One append-only log per session
+  recovery\<ID>.bak                       Originals retained after explicit recovery
+```
+
+Each recording stores changed complete records and current context, not another
+full loaded snapshot. Added/deleted records, provenance and context-only changes
+remain replayable. Unchanged state adds no entry. Each recording is flushed
+before its baseline is adopted; a crash before compilation does not lose
+already completed recordings.
+
+Recording and ordinary button actions do not postpone the compilation deadline.
+Busy work defers one due operation, not a backlog of overlapping ticks.
+An exclusive project lease coordinates Scribe writers, and hash/chain checks
+detect observed external edits; these are not signatures or a universal lock
+against external tools. Closing stops new ticks; an in-flight write may finish
+before its writer lease is released.
+
 Back up this entire storage with the baseline. Close Scribe before manually
 archiving fully compiled sessions; uncompiled logs remain required. No pruning
 or history-management UI is implemented.
@@ -133,6 +152,10 @@ draft text elsewhere before restarting. A changed active mod
 or actual loaded/locked-mod context requires a new baseline. Normal saving does
 not reset tracking, although dependency-header refreshes may require re-export
 before applying an older draft.
+
+Resume replays the main journal and uncompiled sessions. Differences from the
+current editor require confirmation because they may be lost/discarded unsaved
+edits. Tracking is **not a `.mod` backup** and does not restore lost mod changes.
 
 Multi-record application is not transactional. If an error reports partial
 notes, inspect them before retrying or saving. Do not infer safety from a zero

@@ -55,8 +55,9 @@ for the exact build fingerprint and limitations.
 ## FCS-Scribe work and licensing
 
 The project is maintained under [Atlasroar/FCS-Scribe](https://github.com/Atlasroar/FCS-Scribe).
-Implementation and documentation were developed with GitHub Copilot assistance;
-maintainers remain responsible for review, testing, and release decisions.
+Implementation and documentation were developed with AI assistance from
+GitHub Copilot; maintainers remain responsible for review, testing, and
+release decisions.
 
 FCS-Scribe is distributed under [GPL-3.0](https://github.com/Atlasroar/FCS-Scribe/blob/main/LICENSE).
 FCS Extended's inspected repository declares GPL-3.0; OCS declares MIT.

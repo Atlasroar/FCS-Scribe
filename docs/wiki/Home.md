@@ -10,6 +10,12 @@ approve the resulting notes before appending them through FCS.
 It is **not a replacement editor**, an autonomous gameplay editor, or a complete
 wiki generator today. Its reusable evidence model is intended to support
 history, changelogs, saved-data analysis, and eventual wiki-ready exports.
+The goal is an auditable catalogue of the edits you actually make, not invented
+intent. An AI provider or subscription is not required by the plugin.
+
+Implementation and documentation were developed with assistance from AI
+(GitHub Copilot). Maintainers remain responsible for review, testing and
+release decisions, and AI-generated record notes require human approval.
 
 ## Start here
 
@@ -17,6 +23,8 @@ history, changelogs, saved-data analysis, and eventual wiki-ready exports.
   operate it, expected outputs, safeguards, and what remains planned.
 - [Installation and workflow](Installation-and-Workflow): prerequisites, tracking,
   AI handoff, approval, and normal saving.
+- [Building and releases](Building-and-Releases): source builds, validation and
+  inspection commands, packaging, release contents and documentation sources.
 - [Architecture](Architecture): the reusable core, managed FCS adapter, and UI.
 - [Coding decisions](Coding-Decisions): why the implementation uses explicit
   baselines, guarded reflection, typed evidence, and no direct mod writer.
@@ -46,9 +54,13 @@ privacy boundaries.
 **FCS notes are per-record editor-side annotations**, stored in
 `data\__TODO__<user>.txt`, not inside the mod file. Distributing only a `.mod`
 does not distribute these annotations.
+Notes are keyed by stable record ID and can span mods.
 
-The [repository README](https://github.com/Atlasroar/FCS-Scribe#readme),
-[working feature plan](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/plan.md),
-and [feasibility report](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/feasibility.md)
-are the source of truth for scope and evidence. Wiki source pages are reviewed
-alongside the code under `docs\wiki` and published to this separate GitHub wiki.
+This wiki is the detailed user guide; the
+[repository README](https://github.com/Atlasroar/FCS-Scribe#readme) is a short
+feature/wiki index. The
+[working feature plan](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/plan.md)
+tracks scope and acceptance checklists, while the
+[feasibility report](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/feasibility.md)
+records compatibility evidence. Wiki source pages are reviewed alongside the
+code under `docs\wiki` and published to this separate GitHub wiki.
