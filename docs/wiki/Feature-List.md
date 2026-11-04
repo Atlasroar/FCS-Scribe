@@ -35,13 +35,17 @@ Recordings are observations, not an event log; zero evidence is not an all-clear
 See the [supported/omitted-state matrix](Data-and-AI-Contracts#supported-and-omitted-state-beta-13).
 **v0.1.0-beta.14** publishes bounded S12 history-performance improvements and
 reproducible x86 profiling without weakening hash/chain checks. Full-capture
-memory and a sustained real-editor soak remain open; see
+memory and a sustained real-editor soak were left open at that release; see
 [measured performance limits](Validation-and-Limitations#s12-performance-measurements-partial-beta-14).
 **v0.1.0-beta.15** shares immutable strings within individual captures/loaded
 baselines without sharing mutable cells/values or changing evidence. The
 30-cycle copied official-data peak fell from 1,662.8 to 896.7 MiB; capture
-still takes seconds. Custom-stack headroom and a real-editor soak remain open:
+still takes seconds. Custom-stack headroom remains open:
 [bounded memory improvement](Validation-and-Limitations#beta-15-snapshot-local-string-sharing).
+A later [two-hour actual-editor soak](Validation-and-Limitations#beta-15-two-hour-actual-editor-soak)
+passed one Manual-mode test-mod configuration, including eight recorded
+rename/restore cycles, compilation and cold Resume. No additional dependencies
+or extensions were reported; this does not close all S12 support boundaries.
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).

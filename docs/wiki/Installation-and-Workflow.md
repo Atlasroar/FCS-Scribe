@@ -99,8 +99,11 @@ reduced the same copied-data 30-cycle x86 process peak from beta 14's
 This is not a universal memory fix; a longer interval reduces frequency,
 not each pause/peak. See
 [performance limits](Validation-and-Limitations#beta-15-snapshot-local-string-sharing).
-No verified universal record-count/memory ceiling or multi-hour safety claim
-is available; normal mod/notes saving and separate backups remain essential.
+One [two-hour Manual-mode actual-editor soak](Validation-and-Limitations#beta-15-two-hour-actual-editor-soak)
+passed its observed test-mod configuration, including cold Resume. No extra
+dependencies/extensions were reported. This establishes no universal
+record-count/memory ceiling or unbounded-session safety; normal mod/notes
+saving and separate backups remain essential.
 
 **Plugin settings** offers Manual (default), 30 seconds, 1 minute, 5 minutes
 and 10 minutes. Automatic reviews durably append session deltas while the window

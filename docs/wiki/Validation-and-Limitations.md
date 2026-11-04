@@ -308,10 +308,63 @@ All samples from reruns of the three synthetic history workloads stayed within
 the published local timing/128 MiB envelopes, including retained replay.
 
 This accelerated native test is **not a multi-hour interactive FCS Extended
-soak**, nor a representative custom dependency/extension stack. S12 remains
-open for those cases and practical headroom/latency assessment. Use Manual
+soak**, nor a representative custom dependency/extension stack. The actual-editor
+soak below is separate evidence for one configuration; S12 remains open for
+custom-stack coverage and practical headroom/latency assessment. Use Manual
 where necessary and keep ordinary mod/notes backups; no automatic Save,
 pruning, memory threshold or safe-stack-size promise is added.
+
+### Beta 15: two-hour actual-editor soak
+
+On November 4, 2026, the user exercised **FCS Extended with FCS-Scribe beta 15**
+and `Scibe Test Mod`. No additional dependencies or other extensions were
+reported. The loaded baseline contains **54,952 records / 1,326,402 cells**
+and is 223,524,698 bytes. This is one configuration, not custom-stack coverage.
+
+A read-only external sampler pinned the editor's PID and process start time,
+without injecting code, forcing GC or changing the mod, notes or tracking set.
+It observed the same process from **18:53:04 to 20:53:08 UTC**, with 1,428
+samples over 7,204.15 seconds. The nominal interval was five seconds; the
+largest observed gap was 5.09 seconds.
+
+| Memory observation | Start | End | Maximum sampled |
+| --- | --- | --- | --- |
+| Private bytes | 398.7 MiB | 342.8 MiB | 437.3 MiB |
+| Working set | 465.1 MiB | 321.0 MiB | 497.1 MiB |
+
+The OS-reported **process lifetime peak working set was 775.1 MiB**, already
+reached during setup before the timed window, and did not rise during it.
+Sampled maxima can miss between-sample allocations; neither these counters
+nor the lower final endpoint prove leak-free operation or remaining address
+space. No per-operation latency was measured in this physical run.
+
+Scribe stayed in **Manual** mode. The durable journal establishes **eight
+exact forward/reverse Name-edit cycles during the timed window**: 16 changed
+observations, plus two setup observations before the window. All 18 recordings
+have unique IDs, are compiled and remain in the original retained session.
+Counts come from recorded times and paired values, not retrospective estimates.
+The last changed observation was at 20:34:34 UTC, so the sampled window includes
+idle periods, not two hours of continuous editing or automated stress.
+
+The user reported no errors or sustained unresponsiveness and successful
+midpoint/end compilation. After an explicit normal Save, a cold editor restart
+was independently established by the new process identity. The user reported
+Resume completing without error/discrepancy, then an unchanged Review and two
+compilations with nothing new. The resumed session descends from the current
+marker. Independent SHA-256 checks confirmed the original baseline and
+compiled journal remained byte-for-byte unchanged, with all 18 unique
+recordings retained; a read-only full-baseline validation also passed.
+
+Post-Resume memory belongs to a **separate process epoch**: one endpoint was
+607.8 MiB private / 670.9 MiB working set, with a 693.5 MiB lifetime peak.
+Those are not extra samples or a new maximum from the two-hour process.
+No AI notes application or Workshop upload was part of this test, and it
+does not establish native notes retention or full S09 acceptance.
+
+**The observed soak/restart case passed; S12 is not globally closed.**
+Additional intended custom dependency/extension stacks, practical headroom
+and measured UI latency remain unverified. Raw baselines/native files must
+remain private; the figures above are aggregate evidence only.
 
 ### Beta 14 integrity and acceptance boundaries
 
@@ -333,9 +386,10 @@ The representative general suite currently cannot select a numeric-field
 record in its fixture (`Sequence contains no matching element`). The same
 failure reproduced with the unchanged beta 13 test host; it is not counted as
 a passing general run or silently repaired here. Its isolated settings,
-scheduling, export, recovery and sampling suites pass separately. Multi-hour
-FCS Extended use, representative custom stacks, stronger full-capture memory
-headroom and all previously untested S09 boundaries remain open.
+scheduling, export, recovery and sampling suites pass separately. The later
+beta 15 actual-editor soak covers one configuration only; representative
+custom stacks, broader memory/latency headroom and the previously untested
+S09 boundaries remain open.
 
 ## Reproduce
 

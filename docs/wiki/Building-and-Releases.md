@@ -141,6 +141,19 @@ Share only reviewed/redacted aggregate reports. The native test host is not
 the full interactive editor; its memory/timing result does not establish
 multi-hour FCS Extended safety.
 
+For an actual-editor soak, keep observations separate from the disposable
+native host: pin the live editor's PID **and process start time**, sample
+timestamped private bytes/working set/lifetime peak, and do not combine memory
+epochs across a restart. Five-second endpoints can miss transient allocations;
+the lifetime peak includes setup before sampling and is not remaining address
+space. A timer completing establishes duration, not successful interactions.
+Keep Scribe in Manual for this bounded procedure and derive edit/restore
+counts from durable recording times/values, not a retrospective estimate.
+Record human error/usability/compilation/Resume observations separately.
+See the [beta 15 two-hour actual-editor evidence](Validation-and-Limitations#beta-15-two-hour-actual-editor-soak).
+Keep full baselines, native files and private fixture contents out of public
+reports; publish only reviewed aggregate results.
+
 ## Repository security automation
 
 GitHub CodeQL **default setup** analyzes C# with the extended security suite,
