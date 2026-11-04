@@ -84,12 +84,15 @@ namespace FcsScribe
         private long draftRevision;
         private long? approvedCloseRevision;
         private readonly Func<string, DialogResult> draftDecision;
+        private readonly Func<Packet, DialogResult> resumeDecision;
         private readonly TextBox review = TextArea(true);
         private readonly TextBox draft = TextArea(false);
         private readonly TextBox workshop = TextArea(true);
         private readonly Label status = new Label { Dock = DockStyle.Bottom, Height = 48 };
         private readonly Label settingsNotice = new Label { Dock = DockStyle.Top, AutoSize = true,
             BorderStyle = BorderStyle.FixedSingle, MaximumSize = new System.Drawing.Size(1040, 0) };
+        private readonly Label trackingNotice = new Label { Dock = DockStyle.Top, AutoSize = true,
+            BorderStyle = BorderStyle.FixedSingle, Text = TrackingChoiceDialog.BoundaryText };
         private readonly Label compilationNotice = new Label { Dock = DockStyle.Bottom, AutoSize = true,
             Visible = false, BorderStyle = BorderStyle.FixedSingle };
         private const string HelpHint = "Hover over a menu action, or select it with the keyboard, to see what it does.";
@@ -107,6 +110,8 @@ namespace FcsScribe
                 "Yes: save a portable draft workspace. No: discard this window's unsaved work. Cancel: keep working.\r\n" +
                 "Tracking journals do not back up draft text. A saved workspace never saves the mod.",
                 "Unsaved draft workspace", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+            resumeDecision = pending => MessageBox.Show(this, ResumeMessage(pending),
+                "Confirm resumed state", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
             settingsPath = settingsFile;
             AdoptSettings(SettingsStorage.Load(settingsPath));
             if (!editor.IsMdiContainer) throw new NotSupportedException("The FCS main window is not an MDI container.");
@@ -158,17 +163,20 @@ namespace FcsScribe
             };
             Controls.Add(tabs);
             Controls.Add(settingsNotice);
+            Controls.Add(trackingNotice);
             Controls.Add(actions);
             Controls.Add(compilationNotice);
             Controls.Add(help);
             Controls.Add(status);
             ClientSizeChanged += delegate {
                 settingsNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
+                trackingNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
                 compilationNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
             };
             settingsNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
+            trackingNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
             compilationNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
-            status.Text = "Start or resume a project. Recordings go to timestamped session logs; compiling never saves the mod.";
+            status.Text = "No tracking project open. Start/Resume manages recorded evidence, not saved mod/notes files.";
             timer.Tick += async delegate {
                 if (busy || closing) return;
                 RefreshCompilationNotice();
@@ -221,7 +229,7 @@ namespace FcsScribe
                         InitialDirectory = ExportDirectory(), RestoreDirectory = true })
                     {
                         if (picker.ShowDialog(this) != DialogResult.OK) return;
-                        status.Text = "Validating saved JSON in the background. Nothing has been overwritten.";
+                        status.Text = "Validating recorded tracking state in the background; no mod/notes files are restored or saved.";
                         string path = picker.FileName;
                         await ResumePath(path);
                     }
@@ -244,7 +252,7 @@ namespace FcsScribe
             if (!await ConfirmDraftReplacement("starting tracking")) return;
             long revision = draftRevision;
             Snapshot current = adapter.Capture();
-            status.Text = "Saving the project baseline and opening a timestamped session.";
+            status.Text = "Saving a tracking baseline of the current editor, including unsaved edits; no mod/notes save.";
             JournalProject candidate = await Task.Run(() => JournalProject.Create(path, current));
             await Begin(candidate, null, revision);
         }
@@ -268,7 +276,8 @@ namespace FcsScribe
                 if (legacy != null)
                 {
                     if (closing || MessageBox.Show(this, "This AI export cannot restore its original baseline. Preserve " +
-                        "its exact bytes in .legacy.bak and its evidence, then start from the CURRENT editor state?",
+                        "its exact bytes in .legacy.bak and its evidence, then start from the CURRENT editor state?\r\n" +
+                        TrackingChoiceDialog.BoundaryText,
                         "Convert legacy export", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK) return;
                     Snapshot current = adapter.Capture();
                     candidate = await Task.Run(() => JournalProject.ConvertLegacy(path, current, legacy));
@@ -276,7 +285,8 @@ namespace FcsScribe
                 if (interrupted != null)
                 {
                     if (closing || MessageBox.Show(this, interrupted.Message + "\r\nPreserve the original in a recovery backup " +
-                        "and discard only its incomplete final line? Complete but invalid entries are never skipped.",
+                        "and discard only its incomplete final line? Complete but invalid entries are never skipped.\r\n" +
+                        "This repairs tracking history only; it cannot recover unsaved mod/notes edits or save those files.",
                         "Recover interrupted journal", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK) return;
                     await Task.Run(() => JournalProject.RecoverTail(path, interrupted));
                 }
@@ -288,15 +298,21 @@ namespace FcsScribe
                 Snapshot current = adapter.Capture();
                 Packet pending = await Task.Run(() => candidate.ResumeTracker().Export(current));
                 if (closing) return;
-                if (pending.SourceFingerprint != candidate.Fingerprint &&
-                    MessageBox.Show(this, "The editor differs from the last recorded state (" + pending.Changes.Count +
-                        " evidence entries). This can include edits lost after a crash or discarded unsaved changes. " +
-                        "Continuing will record those differences on the next review; it will NOT restore the mod. Continue?",
-                        "Confirm resumed state", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+                if (pending.SourceFingerprint != candidate.Fingerprint && resumeDecision(pending) != DialogResult.Yes) return;
                 JournalProject adopted = candidate; candidate = null;
                 await Begin(adopted, pending, revision);
             }
             finally { if (candidate != null) candidate.Dispose(); }
+        }
+
+        private static string ResumeMessage(Packet pending)
+        {
+            return "The editor differs from the last recorded state (" + pending.Changes.Count +
+                " evidence entries; context-only differences can have zero). Last recorded UTC: " +
+                pending.BaselineCapturedUtc + ".\r\n" +
+                "The recording may include edits lost after a crash or discarded without saving.\r\n\r\n" +
+                "Yes: continue with the CURRENT editor. The next manual or automatic review records the differences; " +
+                "no edits are restored.\r\nNo: do not resume this project.\r\n\r\n" + TrackingChoiceDialog.BoundaryText;
         }
 
         private async Task Begin(JournalProject candidate, Packet pending, long revision)
@@ -356,8 +372,9 @@ namespace FcsScribe
 
         private string ProjectStatus()
         {
-            return WorkshopNotice(project.State.Workshop) + project.PendingCount +
-                " recordings awaiting compilation. Tracking is NOT a saved-mod backup. " + ScheduleText();
+            return WorkshopNotice(project.State.Workshop) + "Last recorded UTC: " + project.CapturedUtc +
+                ". Mod/notes save state is NOT verified. " + project.PendingCount +
+                " recordings awaiting compilation. " + ScheduleText();
         }
 
         private static string WorkshopNotice(WorkshopMetadata metadata)

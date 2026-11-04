@@ -25,6 +25,10 @@ short sessions, with a persistent pending notice and explicit manual-mode hold.
 **v0.1.0-beta.11** protects recognized inactive tracking anchors/backups and
 reserved storage from export/workspace writes, including Workshop without an
 open project.
+**v0.1.0-beta.12** makes recorded versus saved state explicit in a persistent
+notice, Start/Resume/recovery prompts and last-recorded UTC status. Resume
+never restores or saves the mod/notes; the guide includes a separate private
+mod/notes/tracking backup workflow.
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).
@@ -91,6 +95,14 @@ restores its checkpoint identity, then compares it with the current editor.
 Pending changes are retained until review saves them; validation does not
 silently advance over them. Broken or incompatible history is rejected, not
 truncated to an assumed valid entry.
+
+In beta 12, the persistent tracking notice remains visible independently of
+operation/help text. Status reports **last recorded UTC**, not verified saved
+state. The discrepancy prompt explains both choices: No declines this session;
+Yes keeps the current editor and lets the next manual/automatic review record
+the difference. Discarded unsaved edits may therefore appear as new reversals,
+not silently restored values. See the
+[backup workflow](Installation-and-Workflow#recorded-state-saved-mods-and-backups-beta-12).
 
 An old schema-1/2 AI export is not a full baseline. Explicit conversion approval
 preserves its exact bytes at `<file>.json.legacy.bak` and its evidence as history,

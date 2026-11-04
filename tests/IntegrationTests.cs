@@ -46,7 +46,8 @@ internal static class IntegrationTests
         {
             host.Shown += delegate {
                 host.BeginInvoke(new Action(delegate {
-                    try { result = Run(args.Contains("--settings-recovery"), args.Contains("--schedule"), args.Contains("--exports")); }
+                    try { result = Run(args.Contains("--settings-recovery"), args.Contains("--schedule"),
+                        args.Contains("--exports"), args.Contains("--tracking-recovery")); }
                     finally { host.Close(); }
                 }));
             };
@@ -55,7 +56,7 @@ internal static class IntegrationTests
         return result;
     }
 
-    private static int Run(bool settingsOnly, bool scheduleOnly, bool exportsOnly)
+    private static int Run(bool settingsOnly, bool scheduleOnly, bool exportsOnly, bool recoveryOnly)
     {
         Form editor = null;
         try
@@ -87,6 +88,13 @@ internal static class IntegrationTests
             object todo = FcsAdapter.Field(editor, "todoList");
             FcsAdapter.Call(todo, "LoadAll");
             var adapter = new FcsAdapter(assembly, editor);
+            if (recoveryOnly)
+            {
+                CheckScribeWindow(adapter, editor);
+                CheckTrackingRecoveryWindow(adapter, editor, assembly, output);
+                Console.WriteLine("PASS: " + passed + " tracking recovery boundary integration checks");
+                return 0;
+            }
             if (exportsOnly)
             {
                 CheckExportWindow(adapter, editor);
@@ -249,6 +257,13 @@ internal static class IntegrationTests
             var help = (Label)FcsAdapter.Field(window, "help");
             var status = (Label)FcsAdapter.Field(window, "status");
             string originalStatus = status.Text;
+            var trackingNotice = (Label)FcsAdapter.Field(window, "trackingNotice");
+            Check(trackingNotice.Text == TrackingChoiceDialog.BoundaryText &&
+                trackingNotice.Text.Contains("UNSAVED") && trackingNotice.Text.Contains("NOT verified"),
+                "a persistent notice distinguishes captured editor state from saved mod/notes state");
+            using (var choice = new TrackingChoiceDialog())
+                Check(choice.Controls.OfType<FlowLayoutPanel>().Single().Controls.OfType<Label>()
+                    .Any(x => x.Text == trackingNotice.Text), "the Start/Resume chooser shares the persistent boundary guidance");
             var menus = actions.Items.Cast<ToolStripMenuItem>().ToList();
             Check(menus.Select(x => x.Text.Replace("&", "")).SequenceEqual(
                 new[] { "Core", "Workshop", "Draft", "Apply approved notes", "Settings" }),
@@ -299,6 +314,9 @@ internal static class IntegrationTests
                     menu.HideDropDown();
                 }
                 window.Width = 320; window.PerformLayout(); actions.PerformLayout();
+                Check(trackingNotice.MaximumSize.Width == window.ClientSize.Width &&
+                    trackingNotice.Height >= trackingNotice.GetPreferredSize(trackingNotice.MaximumSize).Height,
+                    "the tracking boundary notice wraps rather than clipping in a narrow window");
                 Check(actions.OverflowButton.Visible && menus.Last().Placement == ToolStripItemPlacement.Overflow,
                     "narrow windows retain access to actions through the overflow menu");
                 actions.OverflowButton.ShowDropDown();
@@ -951,6 +969,141 @@ internal static class IntegrationTests
             window.Dispose();
             Check(!timer.Enabled, "disposing the window stops automatic scheduling");
         }
+    }
+
+    private static void CheckTrackingRecoveryWindow(FcsAdapter adapter, Form editor, Assembly assembly, string modPath)
+    {
+        string directory = Directory.GetCurrentDirectory();
+        string path = Path.Combine(directory, "mods", "recovery-boundary.json");
+        string settings = Path.Combine(directory, "recovery-boundary-settings.json");
+        object nav = FcsAdapter.Field(editor, "nav");
+        object data = FcsAdapter.Field(FcsAdapter.Field(nav, "ou"), "gameData");
+        object item = ((IDictionary)FcsAdapter.Field(data, "items")).Values.Cast<object>().First();
+        string id = (string)FcsAdapter.Property(item, "stringID");
+        string originalName = (string)FcsAdapter.Property(item, "Name");
+        string recordedName = originalName + " RECORDED NOT SAVED";
+        string modHash = TrackingStorage.HashFile(modPath);
+        string notes = adapter.Notes(id);
+        string recordedFingerprint;
+        using (var window = new ScribeWindow(adapter, editor, settings))
+        {
+            RunWindow(window, "StartPath", path);
+            Set(item, "Name", recordedName); Set(nav, "HasChanges", true);
+            RunWindow(window, "Review");
+            var project = (JournalProject)FcsAdapter.Field(window, "project");
+            recordedFingerprint = project.Fingerprint;
+            Check(project.EntryCount == 1 && project.PendingCount == 1 &&
+                project.State.Records.Single(x => x.Id == id).Name == recordedName,
+                "an unsaved real FCS edit becomes durable uncompiled tracking evidence");
+            Check(TrackingStorage.HashFile(modPath) == modHash && adapter.Notes(id) == notes &&
+                (bool)FcsAdapter.Property(nav, "HasChanges"), "recording neither saves nor restores the mod/notes or clears dirty state");
+            Check(((Label)FcsAdapter.Field(window, "status")).Text.Contains(project.CapturedUtc) &&
+                ((Label)FcsAdapter.Field(window, "status")).Text.Contains("NOT verified"),
+                "recording status names the observed UTC without claiming a successful FCS save");
+        }
+        adapter = ReopenRecoveryModel(editor, assembly, modPath);
+        Check(adapter.Capture().Records.Single(x => x.Id == id).Name == originalName &&
+            TrackingStorage.HashFile(modPath) == modHash, "fresh native reload discards the unsaved edit without changing the saved mod");
+        var preserved = Directory.GetFiles(path + ".scribe", "*", SearchOption.AllDirectories)
+            .Where(x => Path.GetFileName(x) != "writer.lock").Concat(new[] { path })
+            .ToDictionary(x => x, TrackingStorage.HashFile);
+        using (var window = new ScribeWindow(adapter, editor, settings))
+        {
+            Packet discrepancy = null;
+            Put(window, "resumeDecision", new Func<Packet, DialogResult>(packet => {
+                discrepancy = packet; return DialogResult.No;
+            }));
+            RunWindow(window, "ResumePath", path);
+            Check(discrepancy != null && discrepancy.Changes.Any(x => x.RecordId == id &&
+                x.Before.Text == recordedName && x.After.Text == originalName),
+                "actual Resume compares recorded unsaved edits against the freshly loaded saved state");
+            Check(FcsAdapter.Field(window, "project") == null &&
+                preserved.All(x => TrackingStorage.HashFile(x.Key) == x.Value) &&
+                Directory.GetFiles(path + ".scribe", "*.jsonl", SearchOption.AllDirectories).Length == 1,
+                "declining a discrepancy leaves history byte-identical and starts no session");
+            string message = (string)FcsAdapter.Call(window, "ResumeMessage", discrepancy);
+            Check(message.Contains(discrepancy.BaselineCapturedUtc) && message.Contains("automatic review") &&
+                message.Contains("No: do not resume") && message.Contains(TrackingChoiceDialog.BoundaryText),
+                "the discrepancy prompt explains Yes/No, lost edits, timing and no restoration/save");
+            Put(window, "resumeDecision", new Func<Packet, DialogResult>(packet => DialogResult.Yes));
+            RunWindow(window, "ResumePath", path);
+            var project = (JournalProject)FcsAdapter.Field(window, "project");
+            Check(project.Fingerprint == recordedFingerprint && project.EntryCount == 1 &&
+                File.ReadAllLines(project.SessionPath).Length == 1 &&
+                adapter.Capture().Records.Single(x => x.Id == id).Name == originalName,
+                "accepting Resume keeps the recorded head until review and never restores the discarded edit");
+            RunWindow(window, "Review");
+            Check(project.EntryCount == 2 && project.PendingCount == 2 &&
+                project.State.Records.Single(x => x.Id == id).Name == originalName,
+                "the next review records the reversal as new evidence rather than rewriting the old entry");
+            Check(TrackingStorage.HashFile(modPath) == modHash && adapter.Notes(id) == notes &&
+                !(bool)FcsAdapter.Property(nav, "HasChanges"), "both Resume choices and the reversal review leave FCS files and clean state unchanged");
+            RunWindow(window, "Compile");
+            Check(project.PendingCount == 0 && File.ReadAllLines(project.JournalPath).Length == 2,
+                "compilation consolidates both observations without saving the discarded edit");
+        }
+        data = FcsAdapter.Field(FcsAdapter.Field(nav, "ou"), "gameData");
+        item = ((IDictionary)FcsAdapter.Field(data, "items"))[id];
+        string savedName = originalName + " SAVED NOT RECORDED";
+        Set(item, "Name", savedName); Set(nav, "HasChanges", true);
+        object todo = FcsAdapter.Field(editor, "todoList");
+        Type noteType = assembly.GetType("forgotten_construction_set.ToDo+NotesItem+Type", true);
+        FcsAdapter.Call(todo, "AddItem", item, "S10 disposable notes backup.", Enum.Parse(noteType, "NOTE"), null, true, false);
+        Check((bool)FcsAdapter.Call(editor, "saveFile"), "only an explicit normal FCS save persists the second edit and notes");
+        adapter = ReopenRecoveryModel(editor, assembly, modPath);
+        FcsAdapter.Call(todo, "LoadAll");
+        string savedHash = TrackingStorage.HashFile(modPath), savedNotes = adapter.Notes(id);
+        var noteHashes = Directory.GetFiles(Path.Combine(directory, "data"), "__TODO__*.txt")
+            .ToDictionary(x => x, TrackingStorage.HashFile);
+        Check(savedNotes.Contains("S10 disposable notes backup.") && noteHashes.Count > 0 &&
+            adapter.Capture().Records.Single(x => x.Id == id).Name == savedName,
+            "normal save/reopen retains the second edit and separate notes sidecar");
+        using (var window = new ScribeWindow(adapter, editor, settings))
+        {
+            Packet discrepancy = null;
+            Put(window, "resumeDecision", new Func<Packet, DialogResult>(packet => {
+                discrepancy = packet; return DialogResult.Yes;
+            }));
+            RunWindow(window, "ResumePath", path);
+            var project = (JournalProject)FcsAdapter.Field(window, "project");
+            Check(discrepancy != null && discrepancy.Changes.Any(x => x.RecordId == id &&
+                x.Before.Text == originalName && x.After.Text == savedName) && project.EntryCount == 2,
+                "a saved edit ahead of compiled history is also a discrepancy, not an instruction to restore old state");
+            RunWindow(window, "Review"); RunWindow(window, "Compile");
+            Check(project.EntryCount == 3 && project.PendingCount == 0 &&
+                project.Fingerprint == adapter.Capture().Fingerprint(), "review/compile catches history up to current saved editor state");
+            Check(TrackingStorage.HashFile(modPath) == savedHash && adapter.Notes(id) == savedNotes &&
+                noteHashes.All(x => TrackingStorage.HashFile(x.Key) == x.Value) &&
+                !(bool)FcsAdapter.Property(nav, "HasChanges"), "tracking current saved edits never rewrites mod/notes files or dirty state");
+        }
+        string backup = Path.Combine(directory, "S10-backup");
+        var sources = Directory.GetFiles(path + ".scribe", "*", SearchOption.AllDirectories)
+            .Concat(new[] { path, modPath }).Concat(noteHashes.Keys).ToList();
+        foreach (string source in sources)
+        {
+            string target = Path.Combine(backup, source.Substring(directory.Length + 1));
+            Directory.CreateDirectory(Path.GetDirectoryName(target)); File.Copy(source, target);
+            Check(TrackingStorage.HashFile(source) == TrackingStorage.HashFile(target),
+                "backup retains exact bytes for " + Path.GetFileName(source));
+        }
+        using (var copied = JournalProject.Open(Path.Combine(backup, "mods", Path.GetFileName(path))))
+            Check(copied.EntryCount == 3 && copied.PendingCount == 0 &&
+                copied.Fingerprint == adapter.Capture().Fingerprint(), "the complete copied tracking set replays the saved state without mod restoration");
+    }
+
+    private static FcsAdapter ReopenRecoveryModel(Form editor, Assembly assembly, string modPath)
+    {
+        object nav = FcsAdapter.Field(editor, "nav"), ou = FcsAdapter.Field(nav, "ou");
+        object reloaded = Activator.CreateInstance(FcsAdapter.Field(ou, "gameData").GetType());
+        Type mode = assembly.GetType("forgotten_construction_set.GameData+ModMode", true);
+        Check((bool)FcsAdapter.Call(reloaded, "load", Path.Combine(Directory.GetCurrentDirectory(), "fixture.mod"),
+            Enum.Parse(mode, "BASE"), false, false), "reload disposable dependency through native FCS");
+        Check((bool)FcsAdapter.Call(reloaded, "load", modPath, Enum.Parse(mode, "ACTIVE"), false, false),
+            "reload disposable saved active mod through native FCS");
+        FcsAdapter.Call(reloaded, "resolveAllReferences");
+        Put(ou, "gameData", reloaded); Set(FcsAdapter.Field(editor, "modInfo"), "Data", reloaded);
+        Set(nav, "HasChanges", false);
+        return new FcsAdapter(assembly, editor);
     }
 
     private static void RunWindow(ScribeWindow window, string method, params object[] args)

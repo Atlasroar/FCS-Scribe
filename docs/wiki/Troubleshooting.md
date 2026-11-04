@@ -64,6 +64,10 @@ can include further instructions and an inner exception/stack trace.
 **A tracking project is not a mod backup.** Review, Compile, export and Resume
 do not save or restore the `.mod`. Applying approved notes changes editor
 memory and marks it dirty; saving remains an explicit FCS action.
+For a complete mod/notes/tracking backup, use the
+[private backup workflow](Installation-and-Workflow#practical-private-backup-workflow)
+with all FCS instances closed. Journal recovery repairs tracking, not lost
+unsaved gameplay or notes.
 
 1. Stop retrying an operation that can write. Record the full message and
    which file/action it names. Use Manual settings while diagnosing, when
@@ -163,8 +167,10 @@ availability can change the fingerprint and make an older AI draft stale.
 | `Automatic compilation waits for the next eligible visible, unblocked tick.` | Restore Scribe and leave menus/modal dialogs closed. Automatic work also waits for busy actions, a minimized FCS parent, valid settings and an open project. |
 | `Timestamp ahead of local UTC: treated as due now.` | A recording timestamp is ahead of the current clock. Debt becomes due rather than waiting indefinitely. Check system time; do not edit recorded timestamps. |
 | `Local UTC moved behind the recording; the existing countdown is retained.` | The wall clock moved backward after scheduling. The existing monotonic countdown is retained; check the clock without rewriting history. |
-| `Tracking is NOT a saved-mod backup.` | Journals catalogue captured state, not recoverable `.mod`/asset backups. Use normal independent mod backups. |
-| `Confirm resumed state` / `The editor differs from the last recorded state (<count> evidence entries).` | Resume validated history but the editor fingerprint differs. **No** cancels adoption; **Yes** keeps current editor state and lets the next Review record differences. It never restores the mod. Zero evidence entries can mean context-only differences, including Workshop state. |
+| `Tracking is NOT a saved-mod backup.` (beta 11 and earlier) / `Tracking records captured editor state, including UNSAVED edits.` (beta 12) | Journals catalogue captured state, not recoverable `.mod`/asset backups. Beta 12 keeps the boundary notice visible even when operation/help text changes. Back up the actual mod and separate notes files. |
+| `Last recorded UTC: <UTC>. Mod/notes save state is NOT verified.` | This is the last observed tracking state, not proof of normal FCS Save. A recording can be ahead of or behind the actual saved mod. Verify/save through FCS explicitly if intended. |
+| `Confirm resumed state` / `The editor differs from the last recorded state (<count> evidence entries; context-only differences can have zero).` | Resume validated history but the editor fingerprint differs. **No** declines this session; **Yes** keeps current editor state and lets the next manual or eligible automatic Review record differences, including reversals of discarded edits. Neither choice restores or saves mod/notes. Older versions use the shorter count-only message. |
+| `This repairs tracking history only; it cannot recover unsaved mod/notes edits or save those files.` | The interrupted-tail prompt is about tracking storage only. Preserve/repair the tracking log as instructed; recover actual mod/notes files only from an independent matching backup. |
 | `Convert legacy export` / `This AI export requires explicit baseline conversion.` | Only original schema-1/2 packets support conversion. Cancel preserves the packet; approval preserves exact `.legacy.bak` bytes and starts from the current editor. A packet cannot reconstruct its old baseline. |
 | `Recover interrupted journal` / `An interrupted final journal line requires explicit recovery: <path>` | Back up the project first. Cancel leaves bytes untouched. Approve only the intended copy/project: Scribe preserves original bytes in `.scribe\recovery\<id>.bak`, then removes the incomplete tail. Complete invalid entries must not be skipped. |
 | `Unsaved draft workspace` / `* unsaved draft workspace` | Save preserves the current exact draft and original packet; No discards this window's unsaved work; Cancel keeps working. A workspace does not save the mod. |
@@ -458,6 +464,7 @@ diagnostic evidence; the final wrapper line alone is not the root cause.
 | `Settings recovery tests failed; disposable fixture retained at <path>` | Inspect the settings suite's assertions/output in the retained fixture before changing recovery behavior. |
 | `Scheduling tests failed; disposable fixture retained at <path>` | Inspect the scheduling assertion/time/debt state; retain independent recording/compilation semantics. |
 | `Export protection tests failed; disposable fixture retained at <path>` | Preserve targets/fixture and investigate byte-preservation/classification failure; do not disable guards to pass the suite. |
+| `Tracking recovery boundary tests failed; disposable fixture retained at <path>` | Inspect the retained disposable fixture and failed assertion. The suite checks discarded/saved-state discrepancies, Resume decisions, no silent save/restoration and complete byte-identical backups; never run destructive diagnostics against live notes/mods. |
 | `Could not inspect source checkout.` | Run packaging in a valid Git checkout with Git available; inspect the preceding Git error. |
 | `Release packaging requires a clean, committed checkout.` | Review and commit intended source changes first; preserve unrelated work. Do not reset/delete changes simply to make packaging run. |
 | `Could not determine source commit.` | Resolve the Git checkout/HEAD error before producing a release with unverified provenance. |
