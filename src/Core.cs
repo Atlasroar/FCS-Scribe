@@ -371,7 +371,9 @@ namespace FcsScribe
             if (baseline.ModId != current.ModId || baseline.ModName != current.ModName ||
                 !baseline.LoadOrder.SequenceEqual(current.LoadOrder) ||
                 !baseline.LockedMods.SequenceEqual(current.LockedMods))
-                throw new InvalidOperationException("The active mod or dependency/load-order context changed. Start tracking again.");
+                throw new InvalidOperationException("The active mod or dependency/load-order context changed. Start tracking again. " +
+                    "Restore the original mod path and loaded/locked context, or choose New tracking JSON with a new filename. " +
+                    "Existing history is not relocated or merged.");
             var changes = new List<Change>();
             var before = baseline.Records.ToDictionary(x => x.Id, StringComparer.Ordinal);
             var after = current.Records.ToDictionary(x => x.Id, StringComparer.Ordinal);

@@ -579,7 +579,8 @@ namespace FcsScribe
             }
             JournalRecord record = line.Record;
             if (record.PreviousEntryId != HeadId || record.PreviousFingerprint != Fingerprint)
-                throw new InvalidDataException("The project contains divergent or reordered history.");
+                throw new InvalidDataException("The project contains divergent or reordered history. " +
+                    "Restore one coherent branch; automatic journal merging is not supported.");
             Snapshot next = record.Delta.Apply(State);
             if (next.Fingerprint() != record.Packet.SourceFingerprint ||
                 Json.StreamHash(next.Context()) != Json.StreamHash(record.Packet.Context))

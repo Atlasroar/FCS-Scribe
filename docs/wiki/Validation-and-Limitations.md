@@ -428,6 +428,42 @@ identity is not S14 mod relocation or complete mod/notes restoration.
 Physical disk/power/access failures and every third-party sync/storage tool
 remain outside this bounded evidence.
 
+## S14 portability and divergent history (beta 17)
+
+657 core checks passed, including 18 new assertions. Independently valid
+same-project branches remain replayable alone. Unioning their sibling session
+files, concatenating a valid alternate journal suffix, or reordering intact
+journal lines rejects specifically as divergent/reordered history, preserving
+all remaining file bytes. A sibling marker with absent history also rejects.
+Mod identity/name, reordered loaded context and changed locked context cannot
+rebind old history. A fresh filename creates an independent current-state
+baseline with no transplanted recordings; the common source stays unchanged.
+
+Copied official-data and representative-mod recovery suites each passed
+**112 checks**. Additional native cases create two compiled reversible
+observations, close writers, then move/rename the complete tracking set.
+All moved bytes initially match; Resume under the unchanged active-mod path
+retains identity, fingerprint and both recordings. Unchanged Review/Compile
+adds no history.
+
+The native tests then load a byte-identical same-filename mod copy from a
+different directory. Its path identity changes; old-project Resume rejects
+before discrepancy approval and leaves the old files unchanged. Explicit New
+at a fresh filename captures the relocated native state without importing old
+history. Neither saved mod copy nor notes/dirty state is changed by Scribe.
+Only disposable fixtures were used; no live data was moved or saved.
+
+This verifies the [fresh-baseline route](Installation-and-Workflow#fresh-baseline-after-moving-a-mod-or-changing-machines),
+not transparent relocation/history transplantation. It is a same-host
+supported-build test, not physical cross-machine installation, all dependency
+versions, path aliases, network shares or distributed locking. An initial
+overlong fixture destination exposed the existing .NET Framework path limit;
+shorter fixture paths passed. No long-path support or silent path fallback was
+added. Equal path strings on another machine do not prove equal data. Native
+identity, loaded/locked guards, hashes, replay, schemas and draft approval
+remain unchanged; only failure guidance is clearer. S09 full acceptance and
+S15/S16 remain open.
+
 ## Reproduce
 
 See [Building and releases](Building-and-Releases#run-checks-and-inspect-the-supported-build)

@@ -41,7 +41,7 @@ release decisions, and AI-generated record notes require human approval.
 
 ## Current status
 
-The current [v0.1.0-beta.16 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.16)
+The current [v0.1.0-beta.17 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.17)
 remains experimental and restricted to the inspected Steam FCS 2.14.2 executable
 hash. It includes local Workshop metadata, preview-image archiving, embedded
 MDI hosting and contextual action help alongside change documentation.
@@ -121,7 +121,10 @@ Beta 16 adds persistent complete-set/privacy guidance and verified closed
 tracking-copy/restore and compiled-session archival cases. See
 [private storage and upload safeguards](Installation-and-Workflow#complete-tracking-sets-and-restore-failures);
 there is no automatic pruning, backup wizard or native-upload protection.
-S09 and S14-S16 remain open; these changes do not close full interactive acceptance.
+Beta 17 verifies [tracking-only moves, fresh baselines and divergent-history rejection](Installation-and-Workflow#portability-and-linear-history-beta-17).
+Mod-path identity and linear-history guards are unchanged; no automatic
+relocation/rebinding or journal merging is added.
+S09 and S15/S16 remain open; these changes do not close full interactive acceptance.
 
 **FCS notes are per-record editor-side annotations**, stored in
 `data\__TODO__<user>.txt`, not inside the mod file. Distributing only a `.mod`

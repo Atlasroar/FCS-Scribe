@@ -389,9 +389,23 @@ tested or intercepted. Physical storage failures remain unverified.
 
 ### S14. Portability: path identity and divergent histories
 
-- [ ] Define a verified relocation/new-baseline workflow for moved mods or another machine without bypassing identity checks.
-- [ ] Explain linear history, branch divergence and load-order incompatibility before users attempt version-control merges.
-- [ ] Cover moved/copied paths and divergent chains; automatic journal merging remains outside the verified contract.
+- [x] Define a verified fresh-baseline route for moved mods and documented target-machine setup without bypassing identity checks; physical cross-machine installation remains unverified.
+- [x] Explain linear history, branch divergence and loaded/locked-context incompatibility before users attempt version-control merges.
+- [x] Cover tracking-only moves, moved/copied mod paths and divergent chains; automatic journal merging remains outside the verified contract.
+
+Beta 17 clarifies existing mismatch/divergence errors without changing guards.
+657 core checks include 18 new assertions for valid sibling-session/journal
+forks, reordered intact lines, sibling markers, mod/name/context mismatches
+and independent new baselines, with byte-preserving failure checks.
+Copied official-data and representative recovery runs each passed 112 checks:
+actual native tracking-set move/rename retains two compiled observations under
+the same mod path; a byte-identical same-named `.mod` at another path rejects
+before discrepancy approval; explicit New at a fresh filename starts without
+old history. No live data was changed. A long fixture destination hit the
+existing .NET path limit; short paths passed, not new long-path support.
+The workflow documents same-path cross-machine ambiguity, separate saved mod/
+notes backups and unchanged draft associations. It does not claim automatic
+relocation, history transplant, distributed locks or native mod conflict resolution.
 
 ### S15. Notes safety: partial application and sidecar distribution
 
@@ -642,7 +656,7 @@ stabilization work is distinct from new feature expansion:
 | S09: acceptance | Retain the completed evidence and explicit untested exceptions; resolve or explicitly agree the remaining support scope before closing the gate. |
 | S12: performance (accepted tested scope) | The owner accepted the bounded history/memory/actual-editor evidence. Custom stacks and broader practical headroom/latency remain explicitly unverified, not blocking S13 under this decision. |
 | S13: storage/distribution (beta 16) | Bounded closed tracking-copy/restore/compiled-archival cases and private pre-upload guidance are complete. No automated backups, pruning, native upload protection or physical storage-failure guarantee. |
-| S14: portability | Define verified relocation/new-baseline guidance and divergent-history handling without bypassing path/load-order identity or automatically merging journals. |
+| S14: portability (beta 17) | Tracking-only moves, explicit fresh-baseline workflow and divergent-history failures verified on disposable same-host native fixtures. No automatic relocation/merging, cross-machine installation or path-alias/network guarantee. |
 | S15: notes safety | Improve per-record failure/retry guidance, clarify separate sidecar backup/distribution, and validate partial application without promising rollback. |
 | S16: compatibility/provenance | Maintain the verified build/configuration matrix, test available dependency stacks and keep unresolved field ownership and cached Workshop context explicit. |
 
@@ -661,7 +675,7 @@ in this table.
 ## Working order
 
 1. Keep S09 results and remaining exceptions explicit; untested is not passed, and the gate remains open until its support scope is explicitly accepted.
-2. S10/S11 are addressed in betas 12/13; S12's tested scope is explicitly accepted after betas 14/15 and the actual-editor soak. S13's bounded storage/distribution work is covered in beta 16. Scope S14 next, retaining unverified custom-stack/headroom boundaries. Keep independently scoped changes, regression evidence and the requested PR/merge/beta-release cycle; publishing partial progress does not close unrelated acceptance gates.
+2. S10/S11 are addressed in betas 12/13; S12's tested scope is explicitly accepted after betas 14/15 and the actual-editor soak. S13/S14's bounded storage/portability work is covered in betas 16/17. Scope S15 next, retaining unverified custom-stack/headroom and cross-machine boundaries. Keep independently scoped changes, regression evidence and the requested PR/merge/beta-release cycle; publishing partial progress does not close unrelated acceptance gates.
 3. Close the stabilization/MVP acceptance gate and any exposed issues before implementing new feature expansion.
 4. Then scope OCS design, broader session history and Markdown independently. Markdown/history do not inherently require OCS; do not couple them to a new runtime without a concrete requirement.
 5. Validate dependency provenance before wiki-ready exports. Direct AI remains optional and requires an explicit provider/credential/consent decision.

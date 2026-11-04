@@ -236,6 +236,92 @@ internal static class JournalTests
         Check(SameHashes(originals, source), "copy/restore/archive exercises never mutate the original closed tracking set");
     }
 
+    private static void CheckPortabilityAndDivergence(string directory)
+    {
+        string source = Path.Combine(directory, "linear-source.json");
+        using (var project = JournalProject.Create(source, State("10")))
+        { project.BeginSession(); project.Record(State("11")); project.Compile(); }
+        Dictionary<string, string> originals = TrackingHashes(source);
+        string left = Path.Combine(directory, "branch-left.json"), right = Path.Combine(directory, "branch-right.json");
+        CopyTrackingSet(source, left); CopyTrackingSet(source, right);
+        string rightSession;
+        using (var project = JournalProject.Open(left))
+        { project.BeginSession(); project.Record(State("12")); }
+        using (var project = JournalProject.Open(right))
+        { project.BeginSession(); project.Record(State("13")); rightSession = project.SessionPath; }
+        string combined = Path.Combine(directory, "combined-sessions.json");
+        CopyTrackingSet(left, combined);
+        File.Copy(rightSession, Path.Combine(combined + ".scribe", "sessions", Path.GetFileName(rightSession)));
+        CheckDivergenceRejected(combined, "individually valid sibling sessions cannot be union-merged");
+        using (var project = JournalProject.Open(left))
+        {
+            Check(project.EntryCount == 2 && project.PendingCount == 1 && project.Fingerprint == State("12").Fingerprint(),
+                "the first unmerged branch remains independently replayable");
+            project.Compile();
+        }
+        using (var project = JournalProject.Open(right))
+        {
+            Check(project.EntryCount == 2 && project.PendingCount == 1 && project.Fingerprint == State("13").Fingerprint(),
+                "the second unmerged branch remains independently replayable");
+            project.Compile();
+        }
+        string concatenated = Path.Combine(directory, "combined-journals.json");
+        CopyTrackingSet(left, concatenated);
+        File.AppendAllText(Path.Combine(concatenated + ".scribe", "journal.jsonl"),
+            File.ReadAllLines(Path.Combine(right + ".scribe", "journal.jsonl")).Last() + "\n");
+        CheckDivergenceRejected(concatenated, "valid hashed branch suffixes cannot be concatenated into one history");
+        string reordered = Path.Combine(directory, "reordered-journal.json");
+        CopyTrackingSet(left, reordered);
+        string journal = Path.Combine(reordered + ".scribe", "journal.jsonl");
+        File.WriteAllLines(journal, File.ReadAllLines(journal).Reverse());
+        CheckDivergenceRejected(reordered, "reordering intact hashed entries cannot change the replay order");
+        RejectBrokenCopy<InvalidDataException>(left, Path.Combine(directory, "sibling-marker.json"),
+            path => File.Copy(Path.Combine(right + ".scribe", "project.json"),
+                Path.Combine(path + ".scribe", "project.json"), true));
+        using (var project = JournalProject.Open(left))
+        {
+            string head = project.HeadId;
+            Snapshot moved = State("12"); moved.ModId = "moved-mod-path";
+            Reject<InvalidOperationException>(() => project.ResumeTracker().Export(moved),
+                "moving the active mod cannot rebind old history");
+            Snapshot renamed = State("12"); renamed.ModName = "renamed.mod";
+            Reject<InvalidOperationException>(() => project.ResumeTracker().Export(renamed),
+                "renaming the active mod cannot resume old history");
+            Snapshot reorderedContext = State("12");
+            reorderedContext.LoadOrder.AddRange(new[] { "dependency-a.mod", "dependency-b.mod" });
+            var tracker = new Tracker(reorderedContext);
+            reorderedContext = reorderedContext.Copy(); reorderedContext.LoadOrder.Reverse();
+            Reject<InvalidOperationException>(() => tracker.Export(reorderedContext),
+                "the same dependency names in a different order require a new baseline");
+            Snapshot locked = State("12"); locked.LockedMods.Add("dependency.mod");
+            Reject<InvalidOperationException>(() => project.ResumeTracker().Export(locked),
+                "changing loaded/locked context requires a new baseline");
+            Check(project.HeadId == head && project.EntryCount == 2 && project.PendingCount == 0,
+                "rejected identity/context changes do not advance or compile history");
+            string fresh = Path.Combine(directory, "moved-new-baseline.json");
+            using (var replacement = JournalProject.Create(fresh, moved))
+                Check(replacement.ProjectId != project.ProjectId && replacement.EntryCount == 0 &&
+                    replacement.Fingerprint == moved.Fingerprint() &&
+                    replacement.ResumeTracker().Export(moved).Changes.Count == 0,
+                    "a fresh filename establishes a new identity/current-state baseline without transplanting history");
+        }
+        using (var project = JournalProject.Open(right))
+            Check(project.EntryCount == 2 && project.PendingCount == 0 && project.Fingerprint == State("13").Fingerprint(),
+                "the other original branch still replays after rejected merges");
+        Check(SameHashes(originals, source), "portability and divergence checks leave the common original set untouched");
+    }
+
+    private static void CheckDivergenceRejected(string path, string message)
+    {
+        Dictionary<string, string> before = TrackingHashes(path);
+        InvalidDataException failure = null;
+        try { using (JournalProject.Open(path)) { } }
+        catch (InvalidDataException error) { failure = error; }
+        Check(failure != null && failure.Message.StartsWith("The project contains divergent or reordered history.", StringComparison.Ordinal),
+            message);
+        Check(SameHashes(before, path), "divergence rejection preserves every remaining file: " + Path.GetFileName(path));
+    }
+
     public static int Run()
     {
         string directory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "journal-test-" + Guid.NewGuid().ToString("N"));
@@ -247,6 +333,7 @@ internal static class JournalTests
             CheckSampling(directory);
             CheckCompiledSessionGuards(directory);
             CheckTrackingSetSafety(directory);
+            CheckPortabilityAndDivergence(directory);
             string invalid = Path.Combine(directory, "game.mod");
             Reject<InvalidDataException>(() => JournalProject.Create(invalid, State("10")), "mod targets rejected before creating session storage");
             Check(!Directory.Exists(invalid + ".scribe"), "invalid targets leave no storage next to game/mod files");
