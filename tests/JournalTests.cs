@@ -25,6 +25,45 @@ internal static class JournalTests
                     Value = Value.Of("Int32", i == 0 ? value : "10"), Source = "active" } } });
         return state;
     }
+    private static void CheckSampling(string directory)
+    {
+        Snapshot state = State("10");
+        string fingerprint = state.Fingerprint();
+        string path = Path.Combine(directory, "sampling.json");
+        using (var project = JournalProject.Create(path, state))
+        {
+            project.BeginSession();
+            string sessionHash = TrackingStorage.HashFile(project.SessionPath);
+            state.Records[0].Cells[0].Value = Value.Of("Int32", "11");
+            state.Records[0].Cells[0].Value = Value.Of("Int32", "10");
+            Packet unchanged = project.Record(state);
+            Check(unchanged.Changes.Count == 0 && project.EntryCount == 0 &&
+                TrackingStorage.HashFile(project.SessionPath) == sessionHash,
+                "an unsampled A-to-B-to-A edit creates no event or history entry");
+            Check(unchanged.Instructions.Contains(Tracker.SamplingNotice) &&
+                unchanged.SourceFingerprint == fingerprint && project.Fingerprint == fingerprint,
+                "new packet sampling guidance does not change snapshot fingerprints");
+            Packet forward = project.Record(State("11"));
+            string originalPacket = Json.Write(forward);
+            Packet reverse = project.Record(State("10"));
+            Check(forward.Changes.Single().Before.Text == "10" && forward.Changes.Single().After.Text == "11" &&
+                reverse.Changes.Single().Before.Text == "11" && reverse.Changes.Single().After.Text == "10" &&
+                project.EntryCount == 2 && project.Fingerprint == fingerprint,
+                "explicitly sampled forward and reverse edits retain two observations despite net-zero state");
+            var recordings = project.ExportRecordings(State("10"));
+            Packet range = RangeExport.Create(project.ProjectId, recordings, 0, 1, State("10"));
+            Check(range.Changes.Count == 2 && range.Instructions.Contains(Tracker.SamplingNotice) &&
+                Json.Write(range.Recordings[0].Packet) == originalPacket,
+                "range exports retain reversals and original packets with outer sampling guidance");
+            project.Compile();
+        }
+        using (var reopened = JournalProject.Open(path))
+            Check(reopened.EntryCount == 2 && reopened.PendingCount == 0 &&
+                reopened.Fingerprint == fingerprint &&
+                reopened.ExportRecordings(State("10")).Count == 2,
+                "compiled replay retains both sampled observations rather than collapsing them");
+    }
+
     public static int Run()
     {
         string directory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "journal-test-" + Guid.NewGuid().ToString("N"));
@@ -33,6 +72,7 @@ internal static class JournalTests
         {
             CheckInitialization(directory);
             CheckRangeExports(directory);
+            CheckSampling(directory);
             string invalid = Path.Combine(directory, "game.mod");
             Reject<InvalidDataException>(() => JournalProject.Create(invalid, State("10")), "mod targets rejected before creating session storage");
             Check(!Directory.Exists(invalid + ".scribe"), "invalid targets leave no storage next to game/mod files");

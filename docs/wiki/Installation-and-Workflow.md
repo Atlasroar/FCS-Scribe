@@ -71,6 +71,26 @@ Existing active and inherited notes are preserved. An existing TODO stays a
 TODO rather than being silently reclassified. Applying notes marks the editor
 dirty but does not save or advance the tracking baseline.
 
+### Finish edits and understand sampling (beta 13)
+
+Finish the field using its normal editor workflow before Start/Review/export,
+then inspect the evidence rather than relying only on the count. The guarded
+Name textbox's Enter and lost-focus routes commit to the model; Escape
+discards its pending text. This does not establish every numeric/dropdown,
+dialogue or separate editor's behavior. Clicking Scribe may change focus and
+commit a field **before** its capture; Review itself never flushes controls.
+
+Recordings are observations, not an event log. If a value changes A-to-B-to-A
+between recordings, the intermediate edit can be absent. Review at B and
+again at A to retain both observations. Zero evidence is not proof of no
+editor changes: pending controls, omitted buffers and external file changes
+can remain invisible. Automatic intervals can also be deferred.
+
+Beta 13 displays this caveat with partial-extraction warnings on new baselines,
+reviews, recording-range previews and restored evidence, and in new packet
+instructions. Existing history is not rewritten. Consult the
+[supported/omitted-state matrix](Data-and-AI-Contracts#supported-and-omitted-state-beta-13).
+
 ## Checkpoint scheduling and storage
 
 **Plugin settings** offers Manual (default), 30 seconds, 1 minute, 5 minutes

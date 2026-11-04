@@ -144,6 +144,44 @@ an actual process/power failure, drive every native dialog through the complete
 FCS Extended application, test arbitrary backup restoration/relocation, or
 close S09/S13/S14. Saved state is deliberately **not inferred** from tracking.
 
+## S11 partial capture and sampling: beta 13
+
+**598 core checks**, the plugin build, and the isolated `-SamplingOnly` suite
+with **22 checks each on copied vanilla and representative test-mod data**
+passed. The existing representative `-RecoveryOnly` suite also passed its
+94 checks after the presentation change. The
+[supported/omitted-state matrix](Data-and-AI-Contracts#supported-and-omitted-state-beta-13)
+is the support boundary, not a promise of complete extraction.
+
+The sampling suite binds the real native `ObjectPropertyBox`/PropertyGrid Name
+editor to the loaded FCS record and initializes its native undo/list context.
+It edits the actual focused textbox, raises its wired WinForms Enter/Escape
+key events, and performs a real focus transition with an observed LostFocus
+event. It does not substitute direct model setters for those commit tests:
+
+| Route | Observed boundary |
+| --- | --- |
+| Pending text, then serialized Scribe Review without changing focus | Text remains pending; model/fingerprint/history remain unchanged. Review neither commits nor fabricates evidence for it. |
+| Escape textbox event | Pending text is discarded; captured state remains unchanged. |
+| Enter textbox event | Native control commits the Name and marks the editor dirty; subsequent Review records it. |
+| Actual textbox-to-button focus transition | Native lost-focus handling commits Name; Review records the reversal as a second observation. Native focus handling may move focus again while destroying the editor. |
+| Forward/reverse commits between reviews | No additional evidence/entry when both committed values return to the sampled state before the next Review. |
+| Sample forward and reverse separately | Both observations survive range export; core tests additionally compile/reopen them without collapsing history. |
+| Results and historical display | Baseline, zero-evidence review and range preview retain partial/sampling warnings. Displaying older/restored packets adds guidance without modifying their serialized evidence. |
+
+Mod bytes, existing notes and native dirty state are checked: this workflow
+does not save or clear edits. Synthetic journal checks verify no-op session
+hashes, unchanged state fingerprints and exact retained original packets.
+No snapshot/fingerprint/storage schema is changed for the new explanatory text.
+
+These are native controls under the disposable WinForms host, **not physical
+keyboard input through the complete FCS Extended workflow**. Only this bound
+Name text editor's routes are established here. Numeric/dropdown/reference/
+dialogue editors, separate modal buffers and every possible focus route are
+not newly verified. Earlier S09 user evidence covers one real field-to-Scribe
+route, not all controls. External assets/layouts, complete event history and
+saved-state verification remain omitted. S09 and S12-S16 remain open.
+
 ## Reproduce
 
 See [Building and releases](Building-and-Releases#run-checks-and-inspect-the-supported-build)

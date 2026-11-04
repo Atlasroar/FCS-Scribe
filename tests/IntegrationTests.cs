@@ -47,7 +47,7 @@ internal static class IntegrationTests
             host.Shown += delegate {
                 host.BeginInvoke(new Action(delegate {
                     try { result = Run(args.Contains("--settings-recovery"), args.Contains("--schedule"),
-                        args.Contains("--exports"), args.Contains("--tracking-recovery")); }
+                        args.Contains("--exports"), args.Contains("--tracking-recovery"), args.Contains("--sampling")); }
                     finally { host.Close(); }
                 }));
             };
@@ -56,7 +56,7 @@ internal static class IntegrationTests
         return result;
     }
 
-    private static int Run(bool settingsOnly, bool scheduleOnly, bool exportsOnly, bool recoveryOnly)
+    private static int Run(bool settingsOnly, bool scheduleOnly, bool exportsOnly, bool recoveryOnly, bool samplingOnly)
     {
         Form editor = null;
         try
@@ -88,6 +88,12 @@ internal static class IntegrationTests
             object todo = FcsAdapter.Field(editor, "todoList");
             FcsAdapter.Call(todo, "LoadAll");
             var adapter = new FcsAdapter(assembly, editor);
+            if (samplingOnly)
+            {
+                CheckSamplingWindow(adapter, editor, assembly, output);
+                Console.WriteLine("PASS: " + passed + " sampling boundary integration checks");
+                return 0;
+            }
             if (recoveryOnly)
             {
                 CheckScribeWindow(adapter, editor);
@@ -968,6 +974,107 @@ internal static class IntegrationTests
             FcsAdapter.Call(window, "ConfigureTimer");
             window.Dispose();
             Check(!timer.Enabled, "disposing the window stops automatic scheduling");
+        }
+    }
+
+    private static TextBox OpenNameEditor(object grid, string value)
+    {
+        object row = FcsAdapter.Call(grid, "getItem", "Name");
+        Set(grid, "SelectedItem", row);
+        object property = FcsAdapter.Call(grid, "CreateEditor");
+        var text = (TextBox)FcsAdapter.Field(property, "mTextBox");
+        Check(text != null && text.Focus(), "the native bound Name editor has a focused textbox");
+        text.Text = value;
+        return text;
+    }
+
+    private static void CheckSamplingWindow(FcsAdapter adapter, Form editor, Assembly assembly, string modPath)
+    {
+        string directory = Directory.GetCurrentDirectory();
+        object nav = FcsAdapter.Field(editor, "nav");
+        object data = FcsAdapter.Field(FcsAdapter.Field(nav, "ou"), "gameData");
+        object item = ((IDictionary)FcsAdapter.Field(data, "items")).Values.Cast<object>().First();
+        string id = (string)FcsAdapter.Property(item, "stringID");
+        string original = (string)FcsAdapter.Property(item, "Name");
+        string nameA = original + " S11 A", nameB = original + " S11 B";
+        string modHash = TrackingStorage.HashFile(modPath), notes = adapter.Notes(id);
+        Set(nav, "Undo", Activator.CreateInstance(assembly.GetType("forgotten_construction_set.UndoSystem", true),
+            new[] { data }));
+        object list = FcsAdapter.Field(nav, "listView1");
+        Set(list, "Source", data);
+        Set(list, "Filter", Activator.CreateInstance(assembly.GetType("forgotten_construction_set.ItemFilter", true),
+            new object[] { "" }));
+        using (var host = new Form { ShowInTaskbar = false, Opacity = 0, Width = 900, Height = 700 })
+        using (var box = (Control)Activator.CreateInstance(assembly.GetType("forgotten_construction_set.ObjectPropertyBox", true)))
+        using (var window = new ScribeWindow(adapter, editor, Path.Combine(directory, "sampling-settings.json")))
+        {
+            box.Dock = DockStyle.Fill;
+            var focusTarget = new Button { Dock = DockStyle.Bottom, Text = "Focus boundary" };
+            host.Controls.Add(box); host.Controls.Add(focusTarget);
+            FcsAdapter.Call(box, "setup", item, nav);
+            host.Show(); Application.DoEvents();
+            object grid = FcsAdapter.Field(box, "grid");
+            TextBox text = OpenNameEditor(grid, nameA);
+            FcsAdapter.Call(text, "OnKeyDown", new KeyEventArgs(Keys.Enter));
+            Check((string)FcsAdapter.Property(item, "Name") == nameA &&
+                (bool)FcsAdapter.Property(nav, "HasChanges"), "the real bound textbox Enter event commits to FCS and marks dirty");
+            RunWindow(window, "StartPath", Path.Combine(directory, "mods", "sampling.json"));
+            var project = (JournalProject)FcsAdapter.Field(window, "project");
+            var review = (TextBox)FcsAdapter.Field(window, "review");
+            Check(review.Text.Contains("PARTIAL EXTRACTION") && review.Text.Contains(Tracker.SamplingNotice) &&
+                project.State.Warnings.All(x => review.Text.Contains(x)), "every new baseline presents partial/sampling guidance and captured warnings");
+            string fingerprint = project.Fingerprint, sessionHash = TrackingStorage.HashFile(project.SessionPath);
+            text = OpenNameEditor(grid, nameB);
+            RunWindow(window, "Review");
+            Check(text.Text == nameB && (string)FcsAdapter.Property(item, "Name") == nameA &&
+                project.Fingerprint == fingerprint && project.EntryCount == 0 &&
+                TrackingStorage.HashFile(project.SessionPath) == sessionHash,
+                "Review neither flushes pending native text nor fabricates evidence for it");
+            Check(review.Text.Contains("Zero evidence is not proof") && review.Text.Contains("Uncommitted UI controls"),
+                "zero-evidence results retain both sampling and native pending-control warnings");
+            FcsAdapter.Call(text, "OnKeyDown", new KeyEventArgs(Keys.Escape));
+            Check((string)FcsAdapter.Property(item, "Name") == nameA &&
+                adapter.Capture().Fingerprint() == fingerprint, "the native textbox Escape event discards pending text without changing captured state");
+            text = OpenNameEditor(grid, nameB);
+            FcsAdapter.Call(text, "OnKeyDown", new KeyEventArgs(Keys.Enter));
+            RunWindow(window, "Review");
+            Check(project.EntryCount == 1 && project.State.Records.Single(x => x.Id == id).Name == nameB,
+                "a native Enter commit becomes the next recorded observation");
+            text = OpenNameEditor(grid, nameA);
+            int lostFocus = 0;
+            text.LostFocus += delegate { lostFocus++; };
+            focusTarget.Focus();
+            Application.DoEvents();
+            Check(lostFocus > 0 && !text.Focused, "a real WinForms focus transition leaves the native textbox");
+            Check((string)FcsAdapter.Property(item, "Name") == nameA,
+                "native lost-focus handling commits the pending Name text");
+            RunWindow(window, "Review");
+            Check(project.EntryCount == 2 && project.Fingerprint == fingerprint,
+                "the recorded focus-committed reversal returns to the same captured state without losing history");
+            var recordings = project.ExportRecordings(adapter.Capture());
+            Packet packet = RangeExport.Create(project.ProjectId, recordings, 0, 1, adapter.Capture());
+            Check(packet.Changes.Any(x => x.RecordId == id && x.Before.Text == nameA && x.After.Text == nameB) &&
+                packet.Changes.Any(x => x.RecordId == id && x.Before.Text == nameB && x.After.Text == nameA),
+                "actual native forward/reverse observations remain in the exported range");
+            using (var dialog = new RecordingRangeDialog(recordings))
+                Check(((TextBox)FcsAdapter.Field(dialog, "preview")).Text.Contains(Tracker.SamplingNotice) &&
+                    ((TextBox)FcsAdapter.Field(dialog, "preview")).Text.Contains("PARTIAL EXTRACTION"),
+                    "range previews keep partial-capture and sampling guidance");
+            packet.Instructions = "Historical instructions remain unchanged.";
+            string serialized = Json.Write(packet);
+            FcsAdapter.Call(window, "ShowChanges", packet);
+            Check(review.Text.Contains(Tracker.SamplingNotice) && Json.Write(packet) == serialized,
+                "presenting old/restored evidence adds current guidance without rewriting its packet");
+            text = OpenNameEditor(grid, nameB);
+            FcsAdapter.Call(text, "OnKeyDown", new KeyEventArgs(Keys.Enter));
+            text = OpenNameEditor(grid, nameA);
+            FcsAdapter.Call(text, "OnKeyDown", new KeyEventArgs(Keys.Enter));
+            sessionHash = TrackingStorage.HashFile(project.SessionPath);
+            RunWindow(window, "Review");
+            Check(project.EntryCount == 2 && TrackingStorage.HashFile(project.SessionPath) == sessionHash,
+                "two native commits reversed between reviews are not an event log");
+            Check(TrackingStorage.HashFile(modPath) == modHash && adapter.Notes(id) == notes &&
+                (bool)FcsAdapter.Property(nav, "HasChanges"), "sampling never saves the mod/notes or clears native dirty state");
         }
     }
 

@@ -56,9 +56,9 @@ WinForms message loop without launching FCS's complete startup/mod-selector
 workflow. It exercises in-memory edits and normal save/reopen on disposable
 output, not the source installation or original mod. Fixtures remain available
 for inspection and can be deleted afterward.
-Settings recovery, compilation scheduling, export protection and tracking/recovery boundaries each run in a fresh 32-bit process
+Settings recovery, compilation scheduling, export protection, tracking/recovery and sampling boundaries each run in a fresh 32-bit process
 to avoid retaining earlier large-model fixture allocations. Add `-SettingsOnly`
-or `-ScheduleOnly`, `-ExportsOnly` or `-RecoveryOnly` for one targeted suite (mutually exclusive). PDB-only symbols retain
+or `-ScheduleOnly`, `-ExportsOnly`, `-RecoveryOnly` or `-SamplingOnly` for one targeted suite (mutually exclusive). PDB-only symbols retain
 useful failure locations without
 full-debug JIT lifetime changes; this does not remove production memory limits.
 
@@ -75,6 +75,12 @@ by native saved-model reload, Resume No/Yes, new reversal recordings,
 saved-but-unrecorded edits and exact private backup copies/replay. It injects
 the discrepancy decision at the window boundary instead of clicking a native
 dialog, and does not force a process crash or simulate physical power loss.
+
+`-SamplingOnly` binds the real native Name property textbox and tests pending
+text, wired Enter/Escape events, an actual LostFocus transition, sampled versus
+unsampled reversals, no forced commit/save and retained UI/packet warnings.
+Key events are raised programmatically, not sent as physical keyboard input;
+other control types and complete interactive acceptance remain unverified.
 
 ## Repository security automation
 

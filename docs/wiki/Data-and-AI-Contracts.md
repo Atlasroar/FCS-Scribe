@@ -33,6 +33,48 @@ The packet also includes baseline identity/capture time, export time, source
 fingerprint, instructions, and `ResponseTemplate`. Its context intentionally
 does not include every loaded record.
 
+## Supported and omitted state (beta 13)
+
+"Committed" below means a control has updated FCS's in-memory model, **not**
+that FCS has saved the mod. This matrix describes the guarded executable,
+not every editor build, record subsystem or control.
+
+| State | Capture contract and boundary |
+| --- | --- |
+| Record identity and presence | Stable ID, type, effective name and available layered names; additions/removals relative to the preceding captured state. Missing/invalid states produce warnings; this is not the native undo/event history. |
+| Scalar fields and flags | Supported typed base/active/locked storage and effective values; missing, null, empty, zero and false remain distinct. Unsupported scalar types fail explicitly. A stored override and its effective value can describe the same edit. |
+| References | Available layered links, quantities, explicit removals and effective values; target IDs and resolvable names. Unresolved targets remain unresolved. |
+| Nested instances | Supported recursive instance fields, presence and deletion tombstones, within the extraction depth limit. This does not capture external layouts or independent editor buffers. |
+| Mod/dependency context | Active path-derived identity, filename, loaded order, declared dependencies and locked-mod list. Flattened base/locked storage does not establish exact source-mod ownership. |
+| Workshop | Known local header/derived dependencies and matching staged/cached metadata, preview hash and availability reasons. Not a Steam query, published history or new gameplay evidence. Unavailable payload bytes are not validated. |
+| Pending property controls | Not captured until their normal editor workflow commits to the model. Review does not force a commit, press Enter, move focus or save. Opening/clicking another window can itself change focus before Review runs. |
+| Dialogue and separate editor buffers | Uncommitted dialogue/text/dialog buffers are omitted. Supported values already stored in the captured record model may be included; this is not complete dialogue-editor extraction. |
+| External files, assets and layouts | No general content catalogue or validation. A captured path string is not a hash of the referenced file; preview-image metadata is the specifically documented exception. |
+| Native Notes/TODO and tracking metadata | Excluded from gameplay evidence. Notes sidecars/workspaces/journals have separate persistence and backup contracts. |
+| Saved mod state and editor events | No saved-state verification, binary backup/restoration, keystroke log, undo history, complete metadata history or observations of intermediate states between samples. |
+
+### Sampling and zero evidence
+
+Manual Review and eligible automatic reviews compare supported captured state
+with the **last durable recording**, not with every user action. A-to-B-to-A
+edits between observations can produce no change IDs and no new session entry.
+Recording B and then recording the reversal to A retains both observations;
+range export does not collapse them just because their final net effect is zero.
+An unchanged capture appends nothing; changed context can append a recording
+with no record-change IDs. Neither case proves no editor activity occurred.
+
+A matching fingerprint validates only the supported captured representation,
+not pending controls, omitted buffers or arbitrary external file contents.
+Finish edits normally and verify the resulting before/after evidence; do not
+treat a zero count as an all-clear or shorten the interval as a completeness
+guarantee. Scheduling can defer observations while hidden, busy or modal.
+
+Beta 13 adds sampling guidance to new packet instructions and UI presentation,
+including new baselines, zero-evidence reviews, range previews and restored
+packet display. Snapshot warnings/scope and fingerprint formats are unchanged;
+old recorded/nested packets are not rewritten to add the new wording.
+See [scoped native-control evidence](Validation-and-Limitations#s11-partial-capture-and-sampling-beta-13).
+
 ## Workshop context
 
 `Workshop` contains `ModName` (the Workshop title), `Author`, integer `Version`,

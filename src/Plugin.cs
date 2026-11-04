@@ -326,10 +326,10 @@ namespace FcsScribe
                 if (project != null) project.Dispose();
                 project = candidate; tracker = candidate.ResumeTracker(); adopted = true;
                 if (pending != null) ShowChanges(pending);
-                else if (candidate.State.Workshop != null && candidate.State.Workshop.CaptureStatus == "partial")
-                    review.Text = "PARTIAL EXTRACTION - baseline captured with Workshop availability warnings.\r\n" +
+                else
+                    review.Text = "PARTIAL EXTRACTION - baseline captured; review all warnings.\r\n" +
+                        Tracker.SamplingNotice + "\r\n" +
                         String.Join("\r\n", candidate.State.Warnings.Select(x => "WARNING: " + x));
-                else review.Clear();
                 workshop.Text = Json.Pretty(Json.Write(candidate.State.Workshop));
             }
             finally { if (!adopted) candidate.Dispose(); }
@@ -386,6 +386,7 @@ namespace FcsScribe
         private void ShowChanges(Packet packet)
         {
             var text = new StringBuilder("PARTIAL EXTRACTION - review all warnings.\r\n");
+            text.AppendLine(Tracker.SamplingNotice);
             if (packet.Recordings != null)
             {
                 text.AppendLine("RECORDING RANGE - chronological observations, not a net diff. Current-state validation is from export time.");
