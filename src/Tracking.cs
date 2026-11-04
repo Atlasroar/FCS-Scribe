@@ -264,6 +264,10 @@ namespace FcsScribe
         [DataMember(Order = 0, IsRequired = true)] public int SchemaVersion = 1;
         [DataMember(Order = 1, IsRequired = true)] public int ReviewSeconds;
         [DataMember(Order = 2)] public string ExportDirectory;
+        [DataMember(Order = 3)] public bool ModNotesEnabled;
+        [DataMember(Order = 4)] public bool ModTodoEnabled;
+        [DataMember(Order = 5)] public string ProjectDirectory;
+        [DataMember(Order = 6)] public string ProjectModId;
         public static readonly int[] Intervals = { 0, 30, 60, 300, 600 };
         public static string DefaultPath { get { return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FCS-Scribe", "settings.json"); } }
@@ -274,6 +278,7 @@ namespace FcsScribe
                 throw new InvalidDataException("Unsupported settings schema. Expected schema 1; reload or explicitly save repaired settings.");
             if (!Intervals.Contains(ReviewSeconds))
                 throw new InvalidDataException("Choose Manual, 30 seconds, 1 minute, 5 minutes or 10 minutes.");
+            if (!String.IsNullOrEmpty(ProjectDirectory)) ProjectLocation.RequireDirectory(ProjectDirectory);
             if (String.IsNullOrEmpty(ExportDirectory)) return;
             try
             {

@@ -6,6 +6,36 @@ complete editor compatibility.
 
 ## Automated and disposable-copy evidence
 
+### Scribe notes and TODOs (beta 20)
+
+The explicitly requested feature expansion passed **694 core checks** and a
+warnings-as-errors plugin build. The new isolated `-ModWorkOnly` host passed
+**95 checks each** on copied official data and the representative copied mod.
+It checks real native multi-selection/menu placement, saved opt-in visibility,
+Workspace grouping/help, separate plain notes/tasks, completion persistence,
+Save Changes without/with tracking, an automatic recording action, close/fresh
+window discovery, external edits, disabled recovery controls, foreign settings
+rejection and a failed-then-retried external locator switch. Native mod bytes,
+shared notes and dirty state stay unchanged. Disabling features retains files;
+switching folders is not migration.
+
+Targeted regressions passed **16 settings recovery**, **24 scheduling**,
+**24 export protection**, **116 tracking recovery boundary**, and **36 native
+notes safety + 8 cold-process reopen** checks. The synthetic profile compiler
+also ran with 20 records, 4 entries, 2 sessions and 10 large-record cells; this
+is a compiler/dependency smoke check, not a new performance measurement.
+Expected recovery/invalid-file errors are logged.
+
+Dialogs are injected or driven at their boundaries in copied native hosts;
+this is not physical clicking of the complete FCS Extended workflow. Text files
+commit independently, root switching can leave candidate settings after a
+locator failure, and no physical disk/power-failure guarantee is claimed.
+S09, full interactive beta 20 acceptance, other builds/custom stacks and the
+discussed plain-text vanilla diff remain open/out of scope. Nothing was
+installed in the live game or written to original mods/notes.
+
+### Historical baseline evidence (beta 11)
+
 The recorded beta 11 checks passed. These retain session-journal, grouped-menu,
 complete-coverage/safe-retry, recording-range, optional Workshop isolation and
 portable draft, recoverable initialization and settings recovery checks while

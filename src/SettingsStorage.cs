@@ -40,6 +40,8 @@ namespace FcsScribe
             if (value == null) throw new ArgumentNullException("value");
             value.ValidateForUse();
             TrackingStorage.RequireJson(path);
+            ExportStorage.RequireLocation(path, null);
+            ExportStorage.RequireLocation(path + ".bak", null);
             if (recovering && expectedHash == null)
                 throw new IOException("The original settings could not be read safely. Restore access and Reload from disk " +
                     "before saving a repair. No settings file was changed.");
@@ -49,7 +51,11 @@ namespace FcsScribe
             {
                 TrackingStorage.Verify(path, expectedHash);
                 string backup = recovering ? PreserveOriginal(path, expectedHash) : null;
-                string hash = TrackingStorage.WriteAtomic(path, value, expectedHash);
+                string hash = TrackingStorage.WriteAtomic(path, value, expectedHash, step => {
+                    if (step != "commit") return;
+                    ExportStorage.RequireLocation(path, null);
+                    ExportStorage.RequireLocation(path + ".bak", null);
+                });
                 return new SavedSettings { FileHash = hash, RecoveryBackup = backup };
             }
         }

@@ -513,6 +513,7 @@ internal static class CoreTests
             CheckWorkshopAvailability();
             passed += TrackingTests.Run();
             passed += JournalTests.Run();
+            passed += ModWorkTests.Run();
             Console.WriteLine("PASS: " + passed + " core checks");
             return 0;
         }

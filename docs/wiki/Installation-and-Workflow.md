@@ -52,9 +52,11 @@ anything or modify your game. Do not replace FCS Extended's own contract DLL.
 1. Finish any active field edit and select **Start tracking**. Create a tracking
    JSON or resume an existing one after background validation. Earlier edits
    are deliberately outside a new file's captured baseline.
-2. Edit normally and select **Review changes**. Read the warnings as well as
-   the exact before/after evidence. Review flushes changed records/context to
+2. Edit normally and select **Core > Save Changes** (**Review changes** before
+   beta 20). Read the warnings as well as the exact before/after evidence.
+   This saves enabled Scribe notes/TODOs and flushes changed records/context to
    the current timestamped session log, then advances its baseline.
+   It does **not** save the `.mod`, native FCS annotations or AI draft workspace.
 3. **Export AI packet**: in beta 5, select an inclusive first/last recording
    range and inspect its preview before choosing the JSON destination.
    Earlier sessions remain selectable after resume. Current unrecorded edits
@@ -124,10 +126,69 @@ Hidden/minimized/busy windows, open menus and modal dialogs defer work without
 acknowledging the deadline. After successful compilation there is no empty
 timer: the next first pending recording starts a fresh age window.
 
-JSON save dialogs default to the active mod's actual directory. Settings can
-choose another existing default; dialogs still allow individual locations.
-Changing settings does not move an existing tracking file. The settings file
-is `%LOCALAPPDATA%\FCS-Scribe\settings.json`.
+Since beta 20, new JSON destinations default to the **Scribe project folder**:
+the active mod's actual directory unless an external project folder is enabled.
+The independent custom export-directory setting still overrides dialog defaults;
+dialogs allow individual locations. Changing defaults does not move existing
+tracking/workspace files.
+
+Settings now live at `<project folder>\FCS-Scribe.settings.json`, bound to the
+active mod path. The earlier `%LOCALAPPDATA%\FCS-Scribe\settings.json` is left
+untouched and is **not silently imported**: a missing local file starts with
+Manual and both text features disabled. A notice explains this when old
+user-wide settings exist. Configure each mod explicitly.
+
+### Scribe notes and Mod To Do (beta 20)
+
+In **Settings**, independently enable **Scribe free-form notes** and/or **Mod
+To Do**. Both default off. The **Notes** tab is a basic plain-text editor:
+writing only, with no rich formatting. It uses `notes.txt`. The **Mod To Do**
+tab uses a separate `todo.txt`, retaining task text, linked record IDs/names and
+completion checkboxes.
+
+With Mod To Do enabled, select one or more records in the main FCS Game World
+record list and right-click. **Add Mod To Do** appears immediately below native
+**Add Todo Item** and opens Scribe's task editor. Editing, removing or checking
+a task saves it. The native menu item, its behavior and FCS's own Notes/TODO
+window/files remain unchanged. Other native property-window menus are not
+extended.
+
+**Core > Save Changes** saves enabled notes/TODOs, even without tracking.
+With tracking open it also records the captured gameplay/context evidence.
+Other Scribe actions, eligible automatic recording and normal Scribe close
+also save enabled work. Editable notes/tasks are disabled during asynchronous
+actions. This is separate from **Workspace > Save workspace / Open workspace**,
+which preserve the editable AI draft and its original packet. Closing or an
+action that cannot save fails visibly and retains in-memory work; it does not
+pretend the files were saved.
+
+By default text and settings are in the active mod folder. **Use an external
+Scribe project folder** selects an existing directory for them and new default
+destinations. A small `FCS-Scribe.location.json` pointer remains in the mod
+folder so Scribe can find it next time. Use a distinct project folder per mod.
+Switching folders selects the destination's text, **not a migration**: old notes,
+tasks, tracking sets and workspaces stay where they were. Copy/archive them
+deliberately with writers closed. Settings belonging to another mod block
+adoption. A failed pointer update may leave safely written candidate settings
+in the new folder while the window remains associated with the old one; resolve
+the reported problem and retry rather than deleting either version.
+
+Existing plain UTF-8 `notes.txt` is readable as notes. An unrelated/malformed
+`todo.txt` is not overwritten or converted: preserve it and select a separate
+folder, repair it or disable the feature. Disabling features leaves both files
+untouched. Text saves compare observed hashes, use cooperating leases and
+atomic replacement, and retain prior bytes in unique `.backup-<ID>` files.
+The two files save **independently**, not as a transaction; notes can be saved
+even if a later TODO save fails. Back up unsaved editor text before explicit
+**Reload notes / TODOs**, which discards local edits only after confirmation.
+Do not delete lock files to force a write.
+
+Mod-folder notes/tasks may intentionally ship with the mod. Review them before
+distribution. Private settings/locators, tracking data, draft workspaces and
+all backups must be excluded from uploads; Scribe does not inspect native
+Workshop uploads. Neither Scribe text file is FCS's shared
+`data\__TODO__<user>.txt`, `.mod` data or Workshop change notes. See the
+[text contract](Data-and-AI-Contracts#scribe-text-files-and-project-locator-beta-20).
 
 ### Settings recovery (beta 9)
 
@@ -143,7 +204,7 @@ unsaved configuration choices and validates the current disk file; it does not
 discard the working draft or project. Fix access/directory problems and reload,
 or choose valid values and explicitly **Save repaired settings**. Repair
 preserves readable original bytes in a unique
-`settings.json.recovery-<UTC>_<unique-ID>.bak` before atomic replacement.
+`<settings filename>.recovery-<UTC>_<unique-ID>.bak` before atomic replacement.
 Later saves never rotate away that original. Cancel writes nothing.
 
 An unreadable original cannot be safely replaced until access is restored and
@@ -260,7 +321,7 @@ Neither Yes nor No saves the mod/notes.
    | FCS Notes/TODO | The relevant complete `data\__TODO__<user>.txt` sidecars, including contributing authors' files when needed; these can contain unrelated mods' annotations |
    | Tracking, wherever selected | The baseline JSON and entire matching `.json.scribe` folder, including marker, journal, retained sessions and recovery originals; retain associated `.bak`/`.legacy.bak` files when present |
    | Drafts | Explicitly saved workspace JSONs and desired previous-file backups; they may be outside the mod folder |
-   | Settings, if wanted | `%LOCALAPPDATA%\FCS-Scribe\settings.json` and any repair originals you need; settings do not substitute for the project or mod |
+   | Settings and Scribe work, if wanted | `<project folder>\FCS-Scribe.settings.json`, enabled `notes.txt`/`todo.txt`, any repair originals and mod-local `FCS-Scribe.location.json` when external storage is used; beta 19 and earlier used `%LOCALAPPDATA%\FCS-Scribe\settings.json` |
 
 4. Record original locations, the plugin/editor versions and backup time.
    Check file counts/sizes and preferably SHA-256 hashes against the closed
@@ -471,7 +532,7 @@ Missing images and unsupported/oversized encodings fail explicitly. Local
 metadata is not proof of the current published Steam listing or its changelog.
 
 In beta 6, known optional Workshop failures no longer stop Start tracking,
-Review changes, automatic recording or AI range export. The Workshop tab/JSON
+Save Changes, automatic recording or AI range export. The Workshop tab/JSON
 reports `CaptureStatus: "partial"` with component-specific `Issues`; tracking
 warnings and bottom status repeat the notice. Header fields and any readable
 component remain available. Expected absent files stay explicitly unknown.
@@ -566,7 +627,7 @@ A deleted record cannot receive a new note: explicitly choose a surviving
 record to hold its documentation. Combine entries if they share a target.
 Stale drafts and repeat application of a batch to the same record are rejected.
 
-In beta 7, **Draft > Save workspace** preserves exact unfinished text with its
+**Workspace > Save workspace** (under Draft in betas 7-19) preserves exact unfinished text with its
 original packet. **Open workspace** restores it after restart, independently
 of tracking; it reports stale/invalid responses and never applies them.
 Unsaved work is protected before close, Start/resume, Export, Import, Paste and

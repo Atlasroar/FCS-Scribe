@@ -59,13 +59,21 @@ for inspection and can be deleted afterward.
 Settings recovery, compilation scheduling, export protection, tracking/recovery and sampling boundaries each run in a fresh 32-bit process
 to avoid retaining earlier large-model fixture allocations. Add `-SettingsOnly`
 or `-ScheduleOnly`, `-ExportsOnly`, `-RecoveryOnly`, `-SamplingOnly`, `-NotesOnly`
-or `-CompatibilityOnly` for one targeted suite (mutually exclusive). PDB-only symbols retain
+or `-CompatibilityOnly`, `-ModWorkOnly` for one targeted suite (mutually exclusive). PDB-only symbols retain
 useful failure locations without
 full-debug JIT lifetime changes; this does not remove production memory limits.
 
 `Inspect-Fcs.ps1` supports inspection of the locally installed build. Obtain
 source binaries from an appropriate installed FCS/FCS Extended distribution;
 this repository does not redistribute them.
+
+`-ModWorkOnly` checks the real native record menu and multi-selection, opt-in
+visibility, separate Scribe editors/files, manual/automatic/close persistence,
+conflict/recovery controls, settings ownership, external-root retry and fresh
+window discovery without changing native mod/notes bytes or dirty state.
+The default combined run includes this host in its own fresh process too.
+Dialogs are bypassed/programmatically driven at their boundaries; full
+interactive FCS Extended startup/context-menu acceptance is still required.
 
 See [Validation and limitations](Validation-and-Limitations) for recorded
 results, coverage boundaries and the manual interactive acceptance gate.

@@ -97,7 +97,7 @@ unsaved gameplay or notes.
 1. Stop retrying an operation that can write. Record the full message and
    which file/action it names. Use Manual settings while diagnosing, when
    available; a failed action can already have paused automatic work.
-2. Preserve unsaved draft text with **Draft > Save workspace**. Tracking logs
+2. Preserve unsaved draft text with **Workspace > Save workspace**. Tracking logs
    do not preserve editable drafts. Preserve important unsaved editor work
    through FCS's normal workflow only after inspecting its state.
 3. Before copying/restoring journal files, close Scribe and wait for pending
@@ -370,14 +370,17 @@ otherwise-valid JSON.
 
 ## Settings errors
 
-Settings live at `%LOCALAPPDATA%\FCS-Scribe\settings.json`. A genuinely absent
-settings file uses Manual/active-mod defaults. An existing invalid or unreadable
-file instead enters explicit recovery; these are different cases.
+Since beta 20, settings live at `<project folder>\FCS-Scribe.settings.json`,
+mod-local by default or located through the mod's `FCS-Scribe.location.json`.
+Earlier `%LOCALAPPDATA%\FCS-Scribe\settings.json` is retained, not imported.
+A genuinely absent local settings file uses Manual defaults with Scribe
+notes/TODO disabled. An existing invalid/unreadable file enters explicit
+recovery; these are different cases.
 
 **Safe recovery:** Cancel writes nothing. Restore access/a valid original and
 choose **Discard edits and reload**, or choose valid values and explicitly
 **Save repaired settings**. Readable originals receive a unique
-`settings.json.recovery-<UTC>_<id>.bak` before replacement. Keep those backups.
+`<settings filename>.recovery-<UTC>_<id>.bak` before replacement. Keep those backups.
 Reload discards only unsaved settings-dialog choices, not the project/draft.
 
 | Message | Cause and solution |
@@ -401,6 +404,30 @@ Reload discards only unsaved settings-dialog choices, not the project/draft.
 Settings can also report the generic external-change, JSON-reader, access,
 sharing and disk errors elsewhere on this page. A valid Save/Reload does not
 move existing tracking files or repair a faulted journal.
+
+### Scribe notes, TODOs and external storage (beta 20)
+
+These are Scribe-owned `notes.txt` and `todo.txt`, not native FCS sidecars.
+Save Changes never saves `.mod`, native annotations or the AI draft workspace.
+Use **Workspace > Save workspace** for the latter and normal FCS Save for native
+files.
+
+| Message/symptom | Cause and solution |
+|---|---|
+| `SCRIBE WORK RECOVERY:` | A text file could not be read/validated. Mutation controls are disabled and original files are untouched. Copy unsaved editor text first; repair access/content and explicitly Reload, or disable the affected feature in Settings. |
+| `Scribe work changed or disappeared outside this window:` | External edits/removal invalidate the observed hash. Both external bytes and local editor text are retained. Back up/merge them deliberately, then use **Reload notes / TODOs** and re-enter any retained edits. Do not retry a stale overwrite or delete locks. |
+| Notes saved but TODO save failed | The files commit independently. Inspect both paths; retain unsaved tasks and resolve their conflict before retrying. An error is not proof that no file changed. |
+| `todo.txt is not a Scribe TODO file for this mod.` / malformed tasks or escapes | Existing unrelated/invalid content is not imported or overwritten. Preserve it and choose a separate project folder, repair the documented text format or disable Mod To Do. |
+| Add Mod To Do is missing | It is off by default. Save the Mod To Do setting for this mod, then select records in the main Game World list and right-click. It appears immediately below native Add Todo Item; other property menus are not extended. Native editing/session checks still apply. |
+| `The Scribe project locator is invalid or belongs to another mod path:` | The local pointer is malformed/foreign, including a moved mod path. Back up both roots and explicitly restore/correct the pointer for the intended current mod; no fallback or tracking-history rebinding occurs. |
+| `The Scribe project directory is missing:` | Restore/reconnect the configured folder. A missing external root does not silently revert to mod-local storage. |
+| `The destination already contains settings not owned by this mod.` | Use a separate external project folder. Another mod's settings/text are not adopted by a root switch. |
+| Root switch failed after settings were written | The new folder may contain candidate settings, but a failed locator commit retains the old window association. Preserve both roots, resolve access/lease/conflict and retry. Existing text/tracking/workspaces were not migrated. |
+| Text cannot save because a file/lease is locked | Close the competing writer normally, restore access and resolve any changed bytes before retrying. Do not delete `.lock` files to bypass active handles. Keep unique `.backup-<ID>` originals. |
+
+Settings reload first preserves valid local work. For a notes/TODO conflict,
+use that tab's explicit reload/discard route after copying text; merely reloading
+settings does not discard unsaved writing to evade a conflict.
 
 ## Workshop metadata and preview errors
 

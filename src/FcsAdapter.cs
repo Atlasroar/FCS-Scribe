@@ -291,6 +291,30 @@ namespace FcsScribe
             return Path.GetDirectoryName(Path.GetFullPath((string)Property(nav, "ActiveFile")));
         }
 
+        internal string ActiveModId()
+        {
+            EnsureReady();
+            return Json.Hash(Path.GetFullPath((string)Property(nav, "ActiveFile")).ToUpperInvariant());
+        }
+
+        internal string ActiveModName()
+        {
+            EnsureReady();
+            return Path.GetFileName((string)Property(nav, "ActiveFile"));
+        }
+
+        internal static ContextMenuStrip RecordMenu(Form editor) { return (ContextMenuStrip)Field(Field(editor, "nav"), "contextMenuStrip1"); }
+        internal static ToolStripMenuItem NativeTodoItem(Form editor) { return (ToolStripMenuItem)Field(Field(editor, "nav"), "addTodo"); }
+        internal List<ModTodo> SelectedModTodos()
+        {
+            EnsureReady();
+            object list = Field(nav, "listView1");
+            object selected = list.GetType().GetProperty("SelectedItems", Flags | BindingFlags.DeclaredOnly).GetValue(list, null);
+            return ((IEnumerable)selected).Cast<object>()
+                .Select(x => new ModTodo { RecordId = (string)Property(x, "stringID"),
+                    RecordName = (string)Property(x, "Name"), Text = "Review this record." }).ToList();
+        }
+
         public PreviewImage ArchivePreview(string destination, string expectedHash)
         {
             EnsureReady();

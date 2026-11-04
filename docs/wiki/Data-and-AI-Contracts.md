@@ -442,8 +442,14 @@ AI-packet export instead.
 
 ## Shared settings and recovery (beta 9)
 
-`%LOCALAPPDATA%\FCS-Scribe\settings.json` retains schema 1 with required
-`SchemaVersion` and `ReviewSeconds`, plus optional `ExportDirectory`.
+Beta 20 stores settings at `<project folder>\FCS-Scribe.settings.json`;
+betas 2-19 used `%LOCALAPPDATA%\FCS-Scribe\settings.json`. That older file is
+preserved, not imported implicitly. Schema 1 retains required `SchemaVersion`
+and `ReviewSeconds`, plus optional `ExportDirectory`. Beta 20 adds optional
+`ModNotesEnabled`, `ModTodoEnabled`, `ProjectDirectory` and `ProjectModId`.
+Older files omit these fields: text features default off and the project
+directory defaults mod-local. New settings bind to the path-derived active
+mod ID; another mod's settings require explicit repair or a separate folder.
 Supported intervals remain 0/30/60/300/600 seconds. A custom directory must be
 absolute, syntactically valid and currently available. Missing source files
 produce first-launch manual defaults without writing; invalid/unreadable
@@ -451,11 +457,11 @@ sources produce an explicit recovery state with no valid settings value.
 The observed hash, when readable, covers exact original bytes from the same
 open stream used for parsing.
 
-An exclusive `settings.json.lock` coordinates cooperating beta 9 writers while
+An exclusive `<settings filename>.lock` coordinates cooperating writers while
 they compare the observed hash, preserve originals and atomically replace
-settings. Ordinary replacement retains `settings.json.bak`. Explicit repair
+settings. Ordinary replacement retains `<settings filename>.bak`. Explicit repair
 also preserves exact original bytes as
-`settings.json.recovery-<UTC>_<unique-ID>.bak`; these unique backups are not
+`<settings filename>.recovery-<UTC>_<unique-ID>.bak`; these unique backups are not
 rotated away by later saves. Failed replacement can leave its completed
 recovery copy while retaining the original. Unknown hashes, changed/deleted
 sources and active cooperating leases reject replacement.
@@ -468,6 +474,55 @@ These hashes and leases are consistency guards, not authentication or protection
 against all uncooperating external writers or physical filesystem failures.
 Settings and backups can reveal local paths: keep them private and outside
 AI packets and Workshop uploads.
+
+## Scribe text files and project locator (beta 20)
+
+`notes.txt` is literal UTF-8 writing, with no JSON/header/markup. `todo.txt` is
+separate UTF-8 plain text with this format (columns are actual tab characters):
+
+```text
+FCS-Scribe Mod To Do 1
+Mod: example.mod
+[ ]	0123456789abcdef0123456789abcdef	record-id	Record name	Task text
+[x]	fedcba9876543210fedcba9876543210	other-record	Other name	Completed task
+```
+
+Each task has a unique GUID in `N` format, a stable native record ID, display
+name and nonempty task text. `[ ]` is pending and `[x]` complete. The mod filename
+and text columns escape backslash, tab, CR and LF as `\\`, `\t`, `\r`, `\n`.
+Unknown/truncated escapes, malformed rows, duplicate GUIDs and another mod
+filename reject loading rather than dropping content. This is Scribe's format,
+not the native FCS sidecar format. No record or native annotation is written
+when tasks are edited.
+
+Disabled features do not read/write their text file. Opening reads exact bytes
+and their hash through the same stream; invalid UTF-8 rejects loading. Saves
+verify observed hashes under a cooperating `<filename>.lock`, flush a unique
+same-folder temporary and move/replace atomically. Replacement keeps the old
+bytes in `<filename>.backup-<unique-ID>`. Unchanged content is verified without
+rewriting or normalizing BOM/newlines. External edits/removal reject a stale
+save while retaining local text. Notes and TODOs are independent commits, not
+a two-file transaction. These guards do not eliminate uncooperating-writer
+races, physical failures or the need for backups.
+
+Project defaults use the active mod folder. External mode writes
+`FCS-Scribe.location.json` there, containing required `Format` =
+`FCS-Scribe project location 1`, path-derived `ModId` and absolute `Directory`.
+The directory must exist and must not be reserved tracking storage. Its
+settings are `FCS-Scribe.settings.json`; their mod ID must match. Locator writes
+use a cooperating lease, observed-hash guard and atomic JSON replacement.
+Settings/root switching is not a multi-file transaction or data migration:
+candidate settings may remain after a pointer-write failure, with the old
+window association retained for retry. Unknown/foreign locators fail visibly
+instead of redirecting to a default folder.
+
+Existing tracking/workspaces remain at their explicit paths. The selected
+project folder supplies new default destinations, unless the independent
+export-directory override is set. Scribe settings/locator saves protect
+recognized tracking anchors and their reserved storage/backup paths too.
+These files are not included in gameplay fingerprints or AI evidence.
+Text intended for public mod distribution must still be reviewed; private
+settings, locators, baselines, workspaces and all backups stay out of uploads.
 
 ## Untrusted content and scope
 

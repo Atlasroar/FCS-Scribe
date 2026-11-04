@@ -83,14 +83,18 @@ namespace FcsScribe
     internal sealed class SettingsDialog : Form
     {
         private readonly ComboBox interval = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260 };
-        private readonly CheckBox activeFolder = new CheckBox { Text = "Default JSON exports to the active mod's folder", AutoSize = true };
+        private readonly CheckBox activeFolder = new CheckBox { Text = "Default JSON exports to the Scribe project folder", AutoSize = true };
         private readonly TextBox directory = new TextBox { Width = 440 };
+        private readonly CheckBox modNotes = new CheckBox { Text = "Enable Scribe free-form notes (notes.txt)", AutoSize = true };
+        private readonly CheckBox modTodo = new CheckBox { Text = "Enable Mod To Do (todo.txt and native record context-menu entry)", AutoSize = true };
+        private readonly CheckBox externalProject = new CheckBox { Text = "Use an external Scribe project folder", AutoSize = true };
+        private readonly TextBox projectDirectory = new TextBox { Width = 440 };
         public PluginSettings Value { get; private set; }
 
         public SettingsDialog(PluginSettings settings, string settingsPath = null, Exception loadError = null)
         {
             Text = "FCS-Scribe settings";
-            Width = 640; Height = loadError == null ? 400 : 540;
+            Width = 660; Height = loadError == null ? 620 : 740;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false; StartPosition = FormStartPosition.CenterParent;
             var layout = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown,
@@ -101,7 +105,7 @@ namespace FcsScribe
                         "\r\nProposed values start at Manual/active-mod defaults. Reload to retry reading the file, " +
                         "or explicitly Save repaired settings to preserve its original bytes in a unique recovery backup. " +
                         "An unreadable original must become readable and be reloaded before it can be replaced." });
-            layout.Controls.Add(new Label { Text = "Review and save a validated checkpoint:", AutoSize = true });
+            layout.Controls.Add(new Label { Text = "Save Changes recording interval (does not save the .mod):", AutoSize = true });
             interval.Items.AddRange(new object[] { "Manual", "Automatic - 30 seconds", "Automatic - 1 minute",
                 "Automatic - 5 minutes", "Automatic - 10 minutes" });
             interval.SelectedIndex = Array.IndexOf(PluginSettings.Intervals, settings.ReviewSeconds);
@@ -118,6 +122,25 @@ namespace FcsScribe
             };
             activeFolder.CheckedChanged += delegate { directory.Enabled = browse.Enabled = !activeFolder.Checked; };
             folders.Controls.Add(directory); folders.Controls.Add(browse); layout.Controls.Add(folders);
+            modNotes.Checked = settings.ModNotesEnabled; modTodo.Checked = settings.ModTodoEnabled;
+            externalProject.Checked = !String.IsNullOrEmpty(settings.ProjectDirectory);
+            projectDirectory.Text = settings.ProjectDirectory ?? "";
+            projectDirectory.Enabled = externalProject.Checked;
+            layout.Controls.Add(modNotes); layout.Controls.Add(modTodo); layout.Controls.Add(externalProject);
+            var projectFolders = new FlowLayoutPanel { AutoSize = true };
+            var projectBrowse = new Button { Text = "Browse...", AutoSize = true, Enabled = externalProject.Checked };
+            projectBrowse.Click += delegate {
+                using (var picker = new FolderBrowserDialog { Description = "Scribe project folder (settings, notes, TODOs and default exports)" })
+                    if (picker.ShowDialog(this) == DialogResult.OK) projectDirectory.Text = picker.SelectedPath;
+            };
+            externalProject.CheckedChanged += delegate { projectDirectory.Enabled = projectBrowse.Enabled = externalProject.Checked; };
+            projectFolders.Controls.Add(projectDirectory); projectFolders.Controls.Add(projectBrowse);
+            layout.Controls.Add(projectFolders);
+            layout.Controls.Add(new Label { AutoSize = true, MaximumSize = new System.Drawing.Size(600, 0),
+                Text = "By default Scribe project settings, notes/TODOs and new file destinations use the active mod folder. " +
+                    "External mode keeps a small location pointer there. Existing tracking/workspace files are NOT moved. " +
+                    "Actions and closing save enabled Scribe notes/TODOs, never the .mod or native shared notes. " +
+                    "Mod-folder text may be distributed; private tracking/backups/workspaces must be excluded from uploads." });
             layout.Controls.Add(new Label { AutoSize = true, MaximumSize = new System.Drawing.Size(540, 0),
                 Text = "Recordings are flushed to session logs at each interval. Automatic mode compiles once the oldest pending recording is 30 minutes old, including time closed or manual. Settings changes do not reset that debt. Manual mode requires Compile journal. Neither saves the mod or applies notes." });
             var buttons = new FlowLayoutPanel { AutoSize = true };
@@ -130,11 +153,15 @@ namespace FcsScribe
                     if (interval.SelectedIndex < 0) throw new InvalidDataException("Choose a review interval.");
                     Value = new PluginSettings {
                         ReviewSeconds = PluginSettings.Intervals[interval.SelectedIndex],
-                        ExportDirectory = activeFolder.Checked ? null : directory.Text
+                        ExportDirectory = activeFolder.Checked ? null : directory.Text,
+                        ModNotesEnabled = modNotes.Checked, ModTodoEnabled = modTodo.Checked,
+                        ProjectDirectory = externalProject.Checked ? projectDirectory.Text : null,
+                        ProjectModId = settings.ProjectModId
                     };
                     Value.ValidateForUse();
                     if (!activeFolder.Checked && (String.IsNullOrWhiteSpace(directory.Text) || !Directory.Exists(directory.Text)))
                         throw new DirectoryNotFoundException("Choose an existing custom export directory.");
+                    if (externalProject.Checked) ProjectLocation.RequireDirectory(projectDirectory.Text);
                     DialogResult = DialogResult.OK;
                 }
                 catch (Exception error) { Plugin.ShowError(error); }
