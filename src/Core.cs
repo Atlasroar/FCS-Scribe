@@ -492,6 +492,61 @@ namespace FcsScribe
         }
     }
 
+    public sealed class NoteApplyReport
+    {
+        public const string SidecarNotice = "Notes/TODO are shared per-record annotations, not embedded in the .mod. " +
+            "Normal FCS Save is required. With all FCS instances closed, back up relevant data\\__TODO__<user>.txt " +
+            "files separately; they may include other mods' annotations. Do not distribute whole sidecars blindly.";
+        public IList<string> CompletedRecordIds { get; private set; }
+        public IList<string> SkippedRecordIds { get; private set; }
+        public IList<string> UnconfirmedRecordIds { get; private set; }
+        public string NotesFile { get; private set; }
+
+        internal NoteApplyReport(IEnumerable<string> pending, IEnumerable<string> completed, IEnumerable<string> skipped,
+            string notesFile)
+        {
+            CompletedRecordIds = completed.ToList().AsReadOnly();
+            SkippedRecordIds = skipped.ToList().AsReadOnly();
+            UnconfirmedRecordIds = pending.Except(CompletedRecordIds, StringComparer.Ordinal).ToList().AsReadOnly();
+            NotesFile = notesFile;
+        }
+
+        public string Summary
+        {
+            get { return "Newly confirmed: " + CompletedRecordIds.Count + "; previously completed/skipped: " +
+                SkippedRecordIds.Count + "; unconfirmed: " + UnconfirmedRecordIds.Count + "."; }
+        }
+
+        public string Details
+        {
+            get { return Summary + "\r\nActive notes file: " + NotesFile +
+                "\r\nNewly confirmed record IDs:\r\n" + List(CompletedRecordIds) +
+                "\r\nPreviously completed/skipped record IDs:\r\n" + List(SkippedRecordIds) +
+                "\r\nUnconfirmed record IDs (inspect before retry):\r\n" + List(UnconfirmedRecordIds) +
+                "\r\nNothing was saved by FCS-Scribe. Keep the original complete draft; do not remove completed entries.\r\n" +
+                SidecarNotice; }
+        }
+
+        private static string List(IList<string> ids) { return ids.Count == 0 ? "(none)" : String.Join("\r\n", ids); }
+    }
+
+    public sealed class NoteApplyException : InvalidOperationException
+    {
+        public NoteApplyReport Report { get; private set; }
+        public string LastRecordId { get; private set; }
+        public string Stage { get; private set; }
+
+        internal NoteApplyException(NoteApplyReport report, string lastRecordId, string stage, Exception cause)
+            : base("Notes application stopped after " + report.CompletedRecordIds.Count + " newly completed record(s). " +
+                report.Summary + " Stage: " + stage + "; last target: " + (lastRecordId ?? "(none)") + ". " +
+                "An unconfirmed write may have changed notes, even with zero confirmed records. Inspect FCS Notes and " +
+                "the per-record report before retrying or saving. Keep the original complete draft: matching completed " +
+                "notes will be skipped on retry. No rollback or save was performed.", cause)
+        {
+            Report = report; LastRecordId = lastRecordId; Stage = stage;
+        }
+    }
+
     public static class DraftValidation
     {
         public static string Marker(string batchId) { return "[FCS-Scribe batch " + batchId + "]"; }
@@ -544,7 +599,7 @@ namespace FcsScribe
             return pending;
         }
 
-        private static bool AlreadyApplied(string batchId, NoteEntry entry, string existing)
+        internal static bool AlreadyApplied(string batchId, NoteEntry entry, string existing)
         {
             string marker = Marker(batchId);
             if (!existing.Contains(marker)) return false;

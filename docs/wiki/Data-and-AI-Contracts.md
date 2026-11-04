@@ -255,6 +255,30 @@ are unsaved. Revision guards prevent asynchronous replacement from erasing
 late edits; a saved snapshot excludes later edits, which remain dirty.
 This is explicit Save/Open, not autosave, an event log, or mod recovery.
 
+## Note application outcomes (beta 18)
+
+The on-disk packet/draft/workspace schemas and note block format are unchanged.
+Complete nonduplicate coverage and current-state validation run before writes.
+The adapter records confirmed IDs only after native append and exact unique
+block readback using the same normalized-line comparison as retry validation.
+It marks the editor dirty before each attempt to keep potentially partial
+mutations visible to the native save workflow.
+
+`NoteApplyReport` is an in-memory immutable-list snapshot of newly completed,
+previously completed/skipped and unconfirmed IDs plus the active notes file.
+`NoteApplyException` retains that report, last target, stage and original cause.
+Unconfirmed is not synonymous with untouched or safe-to-append. Completion is
+not disk persistence. Refresh/progress failure can occur after some or all
+appends; the original complete draft/packet remains associated and retry checks
+are repeated rather than trusting a stored report.
+
+No automatic rollback, save, marker repair, partial-coverage exception or
+stale-state bypass is added. Native Save/reload can normalize declaration
+metadata and aggregated note formatting; retry requires the original fingerprint
+and exact unique completed blocks, not byte-identical native aggregate formatting.
+The [safe retry procedure](Installation-and-Workflow#per-record-notes-outcomes-and-safe-retries-beta-18)
+keeps shared Notes/TODO sidecars separate from mod/tracking backup and distribution.
+
 ## Resumable tracking contract (beta 2)
 
 A tracking file is distinct from an AI packet: `Format` is

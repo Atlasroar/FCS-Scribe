@@ -424,34 +424,56 @@ namespace FcsScribe
 
         public void Apply(Packet packet, NoteDraft draft)
         {
+            Apply(packet, draft, null);
+        }
+
+        internal string NotesFile()
+        {
+            EnsureReady();
+            string path = (string)Field(Field(form, "todoList"), "activeFile");
+            if (String.IsNullOrEmpty(path))
+                throw new InvalidOperationException("FCS has not initialized the active notes file. Open FCS Notes, then try again.");
+            return path;
+        }
+
+        internal NoteApplyReport Apply(Packet packet, NoteDraft draft, Action<string> completedRecord)
+        {
             EnsureReady();
             Snapshot current = Capture();
             List<NoteEntry> pending = DraftValidation.Pending(packet, draft, current, Notes);
             object todo = Field(form, "todoList");
-            string notesFile = (string)Field(todo, "activeFile");
-            if (String.IsNullOrEmpty(notesFile))
-                throw new InvalidOperationException("FCS has not initialized the active notes file. Open FCS Notes, then try again.");
+            string notesFile = NotesFile();
             Type noteType = assembly.GetType("forgotten_construction_set.ToDo+NotesItem+Type", true);
-            int applied = 0;
+            var pendingIds = pending.Select(x => x.TargetRecordId).ToList();
+            var skipped = draft.Entries.Select(x => x.TargetRecordId).Except(pendingIds, StringComparer.Ordinal).ToList();
+            var completed = new List<string>();
+            string lastRecord = null, stage = "preparing notes";
             try
             {
                 foreach (NoteEntry entry in pending)
                 {
+                    lastRecord = entry.TargetRecordId; stage = "marking editor dirty";
+                    // A native append may fail after mutation; keep even unconfirmed attempts save-visible.
+                    nav.GetType().GetProperty("HasChanges", Flags).SetValue(nav, true, null);
+                    stage = "appending note";
                     string text = DraftValidation.NoteText(packet.BatchId, entry);
                     Call(todo, "AddItem", Item(entry.TargetRecordId), text, Enum.Parse(noteType, "NOTE"), null, true, false);
-                    applied++;
-                    // AddItem marks new notes dirty, but not its existing-note append branch.
-                    nav.GetType().GetProperty("HasChanges", Flags).SetValue(nav, true, null);
+                    stage = "verifying note";
+                    if (!DraftValidation.AlreadyApplied(packet.BatchId, entry, Notes(entry.TargetRecordId)))
+                        throw new InvalidOperationException("FCS did not return a matching completed note block.");
+                    completed.Add(entry.TargetRecordId);
+                    stage = "reporting completion";
+                    if (completedRecord != null) completedRecord(entry.TargetRecordId);
                 }
+                lastRecord = null; stage = "refreshing Notes list";
                 Call(todo, "UpdateList");
             }
             catch (Exception error)
             {
-                throw new InvalidOperationException("Notes application stopped after " + applied +
-                    " newly completed record(s). FCS may contain partial notes; inspect them before retrying or saving. " +
-                    "Keep the original complete draft: matching completed notes will be skipped on retry. " +
-                    "Nothing was saved by FCS-Scribe.", error);
+                throw new NoteApplyException(new NoteApplyReport(pendingIds, completed, skipped, notesFile),
+                    lastRecord, stage, error);
             }
+            return new NoteApplyReport(pendingIds, completed, skipped, notesFile);
         }
 
         private object Item(string id)

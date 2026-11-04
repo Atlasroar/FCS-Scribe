@@ -58,7 +58,7 @@ output, not the source installation or original mod. Fixtures remain available
 for inspection and can be deleted afterward.
 Settings recovery, compilation scheduling, export protection, tracking/recovery and sampling boundaries each run in a fresh 32-bit process
 to avoid retaining earlier large-model fixture allocations. Add `-SettingsOnly`
-or `-ScheduleOnly`, `-ExportsOnly`, `-RecoveryOnly` or `-SamplingOnly` for one targeted suite (mutually exclusive). PDB-only symbols retain
+or `-ScheduleOnly`, `-ExportsOnly`, `-RecoveryOnly`, `-SamplingOnly` or `-NotesOnly` for one targeted suite (mutually exclusive). PDB-only symbols retain
 useful failure locations without
 full-debug JIT lifetime changes; this does not remove production memory limits.
 
@@ -81,6 +81,16 @@ text, wired Enter/Escape events, an actual LostFocus transition, sampled versus
 unsampled reversals, no forced commit/save and retained UI/packet warnings.
 Key events are raised programmatically, not sent as physical keyboard input;
 other control types and complete interactive acceptance remain unverified.
+
+`-NotesOnly` runs approved-note safety and then a separate cold-reopen host
+process in the same disposable fixture. It uses two Name edits, creates native
+fixture records when fewer than three exist, injects a completion-observer
+failure after one real append, validates per-record/UI reporting and retries,
+checks duplicate markers/inherited TODO/unrelated annotations, and explicitly
+saves/reloads through native FCS. Gameplay is deliberately saved/reloaded before
+export to settle dependency normalization; no fingerprint bypass is used.
+The second process verifies saved blocks and duplicate rejection. This is not
+physical FCS Extended acceptance or a simulated native disk/power failure.
 
 ## Reproduce performance measurements (partial S12)
 

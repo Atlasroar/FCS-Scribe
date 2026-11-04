@@ -56,6 +56,9 @@ moved-mod rejection with an explicit fresh-baseline route, and byte-preserving
 rejection of valid divergent branches. It adds actionable failure guidance,
 not automatic path/history rebinding or journal merging:
 [portability and linear history](Installation-and-Workflow#portability-and-linear-history-beta-17).
+**v0.1.0-beta.18** adds readback-confirmed per-record note outcomes, explicit
+unconfirmed-write reporting, safe retry evidence and approval-time shared
+sidecar guidance: [notes safety](Installation-and-Workflow#per-record-notes-outcomes-and-safe-retries-beta-18).
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).
@@ -353,6 +356,13 @@ requires the same text and ordered citations; line-ending normalization is
 allowed. Conflicting/partial blocks or multiple same-batch markers stop the
 retry for inspection, not silent skipping. Do not remove completed entries
 from the draft or edit identifiers to bypass validation.
+Beta 18's approval names the actual shared notes file and its separate backup/
+distribution boundary. After application, the review area lists newly
+confirmed, previously completed/skipped and unconfirmed record IDs. Confirmation
+requires exact-block readback, not disk persistence. Failures retain the report,
+full draft and packet and identify the last target/stage; zero confirmed records
+does not prove an attempted write left memory untouched. FCS is marked dirty
+before attempting an append. No automatic rollback or Save is introduced.
 
 ## 7. Workshop info: inspect and export local publishing context
 

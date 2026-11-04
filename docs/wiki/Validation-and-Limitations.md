@@ -461,8 +461,49 @@ overlong fixture destination exposed the existing .NET Framework path limit;
 shorter fixture paths passed. No long-path support or silent path fallback was
 added. Equal path strings on another machine do not prove equal data. Native
 identity, loaded/locked guards, hashes, replay, schemas and draft approval
-remain unchanged; only failure guidance is clearer. S09 full acceptance and
-S15/S16 remain open.
+remain unchanged; only failure guidance is clearer. At beta 17, S09 full
+acceptance and S15/S16 remained open.
+
+## S15 partial notes and shared sidecars (beta 18)
+
+664 core checks passed, including six report snapshot/read-only/stage/cause
+and uncertain-write invariants. Complete coverage, stale-state and exact unique
+completed-block retry checks remain in force; confirmation now also uses
+readback after native append.
+
+Copied official-data and representative-mod notes suites each passed **36
+notes-safety checks plus 8 separate cold-process reopen checks**. The small
+representative fixture is augmented with native disposable records when needed;
+this avoids the pre-existing general suite's numeric-field prerequisite, not a
+claim that the general suite now passes.
+
+The tests inject an exception in the completion observer **after one actual
+native append**, before the second target. They verify exact confirmed/
+unconfirmed IDs, original cause/stage, paused-error presentation and unchanged
+full draft, no automatic mod/sidecar save, inherited/existing TODO preservation,
+ambiguous duplicate-marker rejection and a reapproved original-workspace retry
+that skips the completed block byte-for-byte in the current native aggregate.
+The approval includes the actual sidecar path and separate backup/privacy warning;
+changing the destination during approval rejects before either append.
+
+Explicit normal Save and fresh data/notes reload persist the partial result;
+the original batch remains current in the settled fixture. Retry plus explicit
+Save persists both blocks, inherited/category/unrelated annotations, and leaves
+the other-author sidecar hash unchanged. A new native test-host process loads
+the saved mod/notes, finds exactly one completed block per target and rejects
+repeat application without changing mod/sidecar bytes.
+
+Initial unsaved-gameplay fixtures demonstrated dependency normalization after
+native Save/reload staling old fingerprints. Final cases explicitly Save/reload
+gameplay before export; no guard is weakened. Native aggregation formatting can
+also normalize across Save/reload, so exact canonical blocks and preserved
+text are verified, not a promise of byte-identical aggregate formatting across
+native serialization.
+
+No live files were changed. No rollback, auto-save, automatic marker repair or
+reduced-draft/stale-state bypass is introduced. Actual native mid-append I/O,
+every refresh/dirty-set failure, physical power loss and complete interactive
+FCS Extended startup/approval remain unverified. S09 and S16 remain open.
 
 ## Reproduce
 

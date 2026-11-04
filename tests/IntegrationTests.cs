@@ -48,7 +48,8 @@ internal static class IntegrationTests
                 host.BeginInvoke(new Action(delegate {
                     try { result = Run(args.Contains("--settings-recovery"), args.Contains("--schedule"),
                         args.Contains("--exports"), args.Contains("--tracking-recovery"), args.Contains("--sampling"),
-                        args.Contains("--performance")); }
+                        args.Contains("--performance"), args.Contains("--notes-safety") || args.Contains("--notes-reopen"),
+                        args.Contains("--notes-reopen")); }
                     finally { host.Close(); }
                 }));
             };
@@ -58,7 +59,7 @@ internal static class IntegrationTests
     }
 
     private static int Run(bool settingsOnly, bool scheduleOnly, bool exportsOnly, bool recoveryOnly, bool samplingOnly,
-        bool performanceOnly)
+        bool performanceOnly, bool notesOnly, bool notesReopen)
     {
         Form editor = null;
         try
@@ -91,7 +92,7 @@ internal static class IntegrationTests
                     ((IList)FcsAdapter.Field(editor, "activeMods")).Insert(
                         ((IList)FcsAdapter.Field(editor, "activeMods")).Count - 1, name);
                 }
-            File.Copy(Path.Combine(directory, "fixture.mod"), output, true);
+            if (!notesReopen) File.Copy(Path.Combine(directory, "fixture.mod"), output, true);
             Check((bool)FcsAdapter.Call(data, "load", output, Enum.Parse(mode, "ACTIVE"), false, false),
                 "load disposable active mod");
             FcsAdapter.Call(data, "resolveAllReferences");
@@ -100,6 +101,13 @@ internal static class IntegrationTests
             object todo = FcsAdapter.Field(editor, "todoList");
             FcsAdapter.Call(todo, "LoadAll");
             var adapter = new FcsAdapter(assembly, editor);
+            if (notesOnly)
+            {
+                if (notesReopen) CheckNotesReopened(adapter, output);
+                else CheckNotesSafetyWindow(adapter, editor, assembly, output);
+                Console.WriteLine("PASS: " + passed + (notesReopen ? " cold-process notes reopen checks" : " notes safety integration checks"));
+                return 0;
+            }
             if (performanceOnly)
             {
                 PerformanceTests.Native(adapter.Capture, directory, Environment.GetEnvironmentVariable("FCS_SCRIBE_PROFILE_SOURCE"),
@@ -1234,6 +1242,181 @@ internal static class IntegrationTests
         using (var copied = JournalProject.Open(Path.Combine(backup, "mods", Path.GetFileName(path))))
             Check(copied.EntryCount == 3 && copied.PendingCount == 0 &&
                 copied.Fingerprint == adapter.Capture().Fingerprint(), "the complete copied tracking set replays the saved state without mod restoration");
+    }
+
+    private static void CheckNotesSafetyWindow(FcsAdapter adapter, Form editor, Assembly assembly, string modPath)
+    {
+        string directory = Directory.GetCurrentDirectory();
+        object nav = FcsAdapter.Field(editor, "nav"), todo = FcsAdapter.Field(editor, "todoList");
+        object data = FcsAdapter.Field(FcsAdapter.Field(nav, "ou"), "gameData");
+        var records = (IDictionary)FcsAdapter.Field(data, "items");
+        while (adapter.Capture().Records.Count < 3)
+        {
+            object created = FcsAdapter.Call(data, "createItem", FcsAdapter.Property(records.Values.Cast<object>().First(), "type"));
+            Set(created, "Name", "S15 disposable fixture record");
+        }
+        var ids = adapter.Capture().Records.Select(x => x.Id).OrderBy(x => x, StringComparer.Ordinal).Take(3).ToList();
+        Check(ids.Count == 3, "notes-only fixtures contain three native records, creating disposable records when needed");
+        Type noteType = assembly.GetType("forgotten_construction_set.ToDo+NotesItem+Type", true);
+        string notesFile = adapter.NotesFile();
+        string inheritedFile = Path.Combine(directory, "data", "__TODO__scribe-s15-other.txt");
+        FcsAdapter.Call(todo, "AddItem", records[ids[0]], "S15 inherited TODO.", Enum.Parse(noteType, "TODO"), null, false, false);
+        FcsAdapter.Call(todo, "AddItem", records[ids[2]], "S15 unrelated shared-file annotation.",
+            Enum.Parse(noteType, "NOTE"), null, false, false);
+        Put(todo, "activeFile", inheritedFile);
+        try { FcsAdapter.Call(todo, "SaveData"); }
+        finally { Put(todo, "activeFile", notesFile); }
+        FcsAdapter.Call(todo, "LoadAll");
+        FcsAdapter.Call(todo, "AddItem", records[ids[0]], "S15 existing TODO.", Enum.Parse(noteType, "TODO"), null, true, false);
+        Set(nav, "HasChanges", true);
+        Check((bool)FcsAdapter.Call(editor, "saveFile"), "explicit initial native Save normalizes dependencies and existing notes");
+        adapter = ReopenRecoveryModel(editor, assembly, modPath);
+        FcsAdapter.Call(todo, "LoadAll");
+        data = FcsAdapter.Field(FcsAdapter.Field(nav, "ou"), "gameData");
+        records = (IDictionary)FcsAdapter.Field(data, "items");
+        string inheritedHash = TrackingStorage.HashFile(inheritedFile);
+        Snapshot initial = adapter.Capture();
+        foreach (string id in ids.Take(2))
+            Set(records[id], "Name", (string)FcsAdapter.Property(records[id], "Name") + " S15");
+        Set(nav, "HasChanges", true);
+        Check((bool)FcsAdapter.Call(editor, "saveFile"), "explicit Save settles gameplay/dependency metadata before exporting notes evidence");
+        adapter = ReopenRecoveryModel(editor, assembly, modPath);
+        FcsAdapter.Call(todo, "LoadAll");
+        Snapshot documented = adapter.Capture();
+        Packet packet = new Tracker(initial).Export(documented);
+        NoteDraft draft = Json.Read<NoteDraft>(Json.Write(packet.ResponseTemplate));
+        foreach (NoteEntry entry in draft.Entries) entry.Text = "S15 approved prose for " + entry.TargetRecordId + ".";
+        Check(draft.Entries.Count == 2, "native notes fixture uses two Name edits without a numeric-field prerequisite");
+        string first = draft.Entries[0].TargetRecordId, second = draft.Entries[1].TargetRecordId;
+        string firstBefore = adapter.Notes(first), secondBefore = adapter.Notes(second);
+        string savedModHash = TrackingStorage.HashFile(modPath);
+        var diskNotes = Directory.GetFiles(Path.Combine(directory, "data"), "__TODO__*.txt")
+            .ToDictionary(x => x, TrackingStorage.HashFile);
+        string settings = Path.Combine(directory, "notes-settings.json"), workspace = Path.Combine(directory, "notes-workspace.json");
+        using (var window = new ScribeWindow(adapter, editor, settings))
+        {
+            FcsAdapter.Call(window, "ShowChanges", packet);
+            Put(window, "exported", packet);
+            ((TextBox)FcsAdapter.Field(window, "draft")).Text = Json.Write(draft);
+            string approval = null;
+            Put(window, "notesDecision", new Func<string, DialogResult>(message => { approval = message; return DialogResult.No; }));
+            FcsAdapter.Call(window, "Apply");
+            Check(approval != null && approval.Contains(notesFile) && approval.Contains(NoteApplyReport.SidecarNotice) &&
+                approval.Contains("2 pending note(s)"), "real approval workflow names the active shared sidecar and backup/distribution boundary");
+            Check(adapter.Notes(first) == firstBefore && adapter.Notes(second) == secondBefore,
+                "declining approval leaves both native notes unchanged");
+            bool destinationRejected = false;
+            Put(window, "notesDecision", new Func<string, DialogResult>(message => {
+                Put(todo, "activeFile", inheritedFile); return DialogResult.Yes;
+            }));
+            try { FcsAdapter.Call(window, "Apply"); }
+            catch (TargetInvocationException error)
+            {
+                destinationRejected = error.InnerException is InvalidOperationException &&
+                    error.InnerException.Message.Contains("notes file changed during approval");
+            }
+            finally { Put(todo, "activeFile", notesFile); }
+            Check(destinationRejected && adapter.Notes(first) == firstBefore && adapter.Notes(second) == secondBefore,
+                "changing the notes destination during approval rejects before either append");
+            NoteApplyException stopped = null;
+            try
+            {
+                adapter.Apply(packet, draft, id => { throw new IOException("Injected stop between confirmed record one and record two."); });
+            }
+            catch (NoteApplyException error) { stopped = error; }
+            Check(stopped != null && stopped.InnerException is IOException && stopped.Stage == "reporting completion" &&
+                stopped.LastRecordId == first && stopped.Report.CompletedRecordIds.SequenceEqual(new[] { first }) &&
+                stopped.Report.UnconfirmedRecordIds.SequenceEqual(new[] { second }) && stopped.Report.SkippedRecordIds.Count == 0,
+                "an injected boundary failure after a real native append reports exact completed/unconfirmed targets and cause");
+            Check(adapter.Notes(first).Contains(DraftValidation.NoteText(packet.BatchId, draft.Entries[0]).Trim()) &&
+                adapter.Notes(second) == secondBefore && (bool)FcsAdapter.Property(nav, "HasChanges"),
+                "partial application retains the completed native note, untouched next target and dirty state");
+            Check(TrackingStorage.HashFile(modPath) == savedModHash && diskNotes.All(x => TrackingStorage.HashFile(x.Key) == x.Value) &&
+                diskNotes.Count == Directory.GetFiles(Path.Combine(directory, "data"), "__TODO__*.txt").Length,
+                "partial application never saves mod or shared notes files");
+            FcsAdapter.Call(window, "SetActionFailure", true);
+            FcsAdapter.Call(window, "ShowNoteFailure", stopped);
+            Check(((TextBox)FcsAdapter.Field(window, "review")).Text.Contains(first) &&
+                ((TextBox)FcsAdapter.Field(window, "review")).Text.Contains(second) &&
+                ((Label)FcsAdapter.Field(window, "status")).Text.Contains("unconfirmed: 1") &&
+                (bool)FcsAdapter.Field(window, "automaticPaused") &&
+                ((TextBox)FcsAdapter.Field(window, "draft")).Text == Json.Write(draft),
+                "partial-failure presentation retains per-record details, paused automation and the complete original draft");
+            RunWindow(window, "SaveWorkspacePath", workspace);
+        }
+        string partialFirst = adapter.Notes(first);
+        Check((bool)FcsAdapter.Call(editor, "saveFile"), "only an explicit normal Save persists the inspected partial notes");
+        string partialModHash = TrackingStorage.HashFile(modPath);
+        adapter = ReopenRecoveryModel(editor, assembly, modPath);
+        FcsAdapter.Call(todo, "LoadAll");
+        Snapshot reloadedNotes = adapter.Capture();
+        Check(reloadedNotes.Fingerprint() == packet.SourceFingerprint,
+            "fresh native model/notes reload keeps the original batch current");
+        Check(adapter.Notes(first).Contains("S15 inherited TODO.") && adapter.Notes(first).Contains("S15 existing TODO.") &&
+            adapter.Notes(first).Split(new[] { DraftValidation.Marker(packet.BatchId) }, StringSplitOptions.None).Length == 2,
+            "native Save/reload retains existing/inherited text and exactly one completed marker despite formatting normalization");
+        partialFirst = adapter.Notes(first);
+        Check(adapter.Notes(second) == secondBefore,
+            "fresh native notes reload preserves the untouched target bytes");
+        Check(DraftValidation.Pending(packet, draft, adapter.Capture(), adapter.Notes).Single().TargetRecordId == second,
+            "the original complete draft skips only the exact persisted completed block after restart");
+        object resumedData = FcsAdapter.Field(FcsAdapter.Field(nav, "ou"), "gameData");
+        FcsAdapter.Call(todo, "AddItem", ((IDictionary)FcsAdapter.Field(resumedData, "items"))[first],
+            DraftValidation.NoteText(packet.BatchId, draft.Entries[0]), Enum.Parse(noteType, "NOTE"), null, true, false);
+        string ambiguous = adapter.Notes(first);
+        Reject<InvalidOperationException>(() => adapter.Apply(packet, draft), "duplicate native batch markers reject an ambiguous retry before the pending target");
+        Check(adapter.Notes(first) == ambiguous && adapter.Notes(second) == secondBefore &&
+            TrackingStorage.HashFile(modPath) == partialModHash && TrackingStorage.HashFile(inheritedFile) == inheritedHash,
+            "ambiguous retry preserves both notes and saved mod/other-author sidecar bytes");
+        FcsAdapter.Call(todo, "LoadAll");
+        Check(adapter.Notes(first) == partialFirst, "discarding the deliberately injected unsaved duplicate reloads the exact saved completed note");
+        using (var window = new ScribeWindow(adapter, editor, settings))
+        {
+            RunWindow(window, "OpenWorkspacePath", workspace);
+            string approval = null;
+            Put(window, "notesDecision", new Func<string, DialogResult>(message => { approval = message; return DialogResult.Yes; }));
+            FcsAdapter.Call(window, "Apply");
+            Check(approval.Contains("1 pending note(s)") && approval.Contains("1 matching completed") &&
+                adapter.Notes(first) == partialFirst && adapter.Notes(second).Contains("S15 approved prose"),
+                "reapproved workspace retry skips the persisted completed target and appends only the pending one");
+            Check(((Label)FcsAdapter.Field(window, "status")).Text.Contains("previously completed/skipped: 1") &&
+                ((TextBox)FcsAdapter.Field(window, "review")).Text.Contains("unconfirmed: 0"),
+                "successful UI retry reports new/skipped outcomes without claiming a save");
+            Reject<InvalidOperationException>(() => adapter.Apply(packet, draft), "fully completed batches still reject repeat application");
+        }
+        Check((bool)FcsAdapter.Call(editor, "saveFile"), "explicit final native Save persists the retry");
+        adapter = ReopenRecoveryModel(editor, assembly, modPath);
+        FcsAdapter.Call(todo, "LoadAll");
+        Check(adapter.Notes(first) == partialFirst && adapter.Notes(second).Contains("S15 approved prose") &&
+            adapter.Notes(first).Contains("S15 inherited TODO.") && adapter.Notes(first).Contains("S15 existing TODO."),
+            "normal Save/fresh reload retains retry results and inherited/existing notes");
+        Check(TrackingStorage.HashFile(inheritedFile) == inheritedHash &&
+            adapter.Notes(ids[2]).Contains("S15 unrelated shared-file annotation."),
+            "the other-author sidecar and unrelated shared annotation remain unchanged");
+        Check(FcsAdapter.Field(((IDictionary)FcsAdapter.Field(todo, "items"))[first], "type").ToString() == "TODO" &&
+            !(bool)FcsAdapter.Property(nav, "HasChanges"), "retry preserves TODO category and only normal Save/reload clears dirty state");
+    }
+
+    private static void CheckNotesReopened(FcsAdapter adapter, string modPath)
+    {
+        var workspace = DraftWorkspace.Load(Path.Combine(Directory.GetCurrentDirectory(), "notes-workspace.json"));
+        NoteDraft draft = Json.Read<NoteDraft>(workspace.DraftText);
+        Check(adapter.Capture().Fingerprint() == workspace.Packet.SourceFingerprint,
+            "a new native host process loads the saved gameplay under the original packet fingerprint");
+        foreach (NoteEntry entry in draft.Entries)
+            Check(adapter.Notes(entry.TargetRecordId).Split(new[] { DraftValidation.Marker(workspace.Packet.BatchId) },
+                StringSplitOptions.None).Length == 2 && adapter.Notes(entry.TargetRecordId).Contains(entry.Text),
+                "cold-process notes reload retains exactly one completed block per target");
+        string first = draft.Entries[0].TargetRecordId;
+        Check(adapter.Notes(first).Contains("S15 inherited TODO.") && adapter.Notes(first).Contains("S15 existing TODO."),
+            "cold-process reload preserves inherited/existing notes");
+        string modHash = TrackingStorage.HashFile(modPath);
+        var hashes = Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "data"), "__TODO__*.txt")
+            .ToDictionary(x => x, TrackingStorage.HashFile);
+        Reject<InvalidOperationException>(() => adapter.Apply(workspace.Packet, draft),
+            "cold-process retry still rejects an already fully completed batch");
+        Check(TrackingStorage.HashFile(modPath) == modHash && hashes.All(x => TrackingStorage.HashFile(x.Key) == x.Value),
+            "cold-process duplicate rejection does not save or change sidecars");
     }
 
     private static void CheckPortabilityWindow(FcsAdapter adapter, Form editor, Assembly assembly, string modPath)

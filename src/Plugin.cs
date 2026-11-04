@@ -85,6 +85,7 @@ namespace FcsScribe
         private long? approvedCloseRevision;
         private readonly Func<string, DialogResult> draftDecision;
         private readonly Func<Packet, DialogResult> resumeDecision;
+        private readonly Func<string, DialogResult> notesDecision;
         private readonly TextBox review = TextArea(true);
         private readonly TextBox draft = TextArea(false);
         private readonly TextBox workshop = TextArea(true);
@@ -112,6 +113,8 @@ namespace FcsScribe
                 "Yes: save a portable draft workspace. No: discard this window's unsaved work. Cancel: keep working.\r\n" +
                 "Tracking journals do not back up draft text. A saved workspace never saves the mod.",
                 "Unsaved draft workspace", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+            notesDecision = message => MessageBox.Show(this, message, "Approve notes",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
             resumeDecision = pending => MessageBox.Show(this, ResumeMessage(pending),
                 "Confirm resumed state", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
             settingsPath = settingsFile;
@@ -649,16 +652,28 @@ namespace FcsScribe
             NoteDraft notes = Json.Read<NoteDraft>(draft.Text);
             Snapshot current = adapter.Capture();
             var pending = DraftValidation.Pending(exported, notes, current, adapter.Notes);
-            if (MessageBox.Show(this, WorkshopNotice(current.Workshop) + "The complete draft covers all " + exported.Changes.Count +
+            string notesFile = adapter.NotesFile();
+            string approval = WorkshopNotice(current.Workshop) + "The complete draft covers all " + exported.Changes.Count +
                 " exported changes. Approve appending " + pending.Count + " pending note(s) to FCS? " +
                 (notes.Entries.Count - pending.Count) + " matching completed note(s) will be skipped. " +
                 "Existing notes are retained. The mod will be marked changed, but NOT saved. " +
-                "Multi-record application is not transactional; inspect FCS Notes afterward.",
-                "Approve notes", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-            adapter.Apply(exported, notes);
-            status.Text = WorkshopNotice(current.Workshop) +
-                "Approved pending notes appended in FCS; matching completed notes were not duplicated. " +
-                "Inspect FCS Notes and use FCS's normal Save when ready. Baseline unchanged.";
+                "Multi-record application is not transactional; inspect FCS Notes afterward.\r\n\r\n" +
+                "Active notes file: " + notesFile + "\r\n" + NoteApplyReport.SidecarNotice;
+            if (notesDecision(approval) != DialogResult.Yes) return;
+            if (!String.Equals(adapter.NotesFile(), notesFile, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("The active notes file changed during approval. Review the destination and approve again.");
+            NoteApplyReport result = adapter.Apply(exported, notes, id => {
+                status.Text = "Confirmed note append: " + id + ". Not saved; remaining targets are not yet confirmed.";
+                status.Refresh();
+            });
+            review.Text = result.Details;
+            status.Text = result.Summary + " Inspect FCS Notes and use normal Save when ready. Baseline unchanged; NOT saved.";
+        }
+
+        private void ShowNoteFailure(NoteApplyException error)
+        {
+            review.Text = error.Message + "\r\n\r\n" + error.Report.Details;
+            status.Text = error.Report.Summary + " Notes may be partial; automatic work paused. Inspect the per-record report. NOT saved.";
         }
 
         private static TextBox TextArea(bool readOnly)
@@ -842,6 +857,8 @@ namespace FcsScribe
                 {
                     if (closing) return;
                     SetActionFailure(pauseAutomation);
+                    var notesError = error as NoteApplyException;
+                    if (notesError != null) ShowNoteFailure(notesError);
                     Plugin.ShowError(error);
                 }
             };
