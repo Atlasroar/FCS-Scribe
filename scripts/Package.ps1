@@ -22,7 +22,7 @@ New-Item -ItemType Directory -Force -Path $payload | Out-Null
 foreach ($file in @('FCS-Scribe.dll', 'FCS_extended.json')) {
     Copy-Item -LiteralPath (Join-Path $root ('build\FCS-Scribe\' + $file)) -Destination $payload
 }
-foreach ($file in @('README.md', 'LICENSE')) {
+foreach ($file in @('README.md', 'LICENSE', 'SECURITY.md')) {
     Copy-Item -LiteralPath (Join-Path $root $file) -Destination $payload
 }
 Copy-Item -LiteralPath (Join-Path $root 'docs') -Destination (Join-Path $payload 'docs') -Recurse

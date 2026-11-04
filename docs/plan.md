@@ -267,9 +267,25 @@ These results do not trigger a new beta or close the remaining support work.
 
 ### S10. Support boundary: tracking is not mod recovery
 
-- [ ] Make recorded state versus saved mod state unmistakable in start/resume/status/recovery guidance.
-- [ ] Exercise crash/discard discrepancies and confirm that continuing records differences rather than silently restoring or saving the mod.
-- [ ] Document a practical mod-and-notes backup workflow without adding an unverified binary writer or restoration feature.
+- [x] Make recorded state versus saved mod state unmistakable in start/resume/status/recovery guidance.
+- [x] Exercise crash/discard discrepancies and confirm that continuing records differences rather than silently restoring or saving the mod.
+- [x] Document a practical mod-and-notes backup workflow without adding an unverified binary writer or restoration feature.
+
+S10 is addressed in beta 12 as a verified support boundary. A persistent
+wrapping notice and shared chooser/discrepancy guidance distinguish recorded
+editor state (including unsaved edits) from unverified saved mod/notes state.
+Status identifies last-recorded UTC; history repair is explicitly not mod
+recovery. The private backup guide separates mod folders, native shared notes,
+complete tracking storage and draft workspaces.
+
+Recorded checks: 593 core, plugin build, and 94 isolated recovery-boundary
+checks each on vanilla and representative disposable copies. Actual native
+reload simulates discarded/lost unsaved edits; injected Resume No/Yes choices
+verify unchanged files, reversal recording and saved state ahead of history.
+Normal FCS save/reload and byte-identical complete backup/replay are covered.
+This does not force physical power/process failure or claim complete native
+dialog/backup-restoration/relocation acceptance. The user explicitly selected
+S10 while leaving S09's earlier untested boundaries open. S11 is next.
 
 ### S11. Support boundary: partial capture and interval sampling
 
@@ -534,14 +550,14 @@ saved-data backend where it has passed cross-validation.
 
 ## Remaining delivery scope
 
-The grouped-menu cleanup and S01-S08 have shipped. The bounded S09 physical
+The grouped-menu cleanup and S01-S08 have shipped; beta 12 addresses S10's
+tracking-versus-recovery support boundary. The bounded S09 physical
 pass is recorded, not silently promoted to full acceptance. The remaining
 stabilization work is distinct from new feature expansion:
 
 | Item | Remaining deliverable |
 |---|---|
 | S09: acceptance | Retain the completed evidence and explicit untested exceptions; resolve or explicitly agree the remaining support scope before closing the gate. |
-| S10: tracking versus recovery | Make recorded state, saved mods and shared notes unmistakably distinct; verify discrepancy behavior and provide a practical backup workflow without a mod-restoration feature. |
 | S11: partial capture | Publish a supported/omitted-state matrix, explain sampling/reversals and verify more control-commit routes without removing partial-extraction warnings. |
 | S12: performance | Measure realistic capture/history latency and 32-bit memory use, define budgets and optimize without weakening integrity checks. |
 | S13: storage/distribution | Validate complete backup/restore and safe compiled-session archival; make pre-upload privacy and missing-file risks clear without automatic pruning. |
@@ -564,7 +580,7 @@ in this table.
 ## Working order
 
 1. Keep S09 results and remaining exceptions explicit; untested is not passed, and the gate remains open until its support scope is explicitly accepted.
-2. Address the remaining S10-S16 stabilization items in order, one independently scoped issue at a time, retaining regression evidence and accepted support boundaries. Each addressed issue follows the requested PR, merge and beta-release cycle.
+2. With S10 addressed in beta 12, address the remaining S11-S16 stabilization items in order, one independently scoped issue at a time, retaining regression evidence and accepted support boundaries. Each addressed issue follows the requested PR, merge and beta-release cycle.
 3. Close the stabilization/MVP acceptance gate and any exposed issues before implementing new feature expansion.
 4. Then scope OCS design, broader session history and Markdown independently. Markdown/history do not inherently require OCS; do not couple them to a new runtime without a concrete requirement.
 5. Validate dependency provenance before wiki-ready exports. Direct AI remains optional and requires an explicit provider/credential/consent decision.

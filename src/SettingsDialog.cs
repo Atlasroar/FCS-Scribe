@@ -145,6 +145,9 @@ namespace FcsScribe
 
     internal sealed class TrackingChoiceDialog : Form
     {
+        internal const string BoundaryText = "Tracking records captured editor state, including UNSAVED edits. " +
+            "The saved .mod/Notes state is NOT verified. Resume never restores or saves the mod or notes. " +
+            "Back up the .mod and Notes/TODO files separately.";
         public bool Resume { get; private set; }
         public TrackingChoiceDialog()
         {
@@ -154,7 +157,9 @@ namespace FcsScribe
             var layout = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(12),
                 FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true };
             layout.Controls.Add(new Label { AutoSize = true, MaximumSize = new System.Drawing.Size(590, 0),
-                Text = "Create a project baseline or resume its tracking JSON. Every start/resume opens a new timestamped session log in <project>.json.scribe\\sessions. Recordings contain only changed records/context and are durable before compilation. Keep the baseline and uncompiled session files together; nothing is automatically deleted. This is NOT a saved-mod backup. Replacing this session clears the editable draft. All tracking files may be private: do not include them in AI handoffs or Workshop uploads; use compact AI exports." });
+                Text = "New captures the CURRENT editor as a baseline, not the last saved .mod. Resume validates recorded history, then compares it with the current editor. Every start/resume opens a timestamped session in <project>.json.scribe\\sessions. Keep the baseline and matching storage together; compilation never deletes originals. Replacing this session uses draft save/discard protection. Tracking files may be private: do not include them in AI handoffs or Workshop uploads; use compact AI exports." });
+            layout.Controls.Add(new Label { AutoSize = true, MaximumSize = new System.Drawing.Size(590, 0),
+                Text = BoundaryText });
             var create = new Button { Text = "New tracking JSON", AutoSize = true };
             var resume = new Button { Text = "Resume existing JSON", AutoSize = true };
             var cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, AutoSize = true };

@@ -178,6 +178,73 @@ not advance tracking or compile history. Ranges preserve repeated edits and
 reversals rather than calculating a net diff. Overlapping ranges may document
 the same observations again; check existing notes and citations before approval.
 
+## Recorded state, saved mods and backups (beta 12)
+
+**A successful recording is not a successful FCS Save.** The persistent Scribe
+notice and Start/Resume chooser distinguish captured editor state, including
+unsaved edits, from saved `.mod` and Notes/TODO files. Project status names the
+last recorded UTC, not the last successful FCS save; the latter is **not
+verified** by tracking.
+
+| Action/data | What it preserves or changes | What it does not do |
+|---|---|---|
+| New tracking baseline / Review / automatic recording | Observed supported editor state and durable evidence | Save or restore the `.mod`, assets or notes sidecars |
+| Resume | Validate/replay tracking history and compare it with the current editor | Put recorded values back into FCS or roll back the saved mod |
+| Compile journal / interrupted-tail recovery | Consolidate or explicitly repair tracking storage | Recover lost unsaved gameplay/notes or perform FCS Save |
+| Apply approved notes | Append reviewed notes in memory and mark FCS dirty | Persist them to disk or create a complete mod backup |
+| Save workspace | Preserve editable draft text and its original packet | Save gameplay, apply notes or resume tracking |
+| Normal FCS Save | Use the editor's native save workflow for the mod/notes | Advance or compile Scribe history or prove every save target succeeded |
+
+A recording can be **ahead of the saved mod**: you record a rename but close
+without saving, or the editor crashes before normal Save. Reopening loads the
+old saved name; Resume detects the difference. **No** declines this tracking
+session. **Yes** keeps the current editor unchanged; the next manual or
+eligible automatic review records the reversal as a new observation, without
+rewriting the earlier entry. Nothing restores the lost rename.
+
+The saved mod can also be **ahead of tracking**: you save an edit after the
+last recording. Resume still keeps the current editor; review records that
+difference. Zero gameplay evidence can indicate context-only changes rather
+than an identical fingerprint. Inspect the discrepancy before accepting it.
+Neither Yes nor No saves the mod/notes.
+
+### Practical private backup workflow
+
+1. Decide what should survive. Finish committing fields, inspect pending notes
+   and explicitly use normal **FCS Save** if you want those edits on disk.
+   Resolve save errors; do not infer success from Review, Compile, Apply or a
+   closed dialog. Save unfinished draft workspaces separately.
+2. Close Scribe and **all FCS instances** and wait for pending work to finish.
+   Do not copy a project while a writer is active, delete its lock to force
+   access, or force-close the editor as a backup method.
+3. Make one timestamped private backup **outside Kenshi/mods and Workshop upload
+   staging**, keeping these components together:
+
+   | Component | Include |
+   |---|---|
+   | Actual mod | The complete mod folder, including its `.mod`, assets and local supporting files; record required dependency versions/load order |
+   | FCS Notes/TODO | The relevant complete `data\__TODO__<user>.txt` sidecars, including contributing authors' files when needed; these can contain unrelated mods' annotations |
+   | Tracking, wherever selected | The baseline JSON and entire matching `.json.scribe` folder, including marker, journal, retained sessions and recovery originals; retain associated `.bak`/`.legacy.bak` files when present |
+   | Drafts | Explicitly saved workspace JSONs and desired previous-file backups; they may be outside the mod folder |
+   | Settings, if wanted | `%LOCALAPPDATA%\FCS-Scribe\settings.json` and any repair originals you need; settings do not substitute for the project or mod |
+
+4. Record original locations, the plugin/editor versions and backup time.
+   Check file counts/sizes and preferably SHA-256 hashes against the closed
+   originals. Keep more than one known-good backup. A coherent copy can still
+   contain intentionally different recorded and saved states.
+5. To restore, first preserve the current files separately, with FCS closed.
+   Restore a matching set to its original locations; do not merge journals,
+   mix sidecars from different histories, alter identity hashes or assume a
+   moved mod is compatible. Reopen normally and inspect saved gameplay and
+   target notes before resuming the matching tracking project. A discrepancy
+   is a comparison to inspect, not a command to restore recorded values.
+
+This is a manual backup workflow, not a new restoration tool, relocation
+guarantee or power-loss-safe snapshot service. The tracking catalogue cannot
+reconstruct excluded assets/buffers. Do not distribute private backups or an
+entire shared notes file with a mod; redistribution permissions and S13/S14's
+broader archival/portability work remain separate.
+
 ## Capture Workshop information and the preview
 
 Open the active mod's FCS **Steam Workshop** window to make its staged values
@@ -314,6 +381,7 @@ before applying an older draft.
 Resume replays the main journal and uncompiled sessions. Differences from the
 current editor require confirmation because they may be lost/discarded unsaved
 edits. Tracking is **not a `.mod` backup** and does not restore lost mod changes.
+See [recorded versus saved state and private backups](#recorded-state-saved-mods-and-backups-beta-12).
 
 Multi-record application is not transactional. If an error reports partial
 notes, inspect them before retrying or saving. Do not infer safety from a zero

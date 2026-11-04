@@ -118,6 +118,32 @@ content at its backup path. These checks do not drive every native file dialog,
 enumerate physical filesystem aliases, establish a universal race lock or
 simulate physical power loss.
 
+## S10 recorded-versus-saved boundary: beta 12
+
+The existing **593 core checks** and plugin build passed. The isolated
+`-RecoveryOnly` suite passed **94 checks on copied vanilla data and 94 on the
+representative test mod**. These include the persistent notice, shared
+Start/Resume guidance and narrow-window wrapping/menu help, plus:
+
+- Record a real unsaved FCS rename, close tracking without saving, then reload
+  the original saved mod through FCS's native data loader.
+- Exercise the actual asynchronous Resume path with injected No/Yes decisions:
+  No keeps every history byte and creates no session; Yes leaves the saved
+  editor unchanged until Review records the reversal. Compile retains both
+  observations rather than rewriting the original.
+- Explicitly save a different edit and note through normal FCS Save, reload,
+  then Resume/Review/Compile against older compiled history without a further
+  save, restoration, dirty-state change or mod/notes file rewrite.
+- Copy the saved mod, native notes sidecars, full baseline and complete tracking
+  folder byte-for-byte, then validate/replay the copied tracking set.
+
+Native methods, persistence and window paths are real, but the post-crash
+state is simulated by discarding the in-memory model and reloading saved files.
+No live installation/test-mod/notes files were modified. This does not force
+an actual process/power failure, drive every native dialog through the complete
+FCS Extended application, test arbitrary backup restoration/relocation, or
+close S09/S13/S14. Saved state is deliberately **not inferred** from tracking.
+
 ## Reproduce
 
 See [Building and releases](Building-and-Releases#run-checks-and-inspect-the-supported-build)

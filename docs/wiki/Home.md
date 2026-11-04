@@ -41,7 +41,7 @@ release decisions, and AI-generated record notes require human approval.
 
 ## Current status
 
-The current [v0.1.0-beta.11 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.11)
+The current [v0.1.0-beta.12 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.12)
 remains experimental and restricted to the inspected Steam FCS 2.14.2 executable
 hash. It includes local Workshop metadata, preview-image archiving, embedded
 MDI hosting and contextual action help alongside change documentation.
@@ -91,7 +91,11 @@ Beta 11 closes S08: AI/Workshop exports and draft workspace saves protect
 recognized inactive tracking anchors, backups and reserved storage, even with
 no project open. Unreadable or malformed existing destinations require a
 different filename; valid existing AI/Workshop exports remain replaceable.
-S09-S16 remain open; these fixes do not close full interactive acceptance.
+Beta 12 addresses S10: a persistent recorded-versus-saved-state notice,
+last-recorded UTC status and clearer Start/Resume/recovery decisions make the
+no-mod-restoration boundary explicit. The guide provides a separate private
+mod/notes/tracking backup workflow.
+S09 and S11-S16 remain open; these fixes do not close full interactive acceptance.
 
 **FCS notes are per-record editor-side annotations**, stored in
 `data\__TODO__<user>.txt`, not inside the mod file. Distributing only a `.mod`

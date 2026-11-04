@@ -56,9 +56,9 @@ WinForms message loop without launching FCS's complete startup/mod-selector
 workflow. It exercises in-memory edits and normal save/reopen on disposable
 output, not the source installation or original mod. Fixtures remain available
 for inspection and can be deleted afterward.
-Settings recovery, compilation scheduling and export protection each run in a fresh 32-bit process
+Settings recovery, compilation scheduling, export protection and tracking/recovery boundaries each run in a fresh 32-bit process
 to avoid retaining earlier large-model fixture allocations. Add `-SettingsOnly`
-or `-ScheduleOnly` or `-ExportsOnly` for one targeted suite (mutually exclusive). PDB-only symbols retain
+or `-ScheduleOnly`, `-ExportsOnly` or `-RecoveryOnly` for one targeted suite (mutually exclusive). PDB-only symbols retain
 useful failure locations without
 full-debug JIT lifetime changes; this does not remove production memory limits.
 
@@ -69,6 +69,12 @@ this repository does not redistribute them.
 See [Validation and limitations](Validation-and-Limitations) for recorded
 results, coverage boundaries and the manual interactive acceptance gate.
 Passing the standalone checks does not establish full FCS Extended acceptance.
+
+`-RecoveryOnly` covers the persistent boundary UI, real unsaved edits discarded
+by native saved-model reload, Resume No/Yes, new reversal recordings,
+saved-but-unrecorded edits and exact private backup copies/replay. It injects
+the discrepancy decision at the window boundary instead of clicking a native
+dialog, and does not force a process crash or simulate physical power loss.
 
 ## Repository security automation
 
@@ -105,7 +111,7 @@ The version comes from the plugin's assembly metadata, and the package records
 the exact source commit. Packaging does not publish or install anything.
 
 Release archives contain the `FCS-Scribe` folder with this project's plugin,
-`FCS_extended.json`, README, documentation, GPL-3.0 license and `release.json`.
+`FCS_extended.json`, README, security policy, documentation, GPL-3.0 license and `release.json`.
 No Kenshi, FCS or upstream FCS Extended binaries are bundled.
 
 Download published assets from
