@@ -41,7 +41,7 @@ release decisions, and AI-generated record notes require human approval.
 
 ## Current status
 
-The current [v0.1.0-beta.18 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.18)
+The current [v0.1.0-beta.19 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.19)
 remains experimental and restricted to the inspected Steam FCS 2.14.2 executable
 hash. It includes local Workshop metadata, preview-image archiving, embedded
 MDI hosting and contextual action help alongside change documentation.
@@ -127,7 +127,11 @@ relocation/rebinding or journal merging is added.
 Beta 18 adds [per-record note outcomes and shared-sidecar safety](Installation-and-Workflow#per-record-notes-outcomes-and-safe-retries-beta-18):
 readback confirmation, explicit unconfirmed writes and original-draft retries
 with native Save/cold-test-process evidence. No rollback or automatic save.
-S09 and S16 remain open; these changes do not close full interactive acceptance.
+Beta 19 documents the [verified compatibility/provenance matrix](Validation-and-Limitations#s16-compatibility-and-provenance-matrix-beta-19)
+and exercises copied dependency stacks/controlled locked overlays without
+inventing field ownership or published Steam truth. The executable guard and
+runtime behavior are unchanged. S09 remains open; bounded S10-S16 work does not
+close full interactive acceptance or authorize new feature expansion.
 
 **FCS notes are per-record editor-side annotations**, stored in
 `data\__TODO__<user>.txt`, not inside the mod file. Distributing only a `.mod`

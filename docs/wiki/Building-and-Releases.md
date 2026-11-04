@@ -58,7 +58,8 @@ output, not the source installation or original mod. Fixtures remain available
 for inspection and can be deleted afterward.
 Settings recovery, compilation scheduling, export protection, tracking/recovery and sampling boundaries each run in a fresh 32-bit process
 to avoid retaining earlier large-model fixture allocations. Add `-SettingsOnly`
-or `-ScheduleOnly`, `-ExportsOnly`, `-RecoveryOnly`, `-SamplingOnly` or `-NotesOnly` for one targeted suite (mutually exclusive). PDB-only symbols retain
+or `-ScheduleOnly`, `-ExportsOnly`, `-RecoveryOnly`, `-SamplingOnly`, `-NotesOnly`
+or `-CompatibilityOnly` for one targeted suite (mutually exclusive). PDB-only symbols retain
 useful failure locations without
 full-debug JIT lifetime changes; this does not remove production memory limits.
 
@@ -92,6 +93,26 @@ export to settle dependency normalization; no fingerprint bypass is used.
 The second process verifies saved blocks and duplicate rejection. This is not
 physical FCS Extended acceptance or a simulated native disk/power failure.
 
+`-CompatibilityOnly` runs executable/mode/session/context/source-label guards,
+then the existing Workshop provenance/failure-isolation suite in a separate
+fresh process. The default combined run also includes the compatibility host;
+its normal first host already exercises Workshop.
+
+```powershell
+.\scripts\Integration-Test.ps1 -FcsDirectory '<Kenshi>' -FixtureMod '<Kenshi>\data\gamedata.base' -CompatibilityOnly
+.\scripts\Integration-Test.ps1 -FcsDirectory '<Kenshi>' -FixtureMod '<representative.mod>' -CompatibilityOnly -VanillaStack
+```
+
+Compatibility tests add a controlled copied overlay using native `LOCKED`
+loading, not a third-party locked mod. Active/inherited/locked edits and
+reported-context changes are deliberate in-memory fixture mutations, not
+physical UI clicks or real hot-unloading/reordering. A differing test-host
+assembly is the negative hash case, not an inspected second FCS build.
+Workshop runs without the four-file stack even when `VanillaStack` is selected;
+do not combine its provenance count with a claim of full-stack Workshop testing.
+Expected injected cache/preview failures log their causes; the host must still
+finish with PASS and a successful exit. No Steam Refresh/Upload is invoked.
+
 ## Reproduce performance measurements (partial S12)
 
 Run synthetic histories in a fresh x86 host without a game installation:
@@ -116,7 +137,7 @@ Use the isolated native profiling mode for locally installed official data:
 
 `PerformanceOnly` is mutually exclusive with the targeted check suites and
 is **not** run automatically by normal integration checks. `VanillaStack`
-is restricted to profiling and copies official `gamedata.base`, `Newwworld.mod`,
+requires `PerformanceOnly` or `CompatibilityOnly` and copies official `gamedata.base`, `Newwworld.mod`,
 `Dialogue.mod` and `rebirth.mod` into the disposable fixture, loading them
 before the chosen copied active mod. It never uses the original files as
 write targets. Profile iterations default to three (range 1-120).

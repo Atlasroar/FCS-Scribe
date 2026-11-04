@@ -29,6 +29,16 @@ Change entries identify the record, operation, path/layer, exact before/after
 values, available source labels, referenced ID, and resolved reference name.
 An unresolved target remains unresolved; a display name is not an identifier.
 
+The [beta 19 configuration matrix](Validation-and-Limitations#s16-compatibility-and-provenance-matrix-beta-19)
+does not expand field ownership. `base:unresolved` and `locked:unresolved`
+remain literal source labels, including on effective fields/references selected
+from those layers. An active cell may name the writable mod; a dependency's
+position/name, matching record ID or header declaration does not prove which
+mod supplied a flattened inherited value. Loaded order, declared dependencies
+and native locked-file context remain separate sequences in their native forms.
+Changing loaded/locked context requires a fresh baseline; a declaration-only
+Save normalization is not evidence that a source mod changed.
+
 The packet also includes baseline identity/capture time, export time, source
 fingerprint, instructions, and `ResponseTemplate`. Its context intentionally
 does not include every loaded record.

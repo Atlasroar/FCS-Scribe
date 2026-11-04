@@ -503,7 +503,80 @@ native serialization.
 No live files were changed. No rollback, auto-save, automatic marker repair or
 reduced-draft/stale-state bypass is introduced. Actual native mid-append I/O,
 every refresh/dirty-set failure, physical power loss and complete interactive
-FCS Extended startup/approval remain unverified. S09 and S16 remain open.
+FCS Extended startup/approval remain unverified. At beta 18, S09 and S16
+remained open.
+
+## S16 compatibility and provenance matrix (beta 19)
+
+Verified on Windows in fresh x86 .NET Framework native test hosts on
+2026-11-04, with **664 core checks** and a plugin build. These configurations
+are evidence scopes, not a promise that every mod/extension combination works.
+Beta 19 adds tests/documentation and release metadata, not runtime behavior,
+new supported hashes, dependency resolution or source-ownership inference.
+
+### Exact build and configuration
+
+| Configuration | Evidence | Boundary |
+|---|---|---|
+| Steam FCS file/product 2.14.2; assembly 2.1.0.0 | Executable SHA-256 `3688c4d8421d51c2d30c2ff0338874779d91eff150c6a02bf415bc1cdd9c7796` accepted | Hash, not display version, is the runtime guard |
+| Copied FCS Extended managed interface | `FCS_extended_plugin.dll` SHA-256 `bdfc58367a6a92c0cffae7f39f0495ca395d3a9e6ce8e25fade31e166df694f0`; `IPlugin.Init(Assembly)` compiles | A contract binary/native test host is not full FCS Extended loader/UI acceptance |
+| Copied official `gamedata.base` as inherited fixture and disposable active copy | 23 compatibility/provenance checks, including a controlled native `LOCKED` overlay | An official-data fixture, not a normal user's complete mod setup |
+| Copied official `gamedata.base`, `Newwworld.mod`, `Dialogue.mod`, `rebirth.mod`, then a representative active mod | 26 compatibility/provenance checks, including a controlled native `LOCKED` overlay | Real available dependency files in this order; not arbitrary custom stacks or an order-compatibility resolver |
+| Workshop provenance/isolation on copied official-data and representative single-dependency fixtures | 114 checks each in separate fresh hosts | The Workshop host deliberately does **not** load the four-file stack |
+| Differing executable candidate | The test host's assembly is rejected, including before constructor editor reflection | Negative hash case, not inspection/acceptance of another FCS release |
+| GOG, other executable hashes/versions, translations/merge, other extensions/custom stacks | Unsupported or unverified as applicable | No broad compatibility claim; normal writable `.mod`/USER mode remains required |
+| Full FCS Extended startup/mod selector and every interactive action on beta 19 | Not performed | S09 remains open; earlier physical evidence does not establish this release/configuration |
+
+The interface hash above identifies the copied test dependency, **not** a new
+runtime interface hash whitelist; install FCS Extended from its upstream
+distribution. Do not copy fixture DLLs over an installation or bypass the
+existing executable guard.
+
+### Dependency and ownership evidence
+
+The native host separately compares loaded order, header declarations and
+locked-file context with the captured sequences. Unchanged stacks produce
+zero gameplay evidence. A native Name edit is active-mod evidence; deliberately
+changed inherited or locked values reject instead of becoming active edits.
+Changing reported loaded order, adding a native locked overlay, or changing the
+reported locked context rejects the old tracking context. A fresh explicit
+baseline for the locked stack remains a no-op without inventing gameplay edits.
+These context mutations are tests, not real hot-unloading/reordering.
+
+Available base/locked names, fields and references retain literal unresolved
+source labels; effective locked values do not infer ownership from a filename.
+The controlled locked overlay is a copy loaded through actual native `LOCKED`
+mode, not a third-party locked-mod acceptance case. Native loading can omit an
+identical name override: the test changes an available locked record's stored
+name rather than assuming a pre-existing locked-name cell. No capture logic or
+guard was weakened to accommodate the fixture.
+
+Merge/non-mod mode and replaced-data-session cases reject. Original copied
+active/overlay bytes and dirty state remain unchanged by the compatibility
+checks; no live data is written. These tests do not establish exhaustive
+controls, missing dependency recovery, every native mode, large-stack headroom,
+multi-extension interactions or full field ownership.
+
+### Workshop truth and authoritative integration
+
+The existing Workshop suite independently verifies cached versus staged
+values, missing/unknown data, required/referenced lists without header rewrite,
+busy states, malformed cache/preview handling and recovery. No Steam
+Refresh/Upload or published-history query occurs. `LastUpdate`, title, tags,
+visibility and IDs remain local/staged/cached context, not fresh Steam truth;
+Notes/TODO are not Workshop change notes.
+
+BFrizzleFoShizzle's designated sources were rechecked at unchanged revisions:
+[FCS Extended interface/loader](https://github.com/BFrizzleFoShizzle/FCS_extended/tree/8a53a855e45f946f47780387c615c734dc3b0b50),
+[RE_Kenshi README](https://github.com/BFrizzleFoShizzle/RE_Kenshi/blob/c8dfbc9621b9263863722852f819c4c0f440475a/README.md)
+and [KenshiLib README](https://github.com/BFrizzleFoShizzle/KenshiLib/blob/1ce4a163739bbdf17254259039d7aa74fcc11cc0/README.md).
+The managed loader invokes `IPlugin.Init(Assembly)` before the FCS entry point;
+it does not document a stable managed editing API. RE_Kenshi/KenshiLib's native
+game API/compiler/hooking guidance does not establish managed editor support.
+Scribe adds no native dependency or hooks and overrides no upstream guidance.
+
+S16 is bounded by this matrix. S09's remaining interactive checks and explicit
+MVP support-scope acceptance still precede feature expansion.
 
 ## Reproduce
 
