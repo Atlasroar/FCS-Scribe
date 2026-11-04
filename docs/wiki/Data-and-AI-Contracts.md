@@ -303,6 +303,30 @@ anchors without `JournalVersion` cannot themselves detect missing sidecars.
 An exclusive project writer lease coordinates Scribe instances, not arbitrary
 external editors. Timestamps are not entry identities or proof of authenticity.
 
+### Complete-set copying and archival (beta 16)
+
+The private unit of backup is the baseline plus its entire matching `.scribe`
+folder and associated baseline backups, copied with all writers closed.
+Modern journal-enabled roots require `project.json`; the durable head and
+chain expose missing required pending sessions. Foreign markers/journals are
+rejected. Failed validation does not repair missing history or make an empty
+folder sufficient.
+
+Fully compiled originals may be archived only with writers closed and the
+main journal retained. If the main journal is missing but **all originals**
+remain, replay can recover the entries as pending and Compile can reconstruct
+it. Missing journal plus required archived originals is not recoverable from
+the remaining working set. Restore exact files from a coherent private backup.
+No automatic pruning, merge, schema change or weakened hash check is introduced.
+
+Older roots without `JournalVersion` cannot prove sidecars are missing; a
+coherent old set cannot prove newer history exists elsewhere. Copying tracking
+storage under the same mod identity is not verified relocation of the mod.
+The [copy/archive/upload procedures](Installation-and-Workflow#complete-tracking-sets-and-restore-failures)
+retain those limits. Baselines include full loaded/dependency data; storage,
+backups and draft workspaces must stay outside public upload content. The
+persistent warning does not inspect or block native Workshop uploads.
+
 ### Compilation debt (beta 10)
 
 No new field or schema is written. Each validated session/journal entry already

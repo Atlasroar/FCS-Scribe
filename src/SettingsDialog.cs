@@ -149,10 +149,15 @@ namespace FcsScribe
         internal const string BoundaryText = "Tracking records captured editor state, including UNSAVED edits. " +
             "The saved .mod/Notes state is NOT verified. Resume never restores or saves the mod or notes. " +
             "Back up the .mod and Notes/TODO files separately.";
+        internal const string StorageText = "PRIVATE TRACKING SET: Keep the baseline JSON and entire matching .json.scribe " +
+            "folder together, including project.json, journal.jsonl, sessions and recovery/backups. Close writers before " +
+            "copying or archiving. Baselines include full loaded/dependency data; never send them to AI. " +
+            "Keep tracking data, backups and draft workspaces out of Workshop content. " +
+            "Scribe does not inspect or block native uploads.";
         public bool Resume { get; private set; }
         public TrackingChoiceDialog()
         {
-            Text = "Start or resume tracking"; Width = 640; Height = 360;
+            Text = "Start or resume tracking"; Width = 640; Height = 440;
             FormBorderStyle = FormBorderStyle.FixedDialog; MaximizeBox = false; MinimizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
             var layout = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(12),
@@ -161,6 +166,8 @@ namespace FcsScribe
                 Text = "New captures the CURRENT editor as a baseline, not the last saved .mod. Resume validates recorded history, then compares it with the current editor. Every start/resume opens a timestamped session in <project>.json.scribe\\sessions. Keep the baseline and matching storage together; compilation never deletes originals. Replacing this session uses draft save/discard protection. Tracking files may be private: do not include them in AI handoffs or Workshop uploads; use compact AI exports." });
             layout.Controls.Add(new Label { AutoSize = true, MaximumSize = new System.Drawing.Size(590, 0),
                 Text = BoundaryText });
+            layout.Controls.Add(new Label { AutoSize = true, MaximumSize = new System.Drawing.Size(590, 0),
+                Text = StorageText });
             var create = new Button { Text = "New tracking JSON", AutoSize = true };
             var resume = new Button { Text = "Resume existing JSON", AutoSize = true };
             var cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, AutoSize = true };
