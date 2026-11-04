@@ -245,7 +245,25 @@ universal alias/race/power-loss guarantee; S09 interactive acceptance is next.
 
 - [ ] Run the interactive acceptance items in sections 1-5B on disposable mods/notes, including the new menu UI.
 - [ ] Exercise startup/discovery, focus commits, dialogs, scheduling, resize/minimize/close/restart, other extensions and visible failure paths.
-- [ ] Record actual results and remaining exceptions; standalone form/method checks do not close this gate.
+- [x] Record actual results and remaining exceptions; standalone form/method checks do not close this gate.
+
+A bounded real FCS Extended beta 11 pass on November 3-4, 2026 is recorded in
+[Validation and limitations](wiki/Validation-and-Limitations.md#real-fcs-extended-acceptance-beta-11).
+It covers the supported normal-editing startup/UI, real add/scalar/rename
+evidence, manual AI handoff, workspace/approval/save/restart, all recording
+intervals, compilation, native Workshop export/PNG archive, copy-only journal
+recovery/rejection, legacy conversion, export guards and settings repair/reload.
+The final original project has 12 distinct fully compiled recordings.
+
+**S09 remains open.** Broader stacks/independent extensions, merge/translation
+and unsupported builds, physically contested project writers, deliberate notes
+save/partial-application failures and the other listed boundaries remain
+untested/incomplete. Native read-only rejection passed but blocked the
+two-writer attempt. Final notes inspection found acknowledged manual
+replacement text, not the original KEEP/generated block; the user chose not
+to restore/rerun that final block-retention check. Earlier independently
+verified note-preservation checkpoints remain historical evidence only.
+These results do not trigger a new beta or close the remaining support work.
 
 ### S10. Support boundary: tracking is not mod recovery
 
@@ -514,10 +532,39 @@ saved-data backend where it has passed cross-validation.
 - [ ] Keep generated notes editable and require explicit approval; never automatically apply or save.
 - [ ] Test cancellation, unavailable providers, malformed responses, stale results, and accidental repeated requests.
 
+## Remaining delivery scope
+
+The grouped-menu cleanup and S01-S08 have shipped. The bounded S09 physical
+pass is recorded, not silently promoted to full acceptance. The remaining
+stabilization work is distinct from new feature expansion:
+
+| Item | Remaining deliverable |
+|---|---|
+| S09: acceptance | Retain the completed evidence and explicit untested exceptions; resolve or explicitly agree the remaining support scope before closing the gate. |
+| S10: tracking versus recovery | Make recorded state, saved mods and shared notes unmistakably distinct; verify discrepancy behavior and provide a practical backup workflow without a mod-restoration feature. |
+| S11: partial capture | Publish a supported/omitted-state matrix, explain sampling/reversals and verify more control-commit routes without removing partial-extraction warnings. |
+| S12: performance | Measure realistic capture/history latency and 32-bit memory use, define budgets and optimize without weakening integrity checks. |
+| S13: storage/distribution | Validate complete backup/restore and safe compiled-session archival; make pre-upload privacy and missing-file risks clear without automatic pruning. |
+| S14: portability | Define verified relocation/new-baseline guidance and divergent-history handling without bypassing path/load-order identity or automatically merging journals. |
+| S15: notes safety | Improve per-record failure/retry guidance, clarify separate sidecar backup/distribution, and validate partial application without promising rollback. |
+| S16: compatibility/provenance | Maintain the verified build/configuration matrix, test available dependency stacks and keep unresolved field ownership and cached Workshop context explicit. |
+
+After stabilization and explicit acceptance, five expansion areas remain in
+scope. They are not shipped or approved for implementation merely by appearing
+in this table.
+
+| Feature | Existing foundation | Remaining feature boundary |
+|---|---|---|
+| Broader session-history UI | Durable journals, Resume, range selection and portable draft workspaces already exist. | Add browsing/retention controls beyond range selection while preserving identities, duplicate protection and explicit draft associations; no silent history pruning. |
+| Markdown changelogs | The typed catalogue and reviewed draft prose already exist. | Deterministic, escaped human-readable exports with evidence IDs, exact values/layers and limitations; no second diff engine is required. |
+| Optional OCS saved-data backend | Repository assessment exists, but no runtime/package integration has shipped. | Pin/validate a version, choose the runtime/process boundary and protocol, then implement read-only saved-data loading and FCS cross-validation. Keep live unsaved tracking usable without OCS. |
+| Wiki-ready mod documentation | Proposed records/relationships/provenance exports only. | Wait for verified dependency interpretation/provenance, then produce auditable linked pages with explicit unresolved data. Flattened load order is not field ownership. |
+| Optional direct AI connection | Manual export/import and approval remain the working path. | Decide provider, credentials, consent, data scope, cancellation and errors explicitly; retain manual use, editable output and approval, with no automatic apply/save. |
+
 ## Working order
 
-1. Finish the requested menu cleanup without changing existing action semantics.
-2. Address S01-S16 one at a time, recording regression evidence and any explicitly accepted support boundaries.
-3. Close the real FCS Extended acceptance gate and any issues it exposes before new feature expansion.
-4. Only then resume OCS design/implementation, broader session history and Markdown exports as independently scoped work.
-5. Validate dependency provenance before wiki-ready exports; a direct AI connection remains optional and explicitly prioritized.
+1. Keep S09 results and remaining exceptions explicit; untested is not passed, and the gate remains open until its support scope is explicitly accepted.
+2. Address the remaining S10-S16 stabilization items in order, one independently scoped issue at a time, retaining regression evidence and accepted support boundaries. Each addressed issue follows the requested PR, merge and beta-release cycle.
+3. Close the stabilization/MVP acceptance gate and any exposed issues before implementing new feature expansion.
+4. Then scope OCS design, broader session history and Markdown independently. Markdown/history do not inherently require OCS; do not couple them to a new runtime without a concrete requirement.
+5. Validate dependency provenance before wiki-ready exports. Direct AI remains optional and requires an explicit provider/credential/consent decision.

@@ -124,30 +124,69 @@ See [Building and releases](Building-and-Releases#run-checks-and-inspect-the-sup
 for the core/integration commands, inspection command and required local files.
 Builds/inspection do not install the plugin or replace interactive acceptance.
 
-## Remaining acceptance gate
+## Real FCS Extended acceptance: beta 11
 
-The real FCS Extended workflow still needs a manual acceptance pass for
-extension discovery, toolbar placement, field-focus/control commits, review,
-export/import/paste, draft editing/cancellation/approval, stale/duplicate
-messages, notes inspection, and normal save/restart.
-Also check embedded resize/minimize/restore/close behavior, bottom help layout,
-Workshop tab refresh, field agreement with a real Workshop dialog and preview
-archive selection/cancellation.
-New/resume/legacy-conversion/settings dialogs, every timer interval, long-running
-validation/close and restart recovery also need interactive acceptance.
-Also exercise the 30-minute schedule, discrepancy confirmation, recovery
-approval/cancellation, two editor instances and manual session archiving.
-Beta 3's grouped menus also require real-editor mouse/keyboard, small-window
-layout and MDI acceptance; disposable-copy results do not close this gate.
-Beta 5's range selection, preview scrolling, destination/cancellation and real
-manual AI handoff also remain part of that interactive pass.
-Beta 6's warning/status/approval wording, Workshop-only error dialogs and real
-asynchronous Workshop operations also require interactive acceptance.
+A bounded physical pass was performed on November 3-4, 2026 using the supported
+Steam FCS build, FCS Extended, FCS-Scribe beta 11 and a disposable active test
+mod over the normal base-game stack. The user operated the editor. Supporting
+files were inspected read-only; deliberately damaged journals were separate
+copies, not the original project.
 
-Broader dependency stacks, other extensions, unsupported/read-only modes, and
-visible failure handling also need the checks recorded in the
-[working plan](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/plan.md).
-An experimental prerelease does not mark those checkboxes complete.
+**This is partial acceptance evidence, not closure of S09 or approval for
+normal production use.** UI/timing observations below are user-reported;
+file counts, hashes, packet validation and byte-preservation claims were
+independently checked where stated.
+
+| Area | Observed result and boundary |
+|---|---|
+| Startup and embedded UI | User confirmed extension discovery, toolbar, grouped menus, keyboard/hover help, resizing, minimizing/restoring and close/reopen inside FCS. This covers the installed supported configuration only. |
+| Baseline and real edits | A 54,951-record baseline was validated. Added record, scalar edit and same-ID rename were captured; repeated unchanged reviews added nothing. A direct field-to-Scribe focus route captured the edit, not every FCS control/buffer route. |
+| Real AI handoff | Three recordings exported as a schema-3 packet with 71 qualified change citations. The actual manual assistant response, import/paste and complete coverage were checked. Export did not advance/compile history or save the mod. |
+| Draft workspaces | Save/Open, exact completed text, an unsaved-text close cancellation, replacement/discard and restoration after closing Scribe were exercised. A stale restored draft was not treated as approval. |
+| Approval and saved notes | Invalid JSON, stale state, approval No, approved append and duplicate rejection were exercised. Existing KEEP text and one generated block were independently verified after explicit FCS Save and an earlier cold restart. Apply had not saved the mod or notes sidecar before that explicit Save. The observed category token remained `N`; this is not physical verification of all TODO/inherited-note semantics. |
+| Recording and compilation | User timed 30-second, 1-, 5- and 10-minute recording intervals, including early/late checks for the longer intervals. Minimized/menu-open deferral, restore catch-up, Manual hold and repeated Compile no-op were exercised. Real pending entries aged over 30 minutes while Manual/closed, then compiled on eligible automatic work; exact boundary arithmetic remains separately automated. |
+| Workshop workflow | Export without tracking, default/unknown/unpublished values, native-dialog comparison and exact staged change notes were checked. A real 44,977-byte PNG archive matched source/export hashes. Cancel, existing-archive refusal and inside-install rejection were exercised without publishing. This does not cover every nonempty metadata field, encoding or real Steam operation. |
+| Journal recovery | A complete project copy first hash-matched the original. Cancelling an incomplete-tail recovery retained its exact bytes with no backup. Approval restored all 11 complete entries and preserved the exact damaged bytes in a unique backup. A complete invalid line was rejected without truncation; baseline-only Resume rejected missing storage without inventing history. |
+| Legacy conversion | A real schema-2 packet containing 67 changes was extracted to a new disposable file and validated. Cancel preserved it; approval retained its exact `.legacy.bak` bytes and original imported evidence in a valid fresh current-state project. Unchanged Review added no recording, and conversion did not save the mod. |
+| Export guards | Corrected attempts to replace an inactive copied baseline and reserved marker were refused without changing either file. Malformed existing JSON was retained; a valid ordinary Workshop export was created/replaced successfully. An initial reported success was a different selected filename, not a protected-file overwrite. |
+| Settings and busy close | Cancel/custom export defaults/discard-reload, invalid relative/missing directories, explicit malformed-settings recovery and repair/reload were exercised. Exact original malformed bytes were preserved in one unique repair backup; original valid settings were restored byte-for-byte. The project and unsaved draft survived repair/reload. Close was deferred during background validation and worked afterward. |
+| Native read-only mode | A second FCS instance loaded the shared mod read-only. Clicking Scribe explicitly reported `Open a writable active mod before using FCS-Scribe.` This prevented reaching the separate project-writer exclusion test. |
+| Final journal/restart | User confirmed the item name/ID and charges 790 persisted, Manual settings persisted, and original-project Resume/Review/Compile plus unchanged repeats worked. Files contain 12 distinct recordings, all compiled with exact original-line agreement; the final added recording is context-only and the original baseline is unchanged. |
+
+### Final notes checkpoint correction
+
+The final restart initially was reported as retaining the original KEEP text
+and generated block, but file inspection did **not** confirm that claim.
+The target instead contained `LOCAL ACCEPTANCE TEST - DO NOT PUBLISH`.
+The user identified this as an earlier manual test-data replacement.
+That exact replacement text is present in the saved target and was visible
+after restart; there is no evidence attributing the replacement to Scribe.
+
+The user chose to keep the current text and **not rerun final retention of the
+original block**. No stale draft was reapplied. Earlier independently verified
+KEEP/generated-block preservation remains evidence for its earlier checkpoint,
+not proof that those same annotations remained through the final restart.
+
+### Remaining acceptance gate
+
+The following boundaries are explicitly untested or incomplete in this physical
+pass. Existing automated coverage is not promoted to physical acceptance.
+
+| Boundary | Remaining limitation |
+|---|---|
+| Broader compatibility | No additional non-vanilla dependency stack or independent FCS Extended extension was available. FCS Extended is the loader, not a second extension-coexistence case. The user accepted leaving this broader configuration untested. |
+| Restricted modes/builds | Merge/translation and unsupported-build physical rejection were left untested by user choice/setup. No executable alteration or guard bypass was attempted. Native read-only rejection did pass. |
+| Competing project writers | Native FCS read-only loading prevented opening Scribe in the second instance. The Scribe writer lease was therefore not physically contested. |
+| Notes failure behavior | Deliberate native notes-save failures and multi-record partial-application failures were left untested by user choice; the shared editor-side notes file was not corrupted, removed or force-locked. |
+| Final original-block retention | Not rerun after the acknowledged manual notes replacement. Current replacement-text persistence is not the same test. |
+| Capture breadth | Deletions, reference/quantity/removal and nested-instance semantics remain automated/disposable-copy evidence, not additional physical mutations in this pass. One focus route does not establish all UI control commits. |
+| Additional storage/settings failures | Physical power/disk/access failures, all initialization retry boundaries, unreadable/concurrent settings repair and manual compiled-session archival were not exhaustively exercised. |
+| Workshop breadth | Real asynchronous Steam upload/refresh and every populated metadata/image-format boundary were not physically exercised. No publishing was performed for acceptance. |
+| Performance and restoration | The large baseline is one observation, not large-stack/history profiling or proof of mod restoration. S12 and the remaining support-boundary work remain open. |
+
+The [working plan](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/plan.md)
+retains the overall gate. Recording these results/exceptions is not an implicit
+decision to close S09, bypass remaining tests or publish a new beta.
 
 ## Known limits
 
