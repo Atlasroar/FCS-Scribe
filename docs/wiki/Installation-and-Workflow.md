@@ -362,6 +362,92 @@ Do not distribute shared Notes/TODO sidecars wholesale: they can include other
 mods' annotations. These manual safeguards are not an upload scrubber, a
 backup wizard, proof of redistribution rights or a mod-relocation guarantee.
 
+## Portability and linear history (beta 17)
+
+**Moving tracking storage is not moving the active mod.** Scribe's native
+`ModId` hashes `Path.GetFullPath(activeFile).ToUpperInvariant()`; `ModName`
+is the filename and is compared exactly. The tracking JSON's own location
+does not determine that mod identity. No content-based identity, machine ID,
+path-alias resolver or automatic history rebinding is implemented.
+
+| Change | Supported route and boundary |
+|---|---|
+| Move/rename only the closed tracking baseline and entire matching storage | Keep the actual mod/path and loaded/locked context unchanged. Preserve associated backups and rename the adjacent folder to match the chosen baseline filename, e.g. `renamed.json.scribe`. Resume the new JSON location; do not copy just the anchor. |
+| Move/copy/rename the active `.mod` | Even byte-identical copies with the same filename at another path have a different native identity. Preserve old history and deliberately create a fresh baseline with a new filename; do not edit stored identities/hashes. |
+| Change loaded-mod order or locked-mod list | Restore the original context to Resume, or deliberately start a separate baseline after verifying the intended setup. The same names in a different order are not equivalent. |
+| Change only declared dependency metadata | Declaration metadata alone is not the loaded/locked-context guard; save-normalized declarations can be recorded as context without gameplay evidence. This does not certify dependency versions or unchanged inherited data. |
+| Use another machine | Reinstall the supported editor/plugin, verify the intended saved mod/notes/dependencies and use the fresh-baseline procedure below. Equal path strings can produce equal identities across machines: the guard cannot prove machine identity or dependency byte equality. |
+
+### Moving only private tracking storage
+
+1. Use Manual mode, finish pending work and close Scribe/all FCS instances.
+   Make a verified [complete private backup](#practical-private-backup-workflow).
+2. Move the baseline, **entire matching storage folder**, and associated
+   baseline backups together. If renaming `old.json` to `new.json`, rename
+   `old.json.scribe` to `new.json.scribe` and retain matching backup names.
+   Do not change their contents. A multi-file move is not an atomic snapshot:
+   if it fails partway, restore the coherent set before attempting Resume.
+3. Keep the actual active mod at its original path and the intended loaded
+   context unchanged. Reopen normally and **Resume existing JSON** at its
+   new storage location. Inspect project/history counts and any discrepancy.
+   Resume creates a new session and may rotate the small marker backup; it
+   does not relabel old recordings. Review/Compile with unchanged state must
+   not add duplicate observations.
+
+Keep the full generated path short enough for .NET Framework/Windows limits,
+including `.scribe\sessions\<timestamp>_<ID>.jsonl` and temporary suffixes.
+Moving a set to a longer path can exceed those limits even if the baseline
+filename alone fits. This is not new long-path, alias or network-sync support.
+
+### Fresh baseline after moving a mod or changing machines
+
+1. On the source, deliberately save wanted gameplay/notes through FCS and
+   resolve errors. Preserve unsaved drafts separately. Close all writers and
+   make the full private backup, including old tracking, actual mod/assets,
+   relevant Notes/TODO sidecars and dependency/load-order information.
+2. On the target, use the normal editor/game workflow to place and load the
+   intended saved mod and dependencies with the supported FCS build and
+   FCS Extended/plugin. Inspect saved values and notes; copying tracking logs
+   cannot restore them. Actual physical cross-machine installation was not
+   tested by the same-host relocation checks.
+3. Use Manual mode and **Start tracking > New tracking JSON**, choosing a
+   **fresh filename** with no existing tracking/storage set. Do not select
+   Resume for the old mod identity, overwrite the old anchor, transplant its
+   `.scribe` contents, edit hashes, or convert an old packet to bypass the
+   mismatch. If an old export folder no longer exists, choose a valid private
+   folder through Settings/the picker; the active-mod-folder default is unchanged.
+4. Inspect the new baseline's current state and perform an unchanged Review.
+   The new project begins with no historical recordings; future reviews
+   document observations **after this baseline**, not a recovered relocation
+   diff or the old branch. Keep the original history separately for reference.
+
+Old AI packets/workspaces keep their original evidence; New does not rebind
+them. A changed mod path changes current-state identity/fingerprints. Restoring
+text is not approval or a way around current-state checks; export fresh evidence
+for new work and inspect any retained drafts separately.
+
+### Divergent branches and version control
+
+History is **linear**, not a mergeable event graph. Two copies of one project
+can independently record different successors to the same head. Both branches
+can validate alone; combining their distinct session filenames can still be a
+fork even when Git reports no text conflict. Unique entry IDs and valid hashes
+do not make two parents-to-successors sequences compatible.
+
+Do not concatenate journals, union session folders, pick the newest marker,
+reorder JSONL lines or recalculate IDs/hashes. Replay rejects divergent or
+reordered history; a sibling branch's marker can also name missing required
+history. Automatic merge/rebase/cherry-pick of Scribe journals is unsupported.
+
+Preserve both complete private branches before recovery. Choose one coherent
+tracking branch only when its saved mod/context is the intended one. If gameplay
+was reconciled through a separately verified editor workflow, create a **new
+baseline of that resolved current state**; neither branch's recordings are
+automatically imported or rewritten. Tracking does not resolve native mod
+conflicts or recover unsaved work. Keep one writer lineage; independent copies
+do not share a distributed lock, and timestamps are not conflict resolution.
+Do not publish private histories merely to put them under version control.
+
 ## Capture Workshop information and the preview
 
 Open the active mod's FCS **Steam Workshop** window to make its staged values

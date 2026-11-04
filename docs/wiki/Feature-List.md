@@ -51,6 +51,11 @@ tested scope; custom stacks and broader headroom/latency remain unverified.
 clarifies the missing-marker error and verifies closed tracking-copy/restore
 and compiled-session archival cases. It does not automate backups or protect
 native uploads; see [storage procedures](Installation-and-Workflow#complete-tracking-sets-and-restore-failures).
+**v0.1.0-beta.17** verifies tracking-only moves under unchanged mod identity,
+moved-mod rejection with an explicit fresh-baseline route, and byte-preserving
+rejection of valid divergent branches. It adds actionable failure guidance,
+not automatic path/history rebinding or journal merging:
+[portability and linear history](Installation-and-Workflow#portability-and-linear-history-beta-17).
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).

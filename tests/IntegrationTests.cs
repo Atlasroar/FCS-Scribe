@@ -117,6 +117,7 @@ internal static class IntegrationTests
             {
                 CheckScribeWindow(adapter, editor);
                 CheckTrackingRecoveryWindow(adapter, editor, assembly, output);
+                CheckPortabilityWindow(new FcsAdapter(assembly, editor), editor, assembly, output);
                 Console.WriteLine("PASS: " + passed + " tracking recovery boundary integration checks");
                 return 0;
             }
@@ -1233,6 +1234,107 @@ internal static class IntegrationTests
         using (var copied = JournalProject.Open(Path.Combine(backup, "mods", Path.GetFileName(path))))
             Check(copied.EntryCount == 3 && copied.PendingCount == 0 &&
                 copied.Fingerprint == adapter.Capture().Fingerprint(), "the complete copied tracking set replays the saved state without mod restoration");
+    }
+
+    private static void CheckPortabilityWindow(FcsAdapter adapter, Form editor, Assembly assembly, string modPath)
+    {
+        string directory = Directory.GetCurrentDirectory();
+        string original = Path.Combine(directory, "mods", "portability-original.json");
+        string settings = Path.Combine(directory, "portability-settings.json");
+        string modHash = TrackingStorage.HashFile(modPath);
+        object nav = FcsAdapter.Field(editor, "nav");
+        object data = FcsAdapter.Field(FcsAdapter.Field(nav, "ou"), "gameData");
+        object item = ((IDictionary)FcsAdapter.Field(data, "items")).Values.Cast<object>().First();
+        string id = (string)FcsAdapter.Property(item, "stringID");
+        string name = (string)FcsAdapter.Property(item, "Name"), notes = adapter.Notes(id);
+        bool dirty = (bool)FcsAdapter.Property(nav, "HasChanges");
+        string projectId, fingerprint;
+        using (var window = new ScribeWindow(adapter, editor, settings))
+        {
+            RunWindow(window, "StartPath", original);
+            Set(item, "Name", name + " S14"); Set(nav, "HasChanges", true);
+            RunWindow(window, "Review");
+            Set(item, "Name", name); Set(nav, "HasChanges", dirty);
+            RunWindow(window, "Review"); RunWindow(window, "Compile");
+            var project = (JournalProject)FcsAdapter.Field(window, "project");
+            projectId = project.ProjectId; fingerprint = project.Fingerprint;
+            Check(project.EntryCount == 2 && project.PendingCount == 0,
+                "native portability starts with two compiled forward/reverse observations");
+        }
+        var closedHashes = Directory.GetFiles(original + ".scribe", "*", SearchOption.AllDirectories)
+            .Concat(new[] { original }).ToDictionary(x => x.Substring(original.Length), TrackingStorage.HashFile);
+        string storage = Path.Combine(directory, "pstore");
+        Directory.CreateDirectory(storage);
+        string relocated = Path.Combine(storage, "renamed.json");
+        File.Move(original, relocated); Directory.Move(original + ".scribe", relocated + ".scribe");
+        Check(closedHashes.All(x => TrackingStorage.HashFile(relocated + x.Key) == x.Value),
+            "moving/renaming the closed tracking set preserves all bytes without changing the native mod path");
+        using (var window = new ScribeWindow(adapter, editor, settings))
+        {
+            Put(window, "resumeDecision", new Func<Packet, DialogResult>(packet => {
+                throw new Exception("Unchanged native mod must not require discrepancy approval after moving tracking storage.");
+            }));
+            RunWindow(window, "ResumePath", relocated);
+            var project = (JournalProject)FcsAdapter.Field(window, "project");
+            Check(project.ProjectId == projectId && project.Fingerprint == fingerprint &&
+                project.EntryCount == 2 && project.PendingCount == 0,
+                "native Resume of relocated tracking storage retains original identity and compiled history");
+            RunWindow(window, "Review"); RunWindow(window, "Compile");
+            Check(project.EntryCount == 2 && project.PendingCount == 0,
+                "unchanged native review/compilation after a tracking-only move adds no duplicate observations");
+        }
+        var protectedFiles = Directory.GetFiles(relocated + ".scribe", "*", SearchOption.AllDirectories)
+            .Concat(new[] { relocated }).ToDictionary(x => x, TrackingStorage.HashFile);
+        string movedDirectory = Path.Combine(directory, "moved-mod");
+        Directory.CreateDirectory(movedDirectory);
+        string movedMod = Path.Combine(movedDirectory, Path.GetFileName(modPath));
+        File.Copy(modPath, movedMod);
+        Type fileMode = assembly.GetType("forgotten_construction_set.navigation+ModFileMode", true);
+        try
+        {
+            FcsAdapter.Call(nav, "setActiveFilename", movedMod, Enum.Parse(fileMode, "USER"));
+            adapter = ReopenRecoveryModel(editor, assembly, movedMod);
+            Snapshot moved = adapter.Capture();
+            Check(TrackingStorage.HashFile(movedMod) == modHash &&
+                moved.ModName == Path.GetFileName(modPath) &&
+                moved.ModId == Json.Hash(Path.GetFullPath(movedMod).ToUpperInvariant()) &&
+                moved.ModId != Json.Hash(Path.GetFullPath(modPath).ToUpperInvariant()),
+                "byte-identical native mod copies with the same filename acquire different path identities");
+            using (var window = new ScribeWindow(adapter, editor, settings))
+            {
+                bool rejected = false, prompted = false;
+                Put(window, "resumeDecision", new Func<Packet, DialogResult>(packet => {
+                    prompted = true; return DialogResult.Yes;
+                }));
+                try { RunWindow(window, "ResumePath", relocated); }
+                catch (InvalidOperationException error)
+                {
+                    rejected = error.Message.Contains("New tracking JSON with a new filename");
+                }
+                Check(rejected && !prompted && FcsAdapter.Field(window, "project") == null,
+                    "native moved-mod Resume rejects before discrepancy approval and explains the fresh-baseline route");
+                Check(protectedFiles.Count == Directory.GetFiles(relocated + ".scribe", "*", SearchOption.AllDirectories).Length + 1 &&
+                    protectedFiles.All(x => TrackingStorage.HashFile(x.Key) == x.Value),
+                    "rejected native relocation leaves every old tracking file unchanged");
+                string fresh = Path.Combine(storage, "new.json");
+                RunWindow(window, "StartPath", fresh);
+                var project = (JournalProject)FcsAdapter.Field(window, "project");
+                Check(project.ProjectId != projectId && project.EntryCount == 0 && project.PendingCount == 0 &&
+                    project.State.ModId == moved.ModId && project.Fingerprint == moved.Fingerprint(),
+                    "explicit New at a fresh filename captures the moved native mod without importing old history");
+                RunWindow(window, "Review");
+                Check(project.EntryCount == 0 && protectedFiles.All(x => TrackingStorage.HashFile(x.Key) == x.Value),
+                    "fresh-project no-op review neither backfills old edits nor rewrites the old branch");
+            }
+            Check(TrackingStorage.HashFile(modPath) == modHash && TrackingStorage.HashFile(movedMod) == modHash &&
+                adapter.Notes(id) == notes && !(bool)FcsAdapter.Property(nav, "HasChanges"),
+                "native relocation/new-baseline checks never save mod bytes or change notes/dirty state");
+        }
+        finally
+        {
+            FcsAdapter.Call(nav, "setActiveFilename", modPath, Enum.Parse(fileMode, "USER"));
+            ReopenRecoveryModel(editor, assembly, modPath);
+        }
     }
 
     private static FcsAdapter ReopenRecoveryModel(Form editor, Assembly assembly, string modPath)

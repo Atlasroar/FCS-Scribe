@@ -327,6 +327,29 @@ retain those limits. Baselines include full loaded/dependency data; storage,
 backups and draft workspaces must stay outside public upload content. The
 persistent warning does not inspect or block native Workshop uploads.
 
+### Path identity and linear branches (beta 17)
+
+The native adapter derives `ModId` from the uppercase full active-mod path,
+not the tracking JSON path or a mod-content hash. `ModName` is compared exactly.
+Moving/renaming a complete closed tracking set can therefore retain its project
+and entry identities while the mod remains at its original location. Copying
+the `.mod` elsewhere does not transplant that identity; use an explicit fresh
+baseline at a new filename and retain the old project separately.
+
+Resume/record guards compare mod identity, loaded-mod sequence and locked-mod
+sequence. Declaration metadata alone can be a context-only observation; the
+guard does not hash every dependency binary or identify a machine. Inherited
+data changes remain subject to the existing attribution checks.
+
+Every new entry must extend the current head/fingerprint. A known identical
+entry in retained session originals can deduplicate against the compiled
+journal; two distinct successors to a common parent cannot. Combining valid
+sibling sessions or journal suffixes rejects without rewriting remaining file
+bytes. No automatic merge, rebase, re-ID, path rewrite or historical import is
+added. [Portability procedures](Installation-and-Workflow#portability-and-linear-history-beta-17)
+separate tracking-only moves, fresh baselines and divergent-history recovery.
+Existing draft associations are not rebound or approved by these actions.
+
 ### Compilation debt (beta 10)
 
 No new field or schema is written. Each validated session/journal entry already
