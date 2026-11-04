@@ -1,5 +1,8 @@
 # Installation and workflow
 
+For missing extensions, startup failures, warning flags and recovery remedies,
+see [Troubleshooting](Troubleshooting).
+
 Resumable tracking, automatic checkpoint reviews and Plugin settings below
 are included in **v0.1.0-beta.2**. The earlier beta 1 uses session-only baselines.
 

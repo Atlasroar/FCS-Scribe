@@ -24,6 +24,7 @@ remain editable drafts and require human review and approval.
 
 - [Home](https://github.com/Atlasroar/FCS-Scribe/wiki): purpose, current beta and project status.
 - [Feature list and behavior](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List): every action, safeguards and planned features.
+- [Troubleshooting](https://github.com/Atlasroar/FCS-Scribe/wiki/Troubleshooting): installation checks, error/warning catalogue, solutions and safe recovery.
 - [Installation and workflow](https://github.com/Atlasroar/FCS-Scribe/wiki/Installation-and-Workflow): prerequisites, setup, tracking storage, AI handoff, backups and recovery.
 - [Building and releases](https://github.com/Atlasroar/FCS-Scribe/wiki/Building-and-Releases): source builds, validation commands, inspection, packaging and release contents.
 - [Architecture](https://github.com/Atlasroar/FCS-Scribe/wiki/Architecture): core, FCS adapter, UI and session journals.

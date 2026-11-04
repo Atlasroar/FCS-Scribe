@@ -2,6 +2,8 @@
 
 For normal installation and use, see [Installation and workflow](Installation-and-Workflow).
 This page covers source builds, reproducible validation and release packaging.
+For compiler/test wrapper errors and their remedies, see
+[Troubleshooting](Troubleshooting#build-and-validation-script-errors).
 
 ## Build requirements
 
