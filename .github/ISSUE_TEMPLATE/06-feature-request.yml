@@ -1,0 +1,73 @@
+name: Feature or documentation request
+description: Propose a scoped improvement with use cases, safeguards and acceptance criteria.
+title: "[Request] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the [remaining scope](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/plan.md#remaining-delivery-scope)
+        and [feature guide](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List).
+        New feature expansion remains gated by stabilization/acceptance.
+        Do not include credentials, private mod data or exploit details; use private security reporting for vulnerabilities.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Proposed area
+      options:
+        - Existing workflow, safety or UI
+        - Troubleshooting or other documentation
+        - History browsing or retention
+        - Markdown output
+        - Optional OCS saved-data integration
+        - Wiki-ready output or provenance
+        - Optional direct AI integration
+        - New proposal outside the current roadmap
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and concrete use case
+      description: Explain the user task and current limitation rather than only naming a button or library.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Requested behavior and scope boundaries
+      placeholder: |
+        Proposed behavior:
+        Inputs/outputs:
+        What should remain unchanged:
+        Explicitly out of scope:
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria and test cases
+      placeholder: |
+        Successful case:
+        Invalid input/failure/cancellation case:
+        Privacy, identity, approval and no-silent-save requirements:
+        Compatibility/performance expectations and how to measure them:
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Existing alternatives, dependencies and references
+      description: Link related issues or authoritative documentation. Do not include API keys or private data.
+  - type: upload
+    id: attachments
+    attributes:
+      label: Mockups or safe examples
+      description: Optional reviewed screenshots, diagrams or small synthetic sample output with redistribution permission.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Request checks
+      options:
+        - label: I checked existing requests/roadmap and reviewed the public content/uploads for secrets and private data.
+          required: true

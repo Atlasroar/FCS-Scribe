@@ -1,0 +1,96 @@
+name: Tracking, scheduling, storage or recovery
+description: Report recording/compilation, missing history, settings, exports or recovery problems.
+title: "[Tracking] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Stop repeated writes and preserve the original project before troubleshooting.
+        Close Scribe before making a complete backup of the baseline and matching `.json.scribe` folder.
+        Do not delete locks, truncate journals or change hashes/IDs. Use disposable copies for recovery tests.
+        Public attachments must not contain full loaded baselines, entire real histories, shared notes or secrets.
+        Report security-impacting flaws [privately](https://github.com/Atlasroar/FCS-Scribe/security/advisories/new).
+  - type: input
+    id: version
+    attributes:
+      label: FCS-Scribe release or source commit
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment and storage location
+      placeholder: |
+        Windows, FCS version/store/hash if known, FCS Extended version:
+        Other extensions and safe-to-share mod/load-order details:
+        Normal/read-only/merge/translation mode:
+        Local disk, network, sync folder or removable storage:
+        Permissions/free-space issue or another FCS instance:
+    validations:
+      required: true
+  - type: dropdown
+    id: operation
+    attributes:
+      label: Operation that failed
+      options:
+        - New project or interrupted initialization
+        - Resume or editor-state discrepancy
+        - Manual or automatic recording
+        - Compilation or pending-debt notice
+        - Missing, changed or divergent history
+        - Interrupted-tail recovery
+        - Settings, reload or repair
+        - Export destination protection or write
+        - Copy, backup, archive or relocation
+    validations:
+      required: true
+  - type: textarea
+    id: state
+    attributes:
+      label: Project, settings and file state
+      description: List names/counts, not private file contents. Distinguish the live original from a test copy.
+      placeholder: |
+        New/Resume and live original/test copy:
+        Manual or automatic interval:
+        Recording/compiled/pending counts and oldest UTC:
+        Settings recovery/paused/busy/minimized/menu/modal state:
+        Baseline, project marker, journal and required sessions present:
+        Relevant backup/recovery filenames and whether a prompt was accepted:
+        Full exact selected target path with personal components redacted:
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Timeline, expected result and observed result
+      description: Include timestamps/waits for scheduling. Distinguish FCS Save, Scribe Review and Compile.
+      placeholder: |
+        Initial state and last known successful operation:
+        Exact steps:
+        Expected:
+        Observed:
+        Files manually moved/edited/synced or settings changed:
+        Can it reproduce on a disposable copy:
+    validations:
+      required: true
+  - type: textarea
+    id: errors
+    attributes:
+      label: Exact error, warning or recovery prompt
+      description: Include the named path and inner exception, with personal content redacted.
+      render: text
+  - type: upload
+    id: attachments
+    attributes:
+      label: Safe storage diagnostics
+      description: Optional screenshots, redacted logs, file listings/hashes or small synthetic fixtures. Preserve raw originals locally; redacted copies may no longer validate.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety checks
+      options:
+        - label: I described any manual file changes and did not treat a Windows overwrite prompt alone as export success.
+          required: true
+        - label: I reviewed this public report/uploads for secrets, private mod data, full baselines and unrelated annotations.
+          required: true

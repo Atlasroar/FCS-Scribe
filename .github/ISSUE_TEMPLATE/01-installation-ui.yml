@@ -1,0 +1,99 @@
+name: Installation, UI or general bug
+description: Report discovery, startup, mode, window, focus or other general problems.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check [Troubleshooting](https://github.com/Atlasroar/FCS-Scribe/wiki/Troubleshooting) first.
+        Use the dedicated storage, draft/notes or Workshop form for those problems.
+        Security vulnerabilities belong in [private reporting](https://github.com/Atlasroar/FCS-Scribe/security/advisories/new).
+        Do not attach full tracking baselines, shared notes files, Kenshi/FCS binaries, secrets or private mod content.
+  - type: input
+    id: version
+    attributes:
+      label: FCS-Scribe release or source commit
+      description: Include the release URL/build if known; say unknown rather than guessing.
+      placeholder: v0.1.0-beta.11, or a source commit
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Editor and installation environment
+      description: Redact personal path components. Do not upload executables.
+      placeholder: |
+        Windows version:
+        FCS version/store and executable SHA-256 if known:
+        FCS Extended version:
+        Other enabled extensions:
+        Active mod/load order (names only if safe to share):
+        Normal, read-only, merge or translation mode:
+        .NET Framework version if known:
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Installation or extension discovery
+        - Toolbar or startup
+        - Read-only or unsupported editor mode/build
+        - Menus, keyboard, help or layout
+        - Field editing or focus commits
+        - Freeze, memory use or slow operation
+        - General behavior not covered by another form
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps and frequency
+      description: Start with the initial state, then list exact actions. Say whether this reproduces in a disposable minimal setup.
+      placeholder: |
+        1.
+        2.
+        Frequency and smallest known setup:
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Expected and actual behavior
+      placeholder: |
+        Expected:
+        Actual:
+        Any work lost or changed:
+    validations:
+      required: true
+  - type: textarea
+    id: ui-details
+    attributes:
+      label: Installation, window or focus details if applicable
+      placeholder: |
+        DLL/manifest folder layout, checksum result and selector state:
+        Window size/scaling, minimized/hidden state and open dialogs/menus:
+        Field/control edited, how it was committed and where focus moved:
+        Active operation and elapsed time if slow:
+  - type: textarea
+    id: errors
+    attributes:
+      label: Exact errors, warnings and relevant log excerpt
+      description: Include inner exceptions and the Scribe status/banner. Redact only a copy; retain originals locally.
+      render: text
+  - type: upload
+    id: attachments
+    attributes:
+      label: Screenshots, recordings or minimal diagnostic files
+      description: Optional. Upload redacted images/video, log excerpts or a small synthetic reproduction only. Never upload game binaries, full baselines or shared notes.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Report checks
+      options:
+        - label: I searched existing issues and checked the troubleshooting guide.
+          required: true
+        - label: I reviewed this public report and attachments for secrets, unrelated notes, private content and redistribution rights.
+          required: true

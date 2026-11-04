@@ -70,6 +70,27 @@ See [Validation and limitations](Validation-and-Limitations) for recorded
 results, coverage boundaries and the manual interactive acceptance gate.
 Passing the standalone checks does not establish full FCS Extended acceptance.
 
+## Repository security automation
+
+GitHub CodeQL **default setup** analyzes C# with the extended security suite,
+using build mode `none` on GitHub-managed runners. It runs without a local
+Kenshi installation or proprietary FCS binaries. It is not a plugin build or
+the Windows/32-bit integration suite, and incomplete external type context can
+limit analysis. Review run status and findings in the repository's Security
+and Actions views; an enabled scanner is not a claim of no vulnerabilities.
+
+Dependabot vulnerability alerts, secret scanning/push protection and private
+vulnerability reporting are enabled in repository settings. There is no
+package-manager manifest today, so dependency alerts do not inventory the
+externally installed Framework/FCS libraries. Reassess coverage if OCS or other
+packaged dependencies are introduced. No dependency manifest or runtime
+dependency is added merely to enable alerts.
+
+See the [security policy](https://github.com/Atlasroar/FCS-Scribe/blob/main/SECURITY.md)
+for private reporting and scope. Use the
+[test-result form](https://github.com/Atlasroar/FCS-Scribe/issues/new?template=05-test-result.yml)
+to distinguish automated results, physical observations and untested boundaries.
+
 ## Package a release
 
 Start from a **clean, committed checkout** and run:

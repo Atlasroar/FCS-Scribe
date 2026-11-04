@@ -1,0 +1,84 @@
+name: Workshop metadata or preview archive
+description: Report local/cache field disagreement, availability warnings or image-archive problems.
+title: "[Workshop] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Scribe reads local/staged/cached Workshop context; it does not query Steam, upload or publish.
+        Do not start a real upload/refresh or alter valuable source images merely to reproduce an issue.
+        Compare exact selected filenames, not just Windows overwrite confirmations.
+        Upload only reviewed screenshots, redacted metadata or an image you have permission to share.
+        Report security vulnerabilities [privately](https://github.com/Atlasroar/FCS-Scribe/security/advisories/new).
+  - type: input
+    id: version
+    attributes:
+      label: FCS-Scribe release or source commit
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Editor and Workshop context
+      placeholder: |
+        Windows, FCS version/store/hash if known, FCS Extended version:
+        Other extensions and active mod (safe-to-share name):
+        Matching native Workshop dialog open/closed:
+        Local cache/source indicated by Scribe:
+        Steam offline or an already-running upload/refresh:
+        Tracking project open or no tracking project:
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Native-dialog versus export field disagreement
+        - Missing, unknown or partial metadata/cache
+        - Staged change notes
+        - Preview availability, format, size or hash
+        - Archive cancellation, location, overwrite or stale image
+        - Workshop failure affecting ordinary tracking
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps, expected result and observed result
+      placeholder: |
+        Exact steps:
+        Expected native field value or archive behavior:
+        Actual export/UI value or archive behavior:
+        Changes made to local dialog/cache/image and whether saved:
+        Exact target filename/path, with personal components redacted:
+    validations:
+      required: true
+  - type: textarea
+    id: metadata
+    attributes:
+      label: Availability and image details if applicable
+      placeholder: |
+        CaptureStatus, Issues component/code/message, Source:
+        Field known/null/empty versus an assumed published value:
+        Preview status, detected format, byte count and SHA-256:
+        Destination inside/outside Kenshi, existing/new and extension:
+        Source/archive hashes before/after:
+  - type: textarea
+    id: errors
+    attributes:
+      label: Exact errors or warnings
+      render: text
+  - type: upload
+    id: attachments
+    attributes:
+      label: Screenshots, redacted metadata or a minimal preview
+      description: Optional. Remove private descriptions, local paths and unrelated content. Do not attach game binaries or full tracking data.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Public-report safety
+      options:
+        - label: I reviewed the report/uploads for private content and redistribution rights, and distinguished local/staged data from published Steam data.
+          required: true

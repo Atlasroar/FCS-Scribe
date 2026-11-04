@@ -465,6 +465,18 @@ diagnostic evidence; the final wrapper line alone is not the root cause.
 
 ## Reporting an unresolved problem
 
+Open a [focused issue form](https://github.com/Atlasroar/FCS-Scribe/issues/new/choose):
+installation/UI, tracking/storage, drafts/notes, Workshop, test results, or a
+feature/documentation request. Each has an optional upload field for reviewed
+screenshots, recordings and minimal diagnostic examples. Public upload size
+and file-type limits are controlled by GitHub; do not work around them by
+posting private full projects elsewhere.
+
+For suspected security vulnerabilities, use
+[private reporting](https://github.com/Atlasroar/FCS-Scribe/security/advisories/new),
+not a public issue or attachment. See the
+[security policy](https://github.com/Atlasroar/FCS-Scribe/blob/main/SECURITY.md).
+
 Include the plugin/release version, FCS executable hash, FCS Extended version,
 other enabled extensions, normal/read-only/merge/translation mode, action
 sequence, exact selected filename and full error including inner exceptions.
@@ -477,6 +489,10 @@ diagnostics to standard error; a dedicated Scribe log filename is not promised.
 loaded dependency model and private mod content; notes files can contain
 unrelated annotations. Prefer a minimal disposable reproduction and the
 relevant error excerpt. Do not upload entire real projects/notes by default.
+Preserve unmodified originals locally: editing a copy to redact content can
+invalidate its hashes, so a synthetic minimal reproduction is preferable for
+testing integrity/recovery behavior. Record manual edits and test mistakes
+explicitly rather than attributing every changed note/file to the plugin.
 
 ## Catalogue scope and maintenance
 
