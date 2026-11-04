@@ -21,6 +21,8 @@ release decisions, and AI-generated record notes require human approval.
 
 - [Feature list and behavior](Feature-List): what each feature does, how to
   operate it, expected outputs, safeguards, and what remains planned.
+- [Troubleshooting](Troubleshooting): installation checks, error messages,
+  warning flags, safe recovery and solutions.
 - [Installation and workflow](Installation-and-Workflow): prerequisites, tracking,
   AI handoff, approval, and normal saving.
 - [Building and releases](Building-and-Releases): source builds, validation and

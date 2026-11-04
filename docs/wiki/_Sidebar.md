@@ -2,6 +2,7 @@
 
 - [Home](Home)
 - [Feature list and behavior](Feature-List)
+- [Troubleshooting](Troubleshooting)
 - [Installation and workflow](Installation-and-Workflow)
 - [Building and releases](Building-and-Releases)
 - [Architecture](Architecture)
