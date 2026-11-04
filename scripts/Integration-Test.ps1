@@ -5,11 +5,15 @@ param(
     [switch]$ScheduleOnly,
     [switch]$ExportsOnly,
     [switch]$RecoveryOnly,
-    [switch]$SamplingOnly
+    [switch]$SamplingOnly,
+    [switch]$PerformanceOnly,
+    [switch]$VanillaStack,
+    [ValidateRange(1, 120)][int]$ProfileIterations = 3
 )
 $ErrorActionPreference = 'Stop'
+if ($VanillaStack -and -not $PerformanceOnly) { throw 'VanillaStack is restricted to PerformanceOnly profiling.' }
 if (([int]$SettingsOnly.IsPresent + [int]$ScheduleOnly.IsPresent + [int]$ExportsOnly.IsPresent +
-    [int]$RecoveryOnly.IsPresent + [int]$SamplingOnly.IsPresent) -gt 1) {
+    [int]$RecoveryOnly.IsPresent + [int]$SamplingOnly.IsPresent + [int]$PerformanceOnly.IsPresent) -gt 1) {
     throw 'Choose at most one targeted integration suite.'
 }
 $root = Split-Path $PSScriptRoot -Parent
@@ -23,16 +27,30 @@ foreach ($name in @('forgotten construction set.exe', 'PropertyGrid.dll', 'Dialo
     Copy-Item -LiteralPath (Join-Path $FcsDirectory $name) -Destination $fixture
 }
 Copy-Item -LiteralPath $FixtureMod -Destination (Join-Path $fixture 'fixture.mod')
+if ($VanillaStack) {
+    $dependencies = Join-Path $fixture 'dependencies'
+    New-Item -ItemType Directory -Path $dependencies | Out-Null
+    foreach ($name in @('gamedata.base', 'Newwworld.mod', 'Dialogue.mod', 'rebirth.mod')) {
+        Copy-Item -LiteralPath (Join-Path $FcsDirectory ('data\' + $name)) -Destination $dependencies
+    }
+}
 Copy-Item -LiteralPath (Join-Path $FcsDirectory 'FCS_extended\FCS_extended_plugin.dll') -Destination $fixture
 $compiler = Join-Path ([Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()) 'csc.exe'
 $sources = @(Get-ChildItem (Join-Path $root 'src') -Filter '*.cs' | ForEach-Object { $_.FullName })
-& $compiler /nologo /target:exe /platform:x86 /debug:pdbonly /warnaserror+ "/out:$fixture\IntegrationTests.exe" `
+& $compiler /nologo /target:exe /platform:x86 /debug:pdbonly /warnaserror+ /main:IntegrationTests "/out:$fixture\IntegrationTests.exe" `
     /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll `
     /reference:System.Runtime.Serialization.dll "/reference:$fixture\FCS_extended_plugin.dll" `
-    $sources (Join-Path $root 'tests\IntegrationTests.cs')
+    $sources (Join-Path $root 'tests\IntegrationTests.cs') (Join-Path $root 'tests\PerformanceTests.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Integration test compilation failed.' }
 Push-Location $fixture
 try {
+    if ($PerformanceOnly) {
+        $env:FCS_SCRIBE_PROFILE_SOURCE = (git -C $root rev-parse HEAD).Trim() + ' (working tree)'
+        $env:FCS_SCRIBE_PROFILE_ITERATIONS = $ProfileIterations.ToString()
+        & (Join-Path $fixture 'IntegrationTests.exe') --performance
+        if ($LASTEXITCODE -ne 0) { throw "Native performance run failed; fixture retained at $fixture" }
+        return
+    }
     if (-not $SettingsOnly -and -not $ScheduleOnly -and -not $ExportsOnly -and -not $RecoveryOnly -and -not $SamplingOnly) {
         & (Join-Path $fixture 'IntegrationTests.exe')
         if ($LASTEXITCODE -ne 0) { throw "Integration tests failed; disposable fixture retained at $fixture" }

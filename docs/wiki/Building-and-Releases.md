@@ -82,6 +82,50 @@ unsampled reversals, no forced commit/save and retained UI/packet warnings.
 Key events are raised programmatically, not sent as physical keyboard input;
 other control types and complete interactive acceptance remain unverified.
 
+## Reproduce performance measurements (partial S12)
+
+Run synthetic histories in a fresh x86 host without a game installation:
+
+```powershell
+.\scripts\Profile.ps1
+.\scripts\Profile.ps1 -Entries 300 -Sessions 30
+.\scripts\Profile.ps1 -Records 2000 -Entries 20 -Sessions 5 -LargeRecordCells 20000
+```
+
+Default dimensions are 2,000 records, 100 entries, 10 sessions and a 1,000-cell
+changed record; other records have eight cells. Entries must divide evenly
+across sessions. Every session is compiled and retained. The final history is
+reopened three times with exact entry-count/fingerprint checks.
+
+Use the isolated native profiling mode for locally installed official data:
+
+```powershell
+.\scripts\Integration-Test.ps1 -FcsDirectory '<Kenshi>' -FixtureMod '<Kenshi>\data\gamedata.base' -PerformanceOnly
+.\scripts\Integration-Test.ps1 -FcsDirectory '<Kenshi>' -FixtureMod '<Kenshi>\data\gamedata.base' -PerformanceOnly -VanillaStack -ProfileIterations 30
+```
+
+`PerformanceOnly` is mutually exclusive with the targeted check suites and
+is **not** run automatically by normal integration checks. `VanillaStack`
+is restricted to profiling and copies official `gamedata.base`, `Newwworld.mod`,
+`Dialogue.mod` and `rebirth.mod` into the disposable fixture, loading them
+before the chosen copied active mod. It never uses the original files as
+write targets. Profile iterations default to three (range 1-120).
+
+Reports are JSON under ignored `build\performance-fixtures` or
+`build\integration-fixtures`. They include source revision/working-tree label,
+host executable hash, runtime/bitness, workload sizes, whole-operation elapsed
+times, managed/private-memory endpoints and cumulative process peak working
+set. No forced GC is performed. Console min/median/max summaries are descriptive;
+profiling failures exit nonzero, but local timing budgets are not universal
+CI/runtime assertions. See the exact
+[measured envelopes and remaining limits](Validation-and-Limitations#s12-performance-measurements-partial-beta-14).
+
+**Do not publish the fixture directories:** copied native files and full
+tracking snapshots can contain private/dependency data and upstream binaries.
+Share only reviewed/redacted aggregate reports. The native test host is not
+the full interactive editor; its memory/timing result does not establish
+multi-hour FCS Extended safety.
+
 ## Repository security automation
 
 GitHub CodeQL **default setup** analyzes C# with the extended security suite,

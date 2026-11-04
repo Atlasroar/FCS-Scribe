@@ -93,6 +93,14 @@ instructions. Existing history is not rewritten. Consult the
 
 ## Checkpoint scheduling and storage
 
+For large stacks, start with **Manual**. The partial S12 profile in beta 14
+measured several-second UI-thread captures and a roughly 1.66 GiB peak working
+set in a larger copied-data x86 host. Faster history compilation does not fix
+full-capture memory pressure; a longer interval reduces frequency, not each
+pause/peak. See [performance limits](Validation-and-Limitations#s12-performance-measurements-partial-beta-14).
+No verified universal record-count/memory ceiling or multi-hour safety claim
+is available; normal mod/notes saving and separate backups remain essential.
+
 **Plugin settings** offers Manual (default), 30 seconds, 1 minute, 5 minutes
 and 10 minutes. Automatic reviews durably append session deltas while the window
 is visible, not minimized/busy or blocked by visible modal forms; they never

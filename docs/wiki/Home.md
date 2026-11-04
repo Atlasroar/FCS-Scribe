@@ -41,7 +41,7 @@ release decisions, and AI-generated record notes require human approval.
 
 ## Current status
 
-The current [v0.1.0-beta.13 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.13)
+The current [v0.1.0-beta.14 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.14)
 remains experimental and restricted to the inspected Steam FCS 2.14.2 executable
 hash. It includes local Workshop metadata, preview-image archiving, embedded
 MDI hosting and contextual action help alongside change documentation.
@@ -100,6 +100,12 @@ baseline through reviews, range previews and restored evidence. New packet
 instructions explain missed reversals/zero evidence without rewriting original
 history or fingerprints. The guide adds a supported/omitted-state matrix and
 scoped native Name textbox commit/cancel/focus evidence.
+Beta 14 publishes partial S12 progress: already compiled sessions keep full-file
+hash checks without redundant JSON/packet parsing; Resume/recording remove
+duplicate work. Reproducible x86 profiles cover growing retained history,
+large record deltas and copied official data. **S12 remains open** for capture
+memory work and a sustained real-editor soak; the measured large configuration
+approached the 32-bit memory boundary.
 S09 and S12-S16 remain open; these fixes do not close full interactive acceptance.
 
 **FCS notes are per-record editor-side annotations**, stored in
