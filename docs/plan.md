@@ -409,9 +409,24 @@ relocation, history transplant, distributed locks or native mod conflict resolut
 
 ### S15. Notes safety: partial application and sidecar distribution
 
-- [ ] Improve per-record partial-application reporting and verified retry guidance without promising rollback or reapplying completed notes.
-- [ ] Make shared per-record notes sidecars and their separate backup/distribution requirements explicit in the approval workflow.
-- [ ] Exercise failures between records, duplicate markers, inherited notes, normal save and restart on disposable copies.
+- [x] Improve per-record confirmed/skipped/unconfirmed reporting and verified retry guidance without promising rollback or reapplying completed notes.
+- [x] Name the actual shared notes sidecar and separate backup/distribution requirements in the approval workflow.
+- [x] Exercise a failure between actual native appends, duplicate markers, inherited TODO, normal Save/reload and separate cold test-host restart on disposable copies.
+
+Beta 18 confirms each append by exact unique-block readback, marks FCS dirty
+before attempting mutation and preserves target/stage/cause and detailed
+outcomes on failure. The original complete draft/packet remain intact.
+664 core checks and copied official-data/augmented representative runs each
+passing 36 notes checks plus 8 cold-process reopen checks cover safe retries,
+native Save, inherited/category/unrelated-note preservation and other-author
+sidecar hashes. The injected failure is a completion-observer exception after
+one actual append, not a claimed native mid-write failure.
+Native Save normalization initially staled unsaved-gameplay evidence; final
+fixtures settle saved gameplay before export, without bypassing fingerprints.
+Native aggregate formatting can normalize while canonical completed blocks
+remain verifiable. No live writes, rollback, auto-save or marker repair.
+Physical I/O/power failures and full FCS Extended interactive startup/approval
+remain unverified; S09 is not closed.
 
 ### S16. Compatibility and provenance boundaries
 
@@ -657,7 +672,7 @@ stabilization work is distinct from new feature expansion:
 | S12: performance (accepted tested scope) | The owner accepted the bounded history/memory/actual-editor evidence. Custom stacks and broader practical headroom/latency remain explicitly unverified, not blocking S13 under this decision. |
 | S13: storage/distribution (beta 16) | Bounded closed tracking-copy/restore/compiled-archival cases and private pre-upload guidance are complete. No automated backups, pruning, native upload protection or physical storage-failure guarantee. |
 | S14: portability (beta 17) | Tracking-only moves, explicit fresh-baseline workflow and divergent-history failures verified on disposable same-host native fixtures. No automatic relocation/merging, cross-machine installation or path-alias/network guarantee. |
-| S15: notes safety | Improve per-record failure/retry guidance, clarify separate sidecar backup/distribution, and validate partial application without promising rollback. |
+| S15: notes safety (beta 18) | Per-record readback/outcomes, sidecar approval boundary and native partial/retry/Save/cold-test-process cases complete for bounded fixtures. No rollback/auto-save or physical mid-write guarantee. |
 | S16: compatibility/provenance | Maintain the verified build/configuration matrix, test available dependency stacks and keep unresolved field ownership and cached Workshop context explicit. |
 
 After stabilization and explicit acceptance, five expansion areas remain in
@@ -675,7 +690,7 @@ in this table.
 ## Working order
 
 1. Keep S09 results and remaining exceptions explicit; untested is not passed, and the gate remains open until its support scope is explicitly accepted.
-2. S10/S11 are addressed in betas 12/13; S12's tested scope is explicitly accepted after betas 14/15 and the actual-editor soak. S13/S14's bounded storage/portability work is covered in betas 16/17. Scope S15 next, retaining unverified custom-stack/headroom and cross-machine boundaries. Keep independently scoped changes, regression evidence and the requested PR/merge/beta-release cycle; publishing partial progress does not close unrelated acceptance gates.
+2. S10/S11 are addressed in betas 12/13; S12's tested scope is explicitly accepted after betas 14/15 and the actual-editor soak. S13-S15's bounded storage/portability/notes work is covered in betas 16-18. Scope S16 next, retaining unverified custom-stack/headroom, cross-machine and physical-failure boundaries. Keep independently scoped changes, regression evidence and the requested PR/merge/beta-release cycle; publishing partial progress does not close unrelated acceptance gates.
 3. Close the stabilization/MVP acceptance gate and any exposed issues before implementing new feature expansion.
 4. Then scope OCS design, broader session history and Markdown independently. Markdown/history do not inherently require OCS; do not couple them to a new runtime without a concrete requirement.
 5. Validate dependency provenance before wiki-ready exports. Direct AI remains optional and requires an explicit provider/credential/consent decision.

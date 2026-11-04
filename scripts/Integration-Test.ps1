@@ -6,6 +6,7 @@ param(
     [switch]$ExportsOnly,
     [switch]$RecoveryOnly,
     [switch]$SamplingOnly,
+    [switch]$NotesOnly,
     [switch]$PerformanceOnly,
     [switch]$VanillaStack,
     [ValidateRange(1, 120)][int]$ProfileIterations = 3
@@ -13,7 +14,8 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($VanillaStack -and -not $PerformanceOnly) { throw 'VanillaStack is restricted to PerformanceOnly profiling.' }
 if (([int]$SettingsOnly.IsPresent + [int]$ScheduleOnly.IsPresent + [int]$ExportsOnly.IsPresent +
-    [int]$RecoveryOnly.IsPresent + [int]$SamplingOnly.IsPresent + [int]$PerformanceOnly.IsPresent) -gt 1) {
+    [int]$RecoveryOnly.IsPresent + [int]$SamplingOnly.IsPresent + [int]$NotesOnly.IsPresent +
+    [int]$PerformanceOnly.IsPresent) -gt 1) {
     throw 'Choose at most one targeted integration suite.'
 }
 $root = Split-Path $PSScriptRoot -Parent
@@ -44,6 +46,14 @@ $sources = @(Get-ChildItem (Join-Path $root 'src') -Filter '*.cs' | ForEach-Obje
 if ($LASTEXITCODE -ne 0) { throw 'Integration test compilation failed.' }
 Push-Location $fixture
 try {
+    if ($NotesOnly) {
+        & (Join-Path $fixture 'IntegrationTests.exe') --notes-safety
+        if ($LASTEXITCODE -ne 0) { throw "Notes safety tests failed; disposable fixture retained at $fixture" }
+        & (Join-Path $fixture 'IntegrationTests.exe') --notes-reopen
+        if ($LASTEXITCODE -ne 0) { throw "Cold-process notes reopen failed; disposable fixture retained at $fixture" }
+        Write-Output "Disposable fixture retained for inspection: $fixture"
+        return
+    }
     if ($PerformanceOnly) {
         $env:FCS_SCRIBE_PROFILE_SOURCE = (git -C $root rev-parse HEAD).Trim() + ' (working tree)'
         $env:FCS_SCRIBE_PROFILE_ITERATIONS = $ProfileIterations.ToString()
@@ -74,6 +84,12 @@ try {
     if (-not $SettingsOnly -and -not $ScheduleOnly -and -not $ExportsOnly -and -not $RecoveryOnly) {
         & (Join-Path $fixture 'IntegrationTests.exe') --sampling
         if ($LASTEXITCODE -ne 0) { throw "Sampling boundary tests failed; disposable fixture retained at $fixture" }
+    }
+    if (-not $SettingsOnly -and -not $ScheduleOnly -and -not $ExportsOnly -and -not $RecoveryOnly -and -not $SamplingOnly) {
+        & (Join-Path $fixture 'IntegrationTests.exe') --notes-safety
+        if ($LASTEXITCODE -ne 0) { throw "Notes safety tests failed; disposable fixture retained at $fixture" }
+        & (Join-Path $fixture 'IntegrationTests.exe') --notes-reopen
+        if ($LASTEXITCODE -ne 0) { throw "Cold-process notes reopen failed; disposable fixture retained at $fixture" }
     }
 }
 finally { Pop-Location }

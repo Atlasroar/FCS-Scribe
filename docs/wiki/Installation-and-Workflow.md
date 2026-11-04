@@ -598,3 +598,56 @@ Conflicting text/evidence, partial blocks or multiple same-batch markers stop
 the operation for inspection. Do not delete completed entries from the draft.
 In beta 7, reopen the saved workspace containing the original complete draft
 and packet for a retry; fresh current-state/existing-notes checks still apply.
+
+### Per-record notes outcomes and safe retries (beta 18)
+
+Approval names the **actual active Notes/TODO file** and warns that these
+shared annotations are not embedded in the `.mod`. With all FCS instances
+closed, back up relevant `data\__TODO__<user>.txt` files separately, including
+other authors' files when needed. They can contain unrelated mods' annotations:
+do not distribute entire sidecars blindly or overwrite another author's file.
+Use the [complete private backup workflow](#practical-private-backup-workflow).
+If the active destination changes while approval is open, application rejects
+before writes and requires reviewing/approving the new destination.
+
+During approved application, a target is marked newly confirmed only after
+the native append returns and its unique complete block passes readback
+validation. FCS is marked dirty **before** an append attempt, since a failing
+native operation could already have changed memory. An attempted failure can
+therefore leave the editor dirty even with zero confirmed records.
+
+The read-only review area shows the active file and record IDs grouped as:
+
+| Outcome | Meaning |
+|---|---|
+| Newly confirmed | This attempt appended and read back a matching complete block. This is not a disk-save confirmation. |
+| Previously completed/skipped | Prevalidation found one exact matching completed block; Scribe did not append that target again. |
+| Unconfirmed | No completion was confirmed in this attempt. This includes not-yet-attempted targets and potentially partially changed targets; it is **not proof that nothing changed**. |
+
+Failures also name the last target, operation stage and original exception.
+The menu's error path pauses automatic work and preserves the detailed report,
+original packet and full editable draft. A Notes-list refresh failure can occur
+after every append was confirmed; do not blindly reapply the batch.
+
+1. Inspect the report and actual native Notes for each affected target before
+   retrying or saving. Preserve the full draft/packet using **Save workspace**.
+   There is no rollback or automatic save.
+2. Keep the **original complete draft**, including completed entries, their
+   original text and ordered citations. With unchanged captured state, Apply
+   validates all coverage again, asks for approval again and skips only exact,
+   unique completed blocks. Partial/conflicting blocks and duplicate markers
+   require inspection; do not erase markers or edit identifiers to force retry.
+3. If you deliberately Save and restart, inspect both gameplay and notes.
+   Native Save can normalize dependency metadata and native notes formatting.
+   A changed fingerprint remains stale: do not assume the old draft can retry,
+   rebind its IDs or weaken checks. Preserve the old evidence and resolve the
+   changed context before preparing new documentation. Do not lose or duplicate
+   already-written notes while doing so.
+4. If the original fingerprint still matches after reload, open the saved
+   workspace and reapprove the validated pending targets. Inspect the result;
+   use **normal FCS Save** only when ready. A fully present batch still rejects
+   further application instead of silently reporting a new success.
+
+The automated restart check uses a separate native test-host process, not the
+complete physical FCS Extended startup/approval workflow. Tracking does not
+back up these sidecars, and Apply does not change Workshop changelog text.

@@ -59,6 +59,33 @@ internal static class CoreTests
         };
     }
 
+    private static void CheckNoteReports()
+    {
+        var completed = new List<string> { "a" };
+        var report = new NoteApplyReport(new[] { "a", "b" }, completed, new[] { "old" }, "data\\__TODO__fixture.txt");
+        completed.Clear();
+        Check(report.CompletedRecordIds.SequenceEqual(new[] { "a" }) &&
+            report.SkippedRecordIds.SequenceEqual(new[] { "old" }) &&
+            report.UnconfirmedRecordIds.SequenceEqual(new[] { "b" }), "note reports snapshot confirmed/skipped/unconfirmed IDs");
+        bool readOnly = false;
+        try { report.CompletedRecordIds.Add("changed"); }
+        catch (NotSupportedException) { readOnly = true; }
+        Check(readOnly, "note report collections cannot be mutated");
+        Check(report.Details.Contains("data\\__TODO__fixture.txt") && report.Details.Contains("Keep the original complete draft") &&
+            report.Details.Contains("other mods' annotations"), "per-record details preserve retry and shared-sidecar boundaries");
+        var cause = new IOException("injected uncertain native write");
+        var failure = new NoteApplyException(new NoteApplyReport(new[] { "a" }, new string[0], new string[0], "notes.txt"),
+            "a", "appending note", cause);
+        Check(failure.InnerException == cause && failure.LastRecordId == "a" && failure.Stage == "appending note" &&
+            failure.Report.CompletedRecordIds.Count == 0 && failure.Report.UnconfirmedRecordIds.Single() == "a",
+            "an unconfirmed append retains its target, stage and cause without claiming completion");
+        Check(failure.Message.Contains("even with zero confirmed") && failure.Message.Contains("No rollback or save"),
+            "zero confirmed appends never imply untouched notes or rollback");
+        var success = new NoteApplyReport(new[] { "a" }, new[] { "a" }, new[] { "old" }, "notes.txt");
+        Check(success.UnconfirmedRecordIds.Count == 0 && success.Summary.Contains("previously completed/skipped: 1"),
+            "successful retry reports new and previously completed records separately");
+    }
+
     private static void CheckCompleteCoverage()
     {
         Snapshot before = State();
@@ -127,6 +154,9 @@ internal static class CoreTests
         Snapshot stale = Clone(after); stale.Records[0].Name = "Changed after export";
         Reject(delegate { DraftValidation.Check(packet, complete, stale, partiallyApplied); },
             "partial retry still rejects stale editor state");
+        stale = Clone(after); stale.Dependencies.Add("save-normalized.mod");
+        Reject(delegate { DraftValidation.Check(packet, complete, stale, partiallyApplied); },
+            "dependency metadata normalization keeps an older partial draft stale");
 
         Snapshot deleted = Clone(after); deleted.Records.RemoveAt(1);
         Packet deletion = new Tracker(before).Export(deleted);
@@ -479,6 +509,7 @@ internal static class CoreTests
             Reject(delegate { DraftValidation.Check(withContext, contextDraft, withMetadata, delegate { return ""; }); },
                 "Workshop context changed after export blocks stale drafts");
             CheckCompleteCoverage();
+            CheckNoteReports();
             CheckWorkshopAvailability();
             passed += TrackingTests.Run();
             passed += JournalTests.Run();
