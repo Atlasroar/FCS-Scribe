@@ -144,6 +144,7 @@ namespace FcsScribe
         private readonly FileStream lease, anchor;
         private readonly Dictionary<string, Stamp> entries = new Dictionary<string, Stamp>(StringComparer.Ordinal);
         private readonly List<string> sessions = new List<string>();
+        private readonly HashSet<string> compiledSessions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, string> sessionHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         private readonly List<RecordingEvidence> evidence = new List<RecordingEvidence>();
         private string sessionHash, journalHash, markerHash;
@@ -219,7 +220,10 @@ namespace FcsScribe
                     throw new InvalidDataException("The project's session storage is missing. Restore its .json.scribe folder.");
                 if (File.Exists(JournalPath))
                 {
-                    ReadLines(JournalPath, false, null, line => Replay(line, true));
+                    ReadLines(JournalPath, false, null, line => {
+                        ValidateLine(line);
+                        ReplayValidated(line, true);
+                    });
                     journalHash = TrackingStorage.HashFile(JournalPath);
                 }
                 var remaining = System.IO.Directory.GetFiles(Path.Combine(DirectoryName, "sessions"), "*.jsonl")
@@ -231,16 +235,19 @@ namespace FcsScribe
                     if (next == null) throw new InvalidDataException("A session depends on missing history. Restore its required session files.");
                     ValidateHeader(next.Header);
                     string previous = next.Header.ParentEntryId, fingerprint = next.Header.ParentFingerprint;
+                    bool pending = false;
                     ReadLines(next.Path, true, null, line => {
                         ValidateLine(line);
                         if (line.Record.SessionId != next.Header.SessionId || line.Record.PreviousEntryId != previous ||
                             line.Record.PreviousFingerprint != fingerprint)
                             throw new InvalidDataException("The session has a broken local entry chain.");
-                        Replay(line, false);
+                        ReplayValidated(line, false);
+                        pending |= !entries[line.Record.EntryId].Compiled;
                         previous = line.Record.EntryId; fingerprint = line.Record.Packet.SourceFingerprint;
                     });
                     sessions.Add(next.Path);
                     sessionHashes.Add(next.Path, TrackingStorage.HashFile(next.Path));
+                    if (!pending) compiledSessions.Add(next.Path);
                     remaining.Remove(next);
                 }
                 if (marker != null && (!entries.ContainsKey(marker.HeadId) || entries[marker.HeadId].Fingerprint != marker.Fingerprint))
@@ -462,6 +469,7 @@ namespace FcsScribe
             SessionPath = path; SessionId = id; sessionHash = TrackingStorage.HashFile(path);
             sessions.Add(path);
             sessionHashes.Add(path, sessionHash);
+            compiledSessions.Add(path);
         }
 
         public Packet Record(Snapshot current)
@@ -469,8 +477,11 @@ namespace FcsScribe
             EnsureOpen();
             if (SessionPath == null) throw new InvalidOperationException("Begin a session before recording.");
             Packet packet = ResumeTracker().Export(current);
-            TrackingStorage.Verify(SessionPath, sessionHash);
-            if (packet.SourceFingerprint == Fingerprint) return packet;
+            if (packet.SourceFingerprint == Fingerprint)
+            {
+                TrackingStorage.Verify(SessionPath, sessionHash);
+                return packet;
+            }
             var record = new JournalRecord { ProjectId = ProjectId, EntryId = Guid.NewGuid().ToString("N"),
                 SessionId = SessionId, PreviousEntryId = HeadId, PreviousFingerprint = Fingerprint,
                 RecordedUtc = UtcNow(), Packet = packet, Delta = SnapshotDelta.Between(State, current) };
@@ -486,6 +497,7 @@ namespace FcsScribe
                 RecordedUtc = DateTime.Parse(record.RecordedUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind) });
             evidence.Add(Evidence(record));
             sessionHashes[SessionPath] = sessionHash;
+            compiledSessions.Remove(SessionPath);
             State = current; Fingerprint = packet.SourceFingerprint; HeadId = record.EntryId; CapturedUtc = record.RecordedUtc;
             if (packet.Changes.Count > 0) LastEvidence = packet;
             return packet;
@@ -521,6 +533,8 @@ namespace FcsScribe
             {
                 foreach (string path in sessions)
                 {
+                    TrackingStorage.Verify(path, sessionHashes[path]);
+                    if (compiledSessions.Contains(path)) continue;
                     SessionHeader header = null;
                     string previous = null, fingerprint = null;
                     ReadLines(path, true, value => {
@@ -544,6 +558,7 @@ namespace FcsScribe
                         Json.WriteStream(output, line); output.WriteByte(10); output.Flush(true);
                         stamp.Compiled = true; count++;
                     });
+                    compiledSessions.Add(path);
                 }
             }
             catch { faulted = true; throw; }
@@ -552,9 +567,8 @@ namespace FcsScribe
             return count;
         }
 
-        private void Replay(JournalLine line, bool compiled)
+        private void ReplayValidated(JournalLine line, bool compiled)
         {
-            ValidateLine(line);
             Stamp known;
             if (entries.TryGetValue(line.Record.EntryId, out known))
             {

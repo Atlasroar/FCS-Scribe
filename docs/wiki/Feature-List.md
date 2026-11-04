@@ -33,6 +33,10 @@ mod/notes/tracking backup workflow.
 reviews, range previews and restored evidence, and in new packet instructions.
 Recordings are observations, not an event log; zero evidence is not an all-clear.
 See the [supported/omitted-state matrix](Data-and-AI-Contracts#supported-and-omitted-state-beta-13).
+**v0.1.0-beta.14** publishes bounded S12 history-performance improvements and
+reproducible x86 profiling without weakening hash/chain checks. Full-capture
+memory and a sustained real-editor soak remain open; see
+[measured performance limits](Validation-and-Limitations#s12-performance-measurements-partial-beta-14).
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).

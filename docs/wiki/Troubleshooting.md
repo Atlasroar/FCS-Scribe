@@ -40,6 +40,22 @@ Use `Get-FileHash -Algorithm SHA256 -LiteralPath '<actual FCS executable>'`
 in PowerShell to check the file you launch. See
 [Installation and workflow](Installation-and-Workflow) for the full setup.
 
+## Large stacks and profiling (partial S12, beta 14)
+
+Faster compilation does not make capture memory-safe for every 32-bit session.
+If Review pauses for seconds or memory approaches the process limit, use Manual,
+save the mod and notes normally, preserve the complete tracking set and reopen
+when safe. Do not delete uncompiled logs or bypass hash checks. See
+[measured workloads, profiling and unresolved memory limits](Validation-and-Limitations#s12-performance-measurements-partial-beta-14).
+
+Profiling-only errors: `Entries must divide evenly across Sessions.` requires
+positive evenly divisible dimensions; `VanillaStack is restricted to
+PerformanceOnly profiling.` requires both flags. `Performance host compilation
+failed.`, `Performance run failed; fixture retained at ...` and `Native performance
+run failed; fixture retained at ...` are failed measurements, not passing
+budgets: inspect the reported compiler/exception output, retain the fixture
+privately and fix the input/tool/resource problem before rerunning.
+
 ## Finding a message
 
 Use **Ctrl+F** for the first sentence of your error. Values shown as

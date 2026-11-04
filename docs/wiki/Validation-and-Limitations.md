@@ -182,6 +182,117 @@ not newly verified. Earlier S09 user evidence covers one real field-to-Scribe
 route, not all controls. External assets/layouts, complete event history and
 saved-state verification remain omitted. S09 and S12-S16 remain open.
 
+## S12 performance measurements: partial beta 14
+
+**S12 remains open.** The user selected publishing bounded history/profiling
+improvements while retaining full-capture memory work and a sustained real
+FCS Extended soak. The measurements below are local Windows/.NET Framework
+x86 test-host observations, not universal support limits or a production SLA.
+Runs used fresh processes and copied/synthetic data; some independent jobs
+ran concurrently, so small timing differences are not isolated CPU benchmarks.
+
+### History costs and measured regression envelopes
+
+The paired synthetic workload has 2,000 records, 16,992 cells, 100 recordings,
+10 retained sessions and a 1,000-cell changed record. Every observation renames
+that record, so its complete record delta is stored even though only its name
+changed. Baseline/session/journal storage was about 26.3 MiB. Medians:
+
+| Operation | Beta 13 code | Beta 14 code |
+| --- | --- | --- |
+| Changed recording | 77.9 ms | 64.4 ms |
+| Compilation with pending entries | 1,421.4 ms | 257.0 ms |
+| Repeated no-op compilation | 2,417.7 ms | 40.3 ms |
+| Resume with compiled session originals retained | 7,021.1 ms | 6,425.3 ms |
+
+These are whole-operation times, including existing validation/I/O. Changed
+recording includes comparison, full session hash checks, delta/packet validation,
+durable append and marker update; it is not just disk-write time.
+The large difference in no-op compilation is removal of redundant parsing,
+not removal of integrity checks. Resume still hashes/replays the full model
+and history and remains proportional to accumulated data.
+
+Workload-specific **local regression ceilings** were checked against every
+measured sample, not just medians. These conservative rounded ceilings are
+reproduction/review budgets on this setup, **not enforced runtime caps**:
+
+| Synthetic workload | Changed recording max budget | Pending compilation max budget | No-op compilation max budget | Retained-history resume max budget |
+| --- | --- | --- | --- | --- |
+| 100 entries / 10 sessions / 1,000-cell changed record | 250 ms | 500 ms | 250 ms | 10 seconds |
+| 300 entries / 30 sessions / 1,000-cell changed record | 250 ms | 750 ms | 500 ms | 30 seconds |
+| 20 entries / 5 sessions / 20,000-cell changed record | 500 ms | 3 seconds | 500 ms | 30 seconds |
+
+All samples met those local ceilings and the synthetic **128 MiB peak working
+set** envelope. The growing workload used about 74.8 MiB of storage, peaked
+at 49.6 MiB working set and resumed in at most 18.75 seconds. The large-record
+workload used about 100.2 MiB, peaked at 84.3 MiB and resumed in at most
+19.37 seconds. No history was automatically archived, pruned or rewritten.
+Full-file byte hashing still scales with session/journal size; fully compiled
+session contents skip JSON/packet parsing only after matching the observed
+whole-file hash. Recording again invalidates that completed-session status.
+Missing/modified files still fail explicitly, including empty-session headers.
+
+### Native capture and the unresolved memory boundary
+
+The smaller copied `gamedata.base` case contains 9,399 records / 322,017 cells.
+Three baseline measurements took about 1.10-1.16 seconds per native capture,
+0.69-0.70 seconds per unchanged comparison, 11.94 seconds for baseline creation
+and 9.06 seconds for resume. Process lifetime peak working set reached 399.8 MiB.
+
+The larger case combines copied `gamedata.base`, `Newwworld.mod`, `Dialogue.mod`
+and `rebirth.mod`, with `gamedata.base` also used as the disposable active
+fixture. It contains **55,130 records / 1,339,047 cells**; this is a stress
+configuration of official data, not a representative custom mod/extension
+stack. In an accelerated **30-cycle** x86 run:
+
+| Measurement | Observed |
+| --- | --- |
+| Native capture on the UI thread | Median 4.15 seconds; range 3.34-5.50 seconds |
+| Unchanged review after capture | Median 2.41 seconds; maximum 2.79 seconds |
+| Create full baseline / resume | 44.95 seconds / 30.81 seconds |
+| Process lifetime peak working set | 1,662.8 MiB |
+
+Capture and comparison are separate measurements; actual Review includes both.
+The baseline alone is about 215 MiB on disk. Working set is **not** a precise
+measure of remaining address space; fragmentation, native FCS, other extensions
+and allocations between samples can exhaust the 32-bit process earlier.
+Managed/private-memory endpoints are also recorded, without forced collection
+or a production GC/memory workaround. The 30 cycles completed, but this is
+not a multi-hour editor soak or proof of leak-free/unbounded operation.
+
+For now, use Manual on large/slow stacks, finish operations before starting
+another and keep separate mod/notes backups. A longer interval reduces how
+often capture pauses occur, not their UI-thread duration or peak allocation.
+There is **no verified safe record-count or memory ceiling**. If memory or
+pauses are problematic, save normally and reopen the editor/project when safe;
+do not bypass validation, drop uncompiled files, force collection or assume
+archival fixes full-capture allocation. Performance optimization does not
+change the partial-capture contract.
+
+### Integrity and acceptance boundaries
+
+608 core checks passed, including changed/empty/missing fully compiled
+sessions, invalidation after a new recording, reopened retained history and
+byte-preserving rejection. Each replayed line still has identity/hash/packet
+validation; full snapshot fingerprints and local/global chains remain checked.
+The extra session-line hash/packet validation during Resume was duplicate work,
+not a separate protection. Schema versions and original evidence are unchanged.
+
+The complete copied-vanilla integration runner passed **269 general + 16
+settings + 24 scheduling + 24 export + 95 recovery + 22 sampling checks** in
+separate hosts. Representative isolated results were **16 + 24 + 24 + 94 + 22**.
+A final native profiling smoke test with the official stack and the small
+representative active fixture loaded 54,952 records / 1,326,402 cells. Its
+single capture took 4.21 seconds; one sample is not sustained-memory evidence.
+
+The representative general suite currently cannot select a numeric-field
+record in its fixture (`Sequence contains no matching element`). The same
+failure reproduced with the unchanged beta 13 test host; it is not counted as
+a passing general run or silently repaired here. Its isolated settings,
+scheduling, export, recovery and sampling suites pass separately. Multi-hour
+FCS Extended use, representative custom stacks, stronger full-capture memory
+headroom and all previously untested S09 boundaries remain open.
+
 ## Reproduce
 
 See [Building and releases](Building-and-Releases#run-checks-and-inspect-the-supported-build)

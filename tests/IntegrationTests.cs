@@ -47,7 +47,8 @@ internal static class IntegrationTests
             host.Shown += delegate {
                 host.BeginInvoke(new Action(delegate {
                     try { result = Run(args.Contains("--settings-recovery"), args.Contains("--schedule"),
-                        args.Contains("--exports"), args.Contains("--tracking-recovery"), args.Contains("--sampling")); }
+                        args.Contains("--exports"), args.Contains("--tracking-recovery"), args.Contains("--sampling"),
+                        args.Contains("--performance")); }
                     finally { host.Close(); }
                 }));
             };
@@ -56,7 +57,8 @@ internal static class IntegrationTests
         return result;
     }
 
-    private static int Run(bool settingsOnly, bool scheduleOnly, bool exportsOnly, bool recoveryOnly, bool samplingOnly)
+    private static int Run(bool settingsOnly, bool scheduleOnly, bool exportsOnly, bool recoveryOnly, bool samplingOnly,
+        bool performanceOnly)
     {
         Form editor = null;
         try
@@ -75,10 +77,20 @@ internal static class IntegrationTests
             Type fileMode = assembly.GetType("forgotten_construction_set.navigation+ModFileMode", true);
             string output = Path.Combine(directory, "mods", "scribe-test.mod");
             FcsAdapter.Call(nav, "setActiveFilename", output, Enum.Parse(fileMode, "USER"));
-            ((IList)FcsAdapter.Field(editor, "activeMods")).Add("fixture.mod");
+            bool stacked = performanceOnly && Directory.Exists(Path.Combine(directory, "dependencies"));
+            ((IList)FcsAdapter.Field(editor, "activeMods")).Add(stacked ? "gamedata.base" : "fixture.mod");
             ((IList)FcsAdapter.Field(editor, "activeMods")).Add("scribe-test.mod");
-            Check((bool)FcsAdapter.Call(data, "load", Path.Combine(directory, "fixture.mod"),
+            Check((bool)FcsAdapter.Call(data, "load", stacked ? Path.Combine(directory, "dependencies", "gamedata.base") :
+                Path.Combine(directory, "fixture.mod"),
                 Enum.Parse(mode, "BASE"), false, false), "load representative mod copy as dependency");
+            if (stacked)
+                foreach (string name in new[] { "Newwworld.mod", "Dialogue.mod", "rebirth.mod" })
+                {
+                    Check((bool)FcsAdapter.Call(data, "load", Path.Combine(directory, "dependencies", name),
+                        Enum.Parse(mode, "BASE"), false, false), "load additional copied vanilla dependency " + name);
+                    ((IList)FcsAdapter.Field(editor, "activeMods")).Insert(
+                        ((IList)FcsAdapter.Field(editor, "activeMods")).Count - 1, name);
+                }
             File.Copy(Path.Combine(directory, "fixture.mod"), output, true);
             Check((bool)FcsAdapter.Call(data, "load", output, Enum.Parse(mode, "ACTIVE"), false, false),
                 "load disposable active mod");
@@ -88,6 +100,13 @@ internal static class IntegrationTests
             object todo = FcsAdapter.Field(editor, "todoList");
             FcsAdapter.Call(todo, "LoadAll");
             var adapter = new FcsAdapter(assembly, editor);
+            if (performanceOnly)
+            {
+                PerformanceTests.Native(adapter.Capture, directory, Environment.GetEnvironmentVariable("FCS_SCRIBE_PROFILE_SOURCE"),
+                    Int32.Parse(Environment.GetEnvironmentVariable("FCS_SCRIBE_PROFILE_ITERATIONS"),
+                        System.Globalization.CultureInfo.InvariantCulture));
+                return 0;
+            }
             if (samplingOnly)
             {
                 CheckSamplingWindow(adapter, editor, assembly, output);

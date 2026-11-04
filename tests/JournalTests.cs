@@ -64,6 +64,50 @@ internal static class JournalTests
                 "compiled replay retains both sampled observations rather than collapsing them");
     }
 
+    private static void CheckCompiledSessionGuards(string directory)
+    {
+        string path = Path.Combine(directory, "compile-guards.json");
+        string first, second, empty, journal;
+        using (var project = JournalProject.Create(path, State("10")))
+        {
+            project.BeginSession(); first = project.SessionPath;
+            project.Record(State("11"));
+            Check(project.Compile() == 1, "initial compilation marks the current session complete");
+            string original = File.ReadAllText(first);
+            File.WriteAllText(first, original.Replace("\"11\"", "\"19\""));
+            Reject<IOException>(() => project.Compile(), "hash checks reject edited fully compiled sessions before skipping parsing");
+            Check(File.ReadAllText(first) != original, "compiled-session rejection never rewrites the external edit");
+            File.WriteAllText(first, original);
+        }
+        using (var project = JournalProject.Open(path))
+        {
+            Check(project.Compile() == 0, "reopen recognizes validated retained compiled sessions");
+            project.BeginSession(); second = project.SessionPath;
+            project.Record(State("12"));
+            Check(project.Compile() == 1, "a new session still compiles after retained sessions are skipped");
+            project.Record(State("13"));
+            Check(project.Compile() == 1 && project.PendingCount == 0,
+                "recording after compilation invalidates the current session's completed status");
+            journal = TrackingStorage.HashFile(project.JournalPath);
+            project.BeginSession(); empty = project.SessionPath;
+            string header = File.ReadAllText(empty);
+            File.WriteAllText(empty, header.Replace("FCS-Scribe session", "FCS-Scribe changed"));
+            Reject<IOException>(() => project.Compile(), "empty-session headers are hash-checked too");
+            Check(TrackingStorage.HashFile(project.JournalPath) == journal,
+                "a changed empty session never writes a new journal entry");
+            File.WriteAllText(empty, header);
+        }
+        using (var project = JournalProject.Open(path))
+        {
+            File.Delete(first);
+            Reject<IOException>(() => project.Compile(), "compiled sessions removed during an open project still fail explicitly");
+        }
+        using (var project = JournalProject.Open(path))
+            Check(project.EntryCount == 3 && project.Compile() == 0 && File.Exists(second) && File.Exists(empty) &&
+                TrackingStorage.HashFile(project.JournalPath) == journal,
+                "compiled archival is accepted only after reopening with the original journal intact");
+    }
+
     public static int Run()
     {
         string directory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "journal-test-" + Guid.NewGuid().ToString("N"));
@@ -73,6 +117,7 @@ internal static class JournalTests
             CheckInitialization(directory);
             CheckRangeExports(directory);
             CheckSampling(directory);
+            CheckCompiledSessionGuards(directory);
             string invalid = Path.Combine(directory, "game.mod");
             Reject<InvalidDataException>(() => JournalProject.Create(invalid, State("10")), "mod targets rejected before creating session storage");
             Check(!Directory.Exists(invalid + ".scribe"), "invalid targets leave no storage next to game/mod files");
