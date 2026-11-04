@@ -8,6 +8,7 @@ param(
     [switch]$SamplingOnly,
     [switch]$NotesOnly,
     [switch]$CompatibilityOnly,
+    [switch]$ModWorkOnly,
     [switch]$PerformanceOnly,
     [switch]$VanillaStack,
     [ValidateRange(1, 120)][int]$ProfileIterations = 3
@@ -18,7 +19,7 @@ if ($VanillaStack -and -not $PerformanceOnly -and -not $CompatibilityOnly) {
 }
 if (([int]$SettingsOnly.IsPresent + [int]$ScheduleOnly.IsPresent + [int]$ExportsOnly.IsPresent +
     [int]$RecoveryOnly.IsPresent + [int]$SamplingOnly.IsPresent + [int]$NotesOnly.IsPresent +
-    [int]$CompatibilityOnly.IsPresent + [int]$PerformanceOnly.IsPresent) -gt 1) {
+    [int]$CompatibilityOnly.IsPresent + [int]$ModWorkOnly.IsPresent + [int]$PerformanceOnly.IsPresent) -gt 1) {
     throw 'Choose at most one targeted integration suite.'
 }
 $root = Split-Path $PSScriptRoot -Parent
@@ -49,6 +50,12 @@ $sources = @(Get-ChildItem (Join-Path $root 'src') -Filter '*.cs' | ForEach-Obje
 if ($LASTEXITCODE -ne 0) { throw 'Integration test compilation failed.' }
 Push-Location $fixture
 try {
+    if ($ModWorkOnly) {
+        & (Join-Path $fixture 'IntegrationTests.exe') --mod-work
+        if ($LASTEXITCODE -ne 0) { throw "Mod work tests failed; disposable fixture retained at $fixture" }
+        Write-Output "Disposable fixture retained for inspection: $fixture"
+        return
+    }
     if ($CompatibilityOnly) {
         & (Join-Path $fixture 'IntegrationTests.exe') --compatibility
         if ($LASTEXITCODE -ne 0) { throw "Compatibility tests failed; disposable fixture retained at $fixture" }
@@ -105,6 +112,8 @@ try {
     if (-not $SettingsOnly -and -not $ScheduleOnly -and -not $ExportsOnly -and -not $RecoveryOnly -and -not $SamplingOnly) {
         & (Join-Path $fixture 'IntegrationTests.exe') --compatibility
         if ($LASTEXITCODE -ne 0) { throw "Compatibility tests failed; disposable fixture retained at $fixture" }
+        & (Join-Path $fixture 'IntegrationTests.exe') --mod-work
+        if ($LASTEXITCODE -ne 0) { throw "Mod work tests failed; disposable fixture retained at $fixture" }
     }
 }
 finally { Pop-Location }

@@ -40,18 +40,20 @@ namespace FcsScribe
             {
                 var toolbar = (ToolStrip)FcsAdapter.Field(editor, "toolStrip1");
                 var button = new ToolStripButton("FCS-Scribe");
+                Func<ScribeWindow> open = () => {
+                    var adapter = new FcsAdapter(assembly, editor);
+                    if (window == null || window.IsDisposed || window.ModId != adapter.ActiveModId())
+                        window = new ScribeWindow(adapter, editor);
+                    window.Show(); window.Activate(); return window;
+                };
                 button.Click += delegate {
-                    try
-                    {
-                        if (window == null || window.IsDisposed)
-                            window = new ScribeWindow(new FcsAdapter(assembly, editor), editor);
-                        window.Show();
-                        window.Activate();
-                    }
+                    try { open(); }
                     catch (Exception error) { ShowError(error); }
                 };
                 toolbar.Items.Add(new ToolStripSeparator());
                 toolbar.Items.Add(button);
+                var todoMenu = new ModTodoMenu(assembly, editor, open);
+                editor.FormClosed += delegate { todoMenu.Dispose(); };
             }
             catch (Exception error) { ShowError(error); }
         }
@@ -70,7 +72,12 @@ namespace FcsScribe
         private JournalProject project;
         private readonly Stopwatch clock = Stopwatch.StartNew();
         private readonly JournalSchedule schedule = new JournalSchedule();
-        private readonly string settingsPath;
+        private string settingsPath;
+        private ProjectLocation location;
+        private readonly ModWorkView modWork;
+        internal readonly string ModId;
+        private readonly string modName;
+        private TabControl tabs;
         private string settingsHash;
         private PluginSettings settings;
         private Exception settingsError;
@@ -103,11 +110,24 @@ namespace FcsScribe
             BorderStyle = BorderStyle.FixedSingle };
 
         public ScribeWindow(FcsAdapter adapter, Form editor)
-            : this(adapter, editor, PluginSettings.DefaultPath) { }
+            : this(adapter, editor, ProjectLocation.Open(adapter.ActiveModDirectory(), adapter.ActiveModId())) { }
+
+        private ScribeWindow(FcsAdapter adapter, Form editor, ProjectLocation projectLocation)
+            : this(adapter, editor, projectLocation.SettingsPath)
+        {
+            location = projectLocation;
+            if (!File.Exists(settingsPath) && File.Exists(PluginSettings.DefaultPath))
+            {
+                settingsNotice.Visible = true;
+                settingsNotice.Text = "MOD-LOCAL SETTINGS: this mod starts with Manual/disabled notes/TODO defaults. " +
+                    "Earlier user-wide settings are retained, not silently imported. Configure this mod in Settings.";
+            }
+        }
 
         internal ScribeWindow(FcsAdapter adapter, Form editor, string settingsFile)
         {
             this.adapter = adapter;
+            ModId = adapter.ActiveModId(); modName = adapter.ActiveModName();
             draftDecision = operation => MessageBox.Show(this,
                 "Save the editable draft AND its original AI packet before " + operation + "?\r\n" +
                 "Yes: save a portable draft workspace. No: discard this window's unsaved work. Cancel: keep working.\r\n" +
@@ -124,21 +144,22 @@ namespace FcsScribe
             Text = "FCS-Scribe - experimental documentation";
             Width = 1080;
             Height = 780;
-            var coreMenu = AddMenu("&Core", "Start or resume tracking, review changes, compile the journal or export an AI packet.");
+            var coreMenu = AddMenu("&Core", "Start or resume tracking, save Scribe changes, compile the journal or export an AI packet.");
             AddAsyncAction(coreMenu.DropDownItems, "&Start tracking", "Create or resume a tracking project and begin a new timestamped session log. Replaces the editable draft; does not save or restore the mod.", Start);
-            AddAsyncAction(coreMenu.DropDownItems, "&Review changes", "Record new changes since the last durable entry into this session log. Automatic intervals are available in Settings.", Review);
+            AddAsyncAction(coreMenu.DropDownItems, "&Save Changes", "Save enabled Scribe notes/TODOs and record captured changes to the tracking journal. Does NOT save the .mod, native FCS annotations or editable AI draft workspace.", Review);
             AddAsyncAction(coreMenu.DropDownItems, "&Compile journal", "Consolidate durable session entries without duplicates or deleting originals. Automatic mode compiles once the oldest pending recording is 30 minutes old, including time closed or manual.", Compile);
             AddAsyncAction(coreMenu.DropDownItems, "&Export AI packet", "Choose and preview an inclusive range of recordings, including earlier sessions or unrecorded edits, then save an AI packet. Does not record, compile or send anything online. Replaces the editable draft.", Export);
             var workshopMenu = AddMenu("&Workshop", "Export local Workshop information or archive the original preview image.");
             AddAction(workshopMenu.DropDownItems, "&Export Workshop info", "Save current local Workshop information, availability warnings and preview-image details as JSON. No tracking baseline required; Workshop-only errors do not pause gameplay recording.", ExportWorkshop, false);
             AddAction(workshopMenu.DropDownItems, "&Archive preview image", "Copy the local Workshop preview, byte-for-byte, to a new image file outside Kenshi. Unavailable images fail explicitly without pausing gameplay recording. Does not download or change the original.", ArchivePreview, false);
-            var draftMenu = AddMenu("&Draft", "Import/paste a response or save/open its portable workspace with the original AI packet.");
+            var draftMenu = AddMenu("&Draft", "Import or paste an AI response into the editable draft.");
             AddAsyncAction(draftMenu.DropDownItems, "&Import draft", "Load an AI response JSON into the editable draft. Requires an exported batch; save/discard protection keeps existing work safe.", Import);
             AddAsyncAction(draftMenu.DropDownItems, "&Paste draft", "Replace the editable draft with clipboard text after save/discard protection. Nothing is applied by pasting.", Paste);
-            AddAsyncAction(draftMenu.DropDownItems, "&Save workspace", "Atomically save exact editable text, even unfinished JSON, together with its original AI packet. This is separate from tracking and does not save the mod.", SaveWorkspaceAction);
-            AddAsyncAction(draftMenu.DropDownItems, "&Open workspace", "Restore draft text and its original packet after restart. Validate the bundle, report stale/invalid drafts, and require fresh validation and approval before applying.", OpenWorkspace);
+            var workspaceMenu = AddMenu("&Workspace", "Save or restore a portable AI draft workspace. Scribe notes/TODO files are separate.");
+            AddAsyncAction(workspaceMenu.DropDownItems, "&Save workspace", "Atomically save exact editable text, even unfinished JSON, together with its original AI packet. This is separate from tracking and does not save the mod.", SaveWorkspaceAction);
+            AddAsyncAction(workspaceMenu.DropDownItems, "&Open workspace", "Restore draft text and its original packet after restart. Validate the bundle, report stale/invalid drafts, and require fresh validation and approval before applying.", OpenWorkspace);
             AddAction(actions.Items, "&Apply approved notes", "Validate the draft and ask for approval, then append record Notes/TODO entries and mark FCS dirty. Does not save or edit Workshop notes.", Apply);
-            AddAsyncAction(actions.Items, "&Settings", "Choose recording/export defaults, reload changed settings or explicitly repair unreadable/invalid settings with an original-byte backup. Existing tracking files stay at their chosen location.", Settings);
+            AddAsyncAction(actions.Items, "&Settings", "Choose mod notes/TODOs, project storage and recording/export defaults, reload changed settings or explicitly repair settings. Existing tracking files stay at their chosen location.", Settings, true, false);
             MainMenuStrip = actions;
             actions.OverflowButton.AccessibleDescription = "Show menu actions that do not fit in the window.";
             actions.OverflowButton.MouseEnter += delegate { help.Text = actions.OverflowButton.AccessibleDescription; };
@@ -146,7 +167,8 @@ namespace FcsScribe
             actions.OverflowButton.Paint += delegate { if (actions.OverflowButton.Selected) UpdateHelp(); };
             actions.MenuDeactivate += delegate { help.Text = HelpHint; };
             actions.Leave += delegate { help.Text = HelpHint; };
-            var tabs = new TabControl { Dock = DockStyle.Fill };
+            tabs = new TabControl { Dock = DockStyle.Fill };
+            modWork = new ModWorkView(LocalAction, ReloadModWork);
             var changesTab = new TabPage("Changes and warnings");
             changesTab.Controls.Add(review);
             var draftTab = new TabPage("Editable draft JSON");
@@ -156,10 +178,13 @@ namespace FcsScribe
             var workshopTab = new TabPage("Workshop info");
             workshopTab.Controls.Add(workshop);
             tabs.TabPages.Add(workshopTab);
+            tabs.TabPages.Add(modWork.NotesTab); tabs.TabPages.Add(modWork.TodoTab);
+            modWork.Load(ProjectDirectory(), modName, settings);
             tabs.SelectedIndexChanged += delegate {
                 if (tabs.SelectedTab != workshopTab || busy) return;
                 try
                 {
+                    SaveModWork();
                     WorkshopMetadata metadata = adapter.CaptureWorkshop();
                     workshop.Text = Json.Pretty(Json.Write(metadata));
                     status.Text = WorkshopNotice(metadata) + "Workshop information read from local/staged/cached data; no Steam query.";
@@ -206,6 +231,8 @@ namespace FcsScribe
                     status.Text = "An operation is still running. Draft work is retained; close again after it completes.";
                     return;
                 }
+                try { SaveModWork(); }
+                catch (Exception error) { args.Cancel = true; PauseAfterError(error); return; }
                 if (DraftNeedsSave && approvedCloseRevision != draftRevision)
                 {
                     args.Cancel = true;
@@ -349,7 +376,14 @@ namespace FcsScribe
 
         private async Task Review()
         {
-            if (tracker == null) throw new InvalidOperationException("Select Start tracking first.");
+            SaveModWork();
+            if (tracker == null)
+            {
+                if (!settings.ModNotesEnabled && !settings.ModTodoEnabled)
+                    throw new InvalidOperationException("Select Start tracking first, or enable Scribe notes/TODOs in Settings.");
+                status.Text = "Enabled Scribe notes/TODOs saved. No tracking project open; .mod/native notes/draft workspace NOT saved.";
+                return;
+            }
             Snapshot current = adapter.Capture();
             status.Text = "Validating and flushing new entries to the session log.";
             Packet packet = await Task.Run(() => project.Record(current));
@@ -358,7 +392,7 @@ namespace FcsScribe
             schedule.Reviewed(clock.ElapsedMilliseconds);
             schedule.UpdatePending(clock.ElapsedMilliseconds, DateTime.UtcNow, project.OldestPendingUtc);
             ShowChanges(packet);
-            status.Text = packet.Changes.Count + " evidence entries reviewed; session recording saved/unchanged. " + ProjectStatus();
+            status.Text = packet.Changes.Count + " evidence entries saved/unchanged; enabled Scribe notes/TODOs saved. " + ProjectStatus();
         }
 
         private async Task Compile()
@@ -682,11 +716,66 @@ namespace FcsScribe
                 WordWrap = false, ReadOnly = readOnly, MaxLength = Int32.MaxValue };
         }
 
-        private string ExportDirectory() { return settings.DirectoryFor(adapter.ActiveModDirectory()); }
+        private string ExportDirectory() { return settings.DirectoryFor(location == null ? adapter.ActiveModDirectory() : ProjectDirectory()); }
 
         private void ProtectTrackingFile(string path)
         {
             ExportStorage.ObserveTarget(path, project == null ? null : project.PathName);
+        }
+
+        private string ProjectDirectory() { return location == null ? Path.GetDirectoryName(Path.GetFullPath(settingsPath)) : location.Directory; }
+
+        private void SaveModWork()
+        {
+            if (modWork == null) return;
+            if (location != null) ModWork.Verify(location.LocatorPath, location.LocatorHash);
+            if (settingsError == null && location != null && settingsHash == null)
+            {
+                settings.ProjectModId = ModId;
+                settingsHash = SettingsStorage.Save(settingsPath, settings, null, false).FileHash;
+            }
+            modWork.Save();
+        }
+
+        private void LocalAction(Action action)
+        {
+            if (busy || closing) return;
+            try { action(); SaveModWork(); }
+            catch (Exception error) { PauseAfterError(error); }
+        }
+
+        private void ReloadModWork()
+        {
+            if (busy || closing) return;
+            if (MessageBox.Show(this, "Discard unsaved Scribe notes/TODO edits and reload both files? " +
+                "Copy any text you need first. Native FCS notes are unchanged.", "Reload Scribe work",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+            modWork.Load(ProjectDirectory(), modName, settings);
+            status.Text = modWork.LoadError == null ? "Scribe notes/TODO files reloaded; nothing written." :
+                "Scribe work still needs recovery. Files and unsaved editor text were not overwritten.";
+        }
+
+        internal void AddModTodos(System.Collections.Generic.List<ModTodo> targets)
+        {
+            if (busy || closing) throw new InvalidOperationException("Scribe is busy; add the task after the operation finishes.");
+            if (!settings.ModTodoEnabled) throw new InvalidOperationException("Enable Mod To Do in Settings first.");
+            if (targets.Count == 0) throw new InvalidOperationException("Select an FCS record first.");
+            using (var dialog = new ModTodoDialog("Review " + String.Join(", ", targets.Select(x => x.RecordName))))
+                if (dialog.ShowDialog(this) == DialogResult.OK) AddModTodos(targets, dialog.Value);
+        }
+
+        internal void AddModTodos(System.Collections.Generic.List<ModTodo> targets, string text)
+        {
+            if (busy || closing || !settings.ModTodoEnabled || modWork.Work == null)
+                throw new InvalidOperationException("Mod To Do is unavailable; enable it and resolve any file recovery first.");
+            if (adapter.ActiveModId() != ModId) throw new InvalidOperationException("The active mod changed. Open Scribe for that mod before adding tasks.");
+            if (targets.Count == 0 || String.IsNullOrWhiteSpace(text))
+                throw new InvalidOperationException("Select records and enter task text.");
+            foreach (ModTodo target in targets)
+                modWork.Work.Todos.Add(new ModTodo { RecordId = target.RecordId, RecordName = target.RecordName, Text = text });
+            modWork.RefreshTasks(); tabs.SelectedTab = modWork.TodoTab;
+            SaveModWork();
+            status.Text = targets.Count + " Mod To Do task(s) saved in " + modWork.Work.TodoPath + ". Native annotations unchanged.";
         }
 
         private async Task Settings()
@@ -703,12 +792,14 @@ namespace FcsScribe
         {
             if (loaded.Error == null && loaded.Value == null)
                 throw new InvalidOperationException("The settings loader returned neither settings nor a recovery error.");
+            if (loaded.Error == null && loaded.Value.ProjectModId != null && loaded.Value.ProjectModId != ModId)
+                loaded.Error = new InvalidDataException("These Scribe settings belong to another active mod path. Choose a separate project folder or explicitly repair settings.");
             settingsError = loaded.Error; settingsHash = loaded.FileHash;
             settings = settingsError == null ? loaded.Value : new PluginSettings();
             schedule.Configure(clock.ElapsedMilliseconds, settings.ReviewSeconds);
             settingsNotice.Visible = settingsError != null;
             settingsNotice.Text = settingsError == null ? "" :
-                "SETTINGS RECOVERY - automatic recording disabled. Safe manual mode uses the active mod's export folder. " +
+                "SETTINGS RECOVERY - automatic recording disabled. Safe manual mode uses the Scribe project export folder. " +
                 "Open Settings to reload or explicitly save a repair. No settings file was changed.\r\n" +
                 settingsPath + "\r\n" + settingsError.Message;
             if (settingsError != null) Console.Error.WriteLine("FCS-Scribe settings recovery: " + settingsError);
@@ -716,9 +807,11 @@ namespace FcsScribe
 
         private async Task ReloadSettings()
         {
+            if (modWork.LoadError == null) SaveModWork();
             LoadedSettings loaded = await Task.Run(() => SettingsStorage.Load(settingsPath));
             if (closing) return;
             AdoptSettings(loaded);
+            modWork.Load(ProjectDirectory(), modName, settings);
             if (settingsError == null)
             {
                 automaticPaused = false;
@@ -729,11 +822,35 @@ namespace FcsScribe
 
         private async Task SaveSettings(PluginSettings next)
         {
+            if (adapter.ActiveModId() != ModId) throw new InvalidOperationException("The active mod changed. Open its own Scribe window before changing settings.");
+            if (modWork.LoadError == null) SaveModWork();
+            next.ProjectModId = ModId;
+            string root = String.IsNullOrEmpty(next.ProjectDirectory) ? adapter.ActiveModDirectory() : next.ProjectDirectory;
+            if (location == null) root = ProjectDirectory();
+            ProjectLocation.RequireDirectory(root);
+            var candidate = new ModWork(root, modName, next.ModNotesEnabled, next.ModTodoEnabled);
+            bool switching = !String.Equals(Path.GetFullPath(root), Path.GetFullPath(ProjectDirectory()), StringComparison.OrdinalIgnoreCase);
+            string destination = switching ? Path.Combine(root, "FCS-Scribe.settings.json") : settingsPath;
             string expectedHash = settingsHash;
             bool recovering = settingsError != null;
-            SavedSettings saved = await Task.Run(() => SettingsStorage.Save(settingsPath, next, expectedHash, recovering));
+            if (switching)
+            {
+                LoadedSettings existing = SettingsStorage.Load(destination);
+                if (existing.Error != null) throw existing.Error;
+                if (existing.FileHash != null && existing.Value.ProjectModId != ModId)
+                    throw new InvalidDataException("The destination already contains settings not owned by this mod. Choose a separate project folder.");
+                expectedHash = existing.FileHash; recovering = false;
+            }
+            SavedSettings saved = await Task.Run(() => SettingsStorage.Save(destination, next, expectedHash, recovering));
             if (closing) return;
+            if (switching)
+            {
+                location.Switch(root);
+                settingsPath = destination;
+            }
             AdoptSettings(new LoadedSettings { Value = next, FileHash = saved.FileHash });
+            modWork.Adopt(candidate, settings);
+            SaveModWork();
             automaticPaused = false;
             status.Text = "Settings saved. " + (saved.RecoveryBackup == null ? "" :
                 "Original bytes preserved at " + saved.RecoveryBackup + ". ") +
@@ -774,15 +891,23 @@ namespace FcsScribe
             timer.Start();
         }
 
-        private async Task RunBusy(Func<Task> action)
+        private Task RunBusy(Func<Task> action) { return RunBusy(action, true); }
+
+        private async Task RunBusy(Func<Task> action, bool persistWork)
         {
             if (busy || closing) return;
             busy = true; actions.Enabled = false; timer.Stop();
-            try { await action(); }
+            modWork.NotesTab.Enabled = modWork.TodoTab.Enabled = false;
+            try
+            {
+                if (persistWork) SaveModWork();
+                await action();
+                if (persistWork) SaveModWork();
+            }
             finally
             {
                 busy = false;
-                if (!closing) { actions.Enabled = true; ConfigureTimer(); }
+                if (!closing) { actions.Enabled = true; modWork.NotesTab.Enabled = modWork.TodoTab.Enabled = true; ConfigureTimer(); }
                 else if (project != null) project.Dispose();
             }
         }
@@ -848,11 +973,11 @@ namespace FcsScribe
             AddAsyncAction(parent, label, description, () => { action(); return Task.FromResult(0); }, pauseAutomation);
         }
 
-        private void AddAsyncAction(ToolStripItemCollection parent, string label, string description, Func<Task> action, bool pauseAutomation = true)
+        private void AddAsyncAction(ToolStripItemCollection parent, string label, string description, Func<Task> action, bool pauseAutomation = true, bool persistWork = true)
         {
             ToolStripMenuItem item = CreateMenuItem(label, description);
             item.Click += async delegate {
-                try { await RunBusy(action); }
+                try { await RunBusy(action, persistWork); }
                 catch (Exception error)
                 {
                     if (closing) return;

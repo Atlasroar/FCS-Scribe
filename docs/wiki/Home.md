@@ -41,12 +41,19 @@ release decisions, and AI-generated record notes require human approval.
 
 ## Current status
 
-The current [v0.1.0-beta.19 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.19)
+The current [v0.1.0-beta.20 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.20)
 remains experimental and restricted to the inspected Steam FCS 2.14.2 executable
 hash. It includes local Workshop metadata, preview-image archiving, embedded
 MDI hosting and contextual action help alongside change documentation.
 Live-model extraction and disposable save/reopen checks exist; the full
 interactive FCS Extended workflow still requires acceptance.
+
+Beta 20 adds opt-in [Scribe plain notes and record-linked Mod To Do](Installation-and-Workflow#scribe-notes-and-mod-to-do-beta-20):
+separate `notes.txt`/`todo.txt`, an **Add Mod To Do** entry directly below the
+native record-menu action, mod-local settings with optional external storage,
+**Core > Save Changes** and a separate **Workspace** menu. Native FCS notes,
+gameplay saving and draft workspace persistence remain distinct. This is an
+explicitly requested feature expansion, not completion of the S09 gate.
 
 Beta 2 also includes resumable tracking, automatic
 delta session recording, manual/30-minute journal compilation and export-folder

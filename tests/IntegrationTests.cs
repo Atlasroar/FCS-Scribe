@@ -49,7 +49,8 @@ internal static class IntegrationTests
                     try { result = Run(args.Contains("--settings-recovery"), args.Contains("--schedule"),
                         args.Contains("--exports"), args.Contains("--tracking-recovery"), args.Contains("--sampling"),
                         args.Contains("--performance"), args.Contains("--notes-safety") || args.Contains("--notes-reopen"),
-                        args.Contains("--notes-reopen"), args.Contains("--compatibility"), args.Contains("--workshop-provenance")); }
+                        args.Contains("--notes-reopen"), args.Contains("--compatibility"), args.Contains("--workshop-provenance"),
+                        args.Contains("--mod-work")); }
                     finally { host.Close(); }
                 }));
             };
@@ -59,7 +60,7 @@ internal static class IntegrationTests
     }
 
     private static int Run(bool settingsOnly, bool scheduleOnly, bool exportsOnly, bool recoveryOnly, bool samplingOnly,
-        bool performanceOnly, bool notesOnly, bool notesReopen, bool compatibilityOnly, bool workshopOnly)
+        bool performanceOnly, bool notesOnly, bool notesReopen, bool compatibilityOnly, bool workshopOnly, bool modWorkOnly)
     {
         Form editor = null;
         try
@@ -101,6 +102,13 @@ internal static class IntegrationTests
             object todo = FcsAdapter.Field(editor, "todoList");
             FcsAdapter.Call(todo, "LoadAll");
             var adapter = new FcsAdapter(assembly, editor);
+            if (modWorkOnly)
+            {
+                CheckScribeWindow(adapter, editor);
+                CheckModWork(adapter, editor, data, assembly, output);
+                Console.WriteLine("PASS: " + passed + " mod work/menu integration checks");
+                return 0;
+            }
             if (compatibilityOnly)
             {
                 CheckCompatibility(adapter, editor, data, nav, assembly, output);
@@ -327,14 +335,15 @@ internal static class IntegrationTests
             }
             var menus = actions.Items.Cast<ToolStripMenuItem>().ToList();
             Check(menus.Select(x => x.Text.Replace("&", "")).SequenceEqual(
-                new[] { "Core", "Workshop", "Draft", "Apply approved notes", "Settings" }),
-                "five top-level menus/actions replace the flat button row");
+                new[] { "Core", "Workshop", "Draft", "Workspace", "Apply approved notes", "Settings" }),
+                "Workspace has its own top-level dropdown without losing native annotation approval");
             Check(window.MainMenuStrip == actions && !actions.AllowMerge && actions.TabStop,
                 "menus stay inside Scribe and support keyboard access without merging into FCS");
             string[][] groups = {
-                new[] { "Start tracking", "Review changes", "Compile journal", "Export AI packet" },
+                new[] { "Start tracking", "Save Changes", "Compile journal", "Export AI packet" },
                 new[] { "Export Workshop info", "Archive preview image" },
-                new[] { "Import draft", "Paste draft", "Save workspace", "Open workspace" }
+                new[] { "Import draft", "Paste draft" },
+                new[] { "Save workspace", "Open workspace" }
             };
             for (int i = 0; i < groups.Length; i++)
                 Check(menus[i].DropDownItems.Cast<ToolStripMenuItem>().Select(x => x.Text.Replace("&", "")).SequenceEqual(groups[i]),
@@ -342,7 +351,7 @@ internal static class IntegrationTests
             var commands = menus.SelectMany(x => x.HasDropDownItems ?
                 x.DropDownItems.Cast<ToolStripMenuItem>() : new[] { x }).ToList();
             Check(commands.Count == 12, "all ten original actions plus two workspace actions remain available");
-            foreach (ToolStripMenuItem item in menus.Take(3).Concat(commands))
+            foreach (ToolStripMenuItem item in menus.Take(4).Concat(commands))
             {
                 typeof(ToolStripItem).GetMethod("HandleMouseEnter", Flags).Invoke(item, new object[] { EventArgs.Empty });
                 Check(!String.IsNullOrEmpty(item.AccessibleDescription) && help.Text == item.AccessibleDescription &&
@@ -930,7 +939,7 @@ internal static class IntegrationTests
             FcsAdapter.Call(window, "ConfigureTimer");
             Check(!timer.Enabled, "manual review disables scheduling");
             ToolStripMenuItem reviewAction = window.MainMenuStrip.Items.Cast<ToolStripMenuItem>().First()
-                .DropDownItems.Cast<ToolStripMenuItem>().Single(x => x.Text.Replace("&", "") == "Review changes");
+                .DropDownItems.Cast<ToolStripMenuItem>().Single(x => x.Text.Replace("&", "") == "Save Changes");
             reviewAction.PerformClick();
             var reviewTimeout = System.Diagnostics.Stopwatch.StartNew();
             while ((bool)FcsAdapter.Field(window, "busy") && reviewTimeout.Elapsed < TimeSpan.FromMinutes(3))
@@ -938,7 +947,7 @@ internal static class IntegrationTests
                 Application.DoEvents(); Thread.Sleep(10);
             }
             Check(!(bool)FcsAdapter.Field(window, "busy") && !((bool)FcsAdapter.Field(window, "automaticPaused")),
-                "the Review changes menu dispatches through the serialized asynchronous operation gate");
+                "the Save Changes menu dispatches through the serialized asynchronous operation gate");
             Check(first.EntryCount == 0, "unchanged reviews do not append duplicate checkpoints");
             RunWindow(window, "ResumePath", path);
             JournalProject resumed = (JournalProject)FcsAdapter.Field(window, "project");
@@ -1254,6 +1263,123 @@ internal static class IntegrationTests
         using (var copied = JournalProject.Open(Path.Combine(backup, "mods", Path.GetFileName(path))))
             Check(copied.EntryCount == 3 && copied.PendingCount == 0 &&
                 copied.Fingerprint == adapter.Capture().Fingerprint(), "the complete copied tracking set replays the saved state without mod restoration");
+    }
+
+    private static void CheckModWork(FcsAdapter adapter, Form editor, object data, Assembly assembly, string modPath)
+    {
+        string root = adapter.ActiveModDirectory(), notes = Path.Combine(root, "notes.txt"), todo = Path.Combine(root, "todo.txt");
+        string original = TrackingStorage.HashFile(modPath), fingerprint = adapter.Capture().Fingerprint();
+        bool dirty = (bool)FcsAdapter.Property(FcsAdapter.Field(editor, "nav"), "HasChanges");
+        object nativeTodo = FcsAdapter.Field(editor, "todoList");
+        string nativeFile = (string)FcsAdapter.Field(nativeTodo, "activeFile");
+        string nativeHash = File.Exists(nativeFile) ? TrackingStorage.HashFile(nativeFile) : null;
+        using (var window = new ScribeWindow(adapter, editor))
+        using (var hook = new ModTodoMenu(assembly, editor, () => window))
+        {
+            Check(!File.Exists(notes) && !File.Exists(todo), "disabled mod work creates no text files on open");
+            var menu = FcsAdapter.RecordMenu(editor);
+            Check(menu.Items.IndexOf(hook.Item) == menu.Items.IndexOf(FcsAdapter.NativeTodoItem(editor)) + 1 &&
+                hook.Item.Text == "Add Mod To Do", "Scribe task action is directly below the unchanged native Add Todo Item");
+            FcsAdapter.Call(hook, "Opening", menu, new System.ComponentModel.CancelEventArgs());
+            Check(!hook.Item.Available, "Mod To Do context entry is hidden by default");
+            RunWindow(window, "SaveSettings", new PluginSettings { ModNotesEnabled = true, ModTodoEnabled = true });
+            Check(File.Exists(notes) && File.Exists(todo) &&
+                File.Exists(Path.Combine(root, "FCS-Scribe.settings.json")), "enabling work persists separate files and mod-local settings");
+            var view = (ModWorkView)FcsAdapter.Field(window, "modWork");
+            view.Notes.Text = "Free-form author notes.\r\nPlain writing.";
+            RunWindow(window, "Review");
+            Check(File.ReadAllText(notes) == view.Notes.Text &&
+                ((Label)FcsAdapter.Field(window, "status")).Text.Contains("No tracking project"),
+                "Save Changes persists notes even without a tracking project and does not imply a native save");
+            var list = (ListView)FcsAdapter.Field(FcsAdapter.Field(editor, "nav"), "listView1");
+            Set(list, "Source", data);
+            var records = ((IDictionary)FcsAdapter.Field(data, "items")).Values.Cast<object>().Take(2).ToList();
+            foreach (object item in records) FcsAdapter.Call(list, "AddItem", item);
+            list.CreateControl();
+            IntPtr handle = list.Handle;
+            list.SelectedIndices.Add(0);
+            if (records.Count > 1) list.SelectedIndices.Add(1);
+            var selected = adapter.SelectedModTodos();
+            Check(selected.Count == records.Count && selected.All(x => !String.IsNullOrWhiteSpace(x.RecordId)),
+                "the adapter resolves actual native multi-selection into stable task targets");
+            FcsAdapter.NativeTodoItem(editor).Enabled = true;
+            FcsAdapter.Call(hook, "Opening", menu, new System.ComponentModel.CancelEventArgs());
+            Check(hook.Item.Available && hook.Item.Enabled, "the native record-menu entry follows the saved opt-in setting and selection");
+            window.AddModTodos(selected, "Adjust this record.");
+            Check(view.Work.Todos.Count == selected.Count && File.ReadAllText(todo).Contains(selected[0].RecordId),
+                "record-linked tasks save in todo.txt, separate from free-form notes");
+            view.Todos.SetItemChecked(0, true);
+            Check(new ModWork(root, adapter.ActiveModName(), true, true).Todos[0].Done, "checking a task persists completion");
+            view.Notes.Text = "Unsaved local text";
+            File.WriteAllText(notes, "External author edit");
+            Reject<IOException>(() => RunWindow(window, "Review"), "external notes edits block action saves rather than overwriting either intent");
+            Check(view.Notes.Text == "Unsaved local text" && File.ReadAllText(notes) == "External author edit",
+                "a conflict retains local editor text and external bytes");
+            string taskText = File.ReadAllText(todo);
+            File.WriteAllText(todo, "Malformed external task file");
+            view.Load(root, adapter.ActiveModName(), (PluginSettings)FcsAdapter.Field(window, "settings"));
+            Check(view.LoadError != null && view.Work == null && view.Notes.ReadOnly && !view.Todos.Enabled &&
+                !((Button)FcsAdapter.Field(view, "edit")).Enabled && !((Button)FcsAdapter.Field(view, "remove")).Enabled &&
+                view.Notes.Text == "Unsaved local text", "failed reload preserves editor text and disables every task mutation control");
+            File.WriteAllText(todo, taskText);
+            view.Load(root, adapter.ActiveModName(), (PluginSettings)FcsAdapter.Field(window, "settings"));
+            string foreign = Path.Combine(root, "foreign-project"); Directory.CreateDirectory(foreign);
+            string foreignSettings = Path.Combine(foreign, "FCS-Scribe.settings.json");
+            SettingsStorage.Save(foreignSettings, new PluginSettings { ProjectModId = "another-mod" }, null, false);
+            string foreignHash = TrackingStorage.HashFile(foreignSettings);
+            Reject<InvalidDataException>(() => RunWindow(window, "SaveSettings", new PluginSettings { ProjectDirectory = foreign }),
+                "an external root owned by another mod cannot be adopted");
+            Check(TrackingStorage.HashFile(foreignSettings) == foreignHash &&
+                ProjectLocation.Open(root, adapter.ActiveModId()).Directory == root, "foreign settings rejection retains destination bytes and the original association");
+            string external = Path.Combine(Directory.GetCurrentDirectory(), "external-project"); Directory.CreateDirectory(external);
+            using (var lease = new FileStream(Path.Combine(root, "FCS-Scribe.location.json.lock"),
+                FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+                Reject<IOException>(() => RunWindow(window, "SaveSettings", new PluginSettings {
+                    ModNotesEnabled = true, ModTodoEnabled = true, ProjectDirectory = external }),
+                    "a held locator lease rejects an external root switch");
+            Check(ProjectLocation.Open(root, adapter.ActiveModId()).Directory == root &&
+                (string)FcsAdapter.Field(window, "settingsPath") == Path.Combine(root, "FCS-Scribe.settings.json") &&
+                File.Exists(Path.Combine(external, "FCS-Scribe.settings.json")),
+                "a partial root switch retains old window association and safely written candidate settings for retry");
+            RunWindow(window, "SaveSettings", new PluginSettings { ModNotesEnabled = true, ModTodoEnabled = true, ProjectDirectory = external });
+            Check(ProjectLocation.Open(root, adapter.ActiveModId()).Directory == external &&
+                File.ReadAllText(notes) == "External author edit" && File.Exists(Path.Combine(external, "FCS-Scribe.settings.json")),
+                "external mode moves default destinations through a locator, not old content or tracking history");
+            view.Notes.Text = "External project note";
+            RunWindow(window, "Review");
+            Check(File.ReadAllText(Path.Combine(external, "notes.txt")) == "External project note" &&
+                (string)FcsAdapter.Call(window, "ExportDirectory") == external, "external project root is used for work and default new exports");
+            RunWindow(window, "StartPath", Path.Combine(external, "work-tracking.json"));
+            view.Notes.Text = "Saved with tracked changes";
+            RunWindow(window, "Review");
+            Check(File.ReadAllText(Path.Combine(external, "notes.txt")) == "Saved with tracked changes" &&
+                ((JournalProject)FcsAdapter.Field(window, "project")).EntryCount == 0,
+                "Save Changes persists work alongside tracking without inventing gameplay recordings");
+            RunWindow(window, "SaveSettings", new PluginSettings {
+                ModNotesEnabled = true, ModTodoEnabled = true, ProjectDirectory = external, ReviewSeconds = 30 });
+            Set(FcsAdapter.Field(window, "schedule"), "NextReview", 0L);
+            view.Notes.Text = "Saved on automatic recording";
+            RunWindow(window, "AutomaticTick");
+            Check(File.ReadAllText(Path.Combine(external, "notes.txt")) == "Saved on automatic recording",
+                "an eligible automatic recording action also persists enabled work");
+            RunWindow(window, "SaveSettings", new PluginSettings { ProjectDirectory = external });
+            FcsAdapter.Call(hook, "Opening", menu, new System.ComponentModel.CancelEventArgs());
+            Check(!hook.Item.Available && File.ReadAllText(Path.Combine(external, "notes.txt")) == "Saved on automatic recording",
+                "disabling features hides the extension without deleting either text file");
+            RunWindow(window, "SaveSettings", new PluginSettings { ModNotesEnabled = true, ModTodoEnabled = true, ProjectDirectory = external });
+            view.Notes.Text = "Saved on close";
+            var closing = new FormClosingEventArgs(CloseReason.UserClosing, false);
+            FcsAdapter.Call(window, "OnFormClosing", closing);
+            Check(!closing.Cancel && File.ReadAllText(Path.Combine(external, "notes.txt")) == "Saved on close",
+                "normal Scribe close persists enabled free-form notes");
+        }
+        using (var reopened = new ScribeWindow(adapter, editor))
+            Check(((ModWorkView)FcsAdapter.Field(reopened, "modWork")).Notes.Text == "Saved on close",
+                "a fresh window discovers external settings and restores text through the mod-local locator");
+        Check(TrackingStorage.HashFile(modPath) == original && adapter.Capture().Fingerprint() == fingerprint &&
+            (bool)FcsAdapter.Property(FcsAdapter.Field(editor, "nav"), "HasChanges") == dirty &&
+            (nativeHash == null ? !File.Exists(nativeFile) : TrackingStorage.HashFile(nativeFile) == nativeHash),
+            "Scribe notes/tasks never save or mutate native gameplay or the shared FCS notes file");
     }
 
     private static void CheckCompatibility(FcsAdapter adapter, Form editor, object data, object nav,

@@ -14,7 +14,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Could not identify source revision.' }
 $fixture = Join-Path $root ('build\performance-fixtures\' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $fixture | Out-Null
 $compiler = Join-Path ([Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()) 'csc.exe'
-$sources = @('Core.cs', 'Tracking.cs', 'Journal.cs', 'RangeExport.cs') |
+$sources = @('Core.cs', 'Tracking.cs', 'Journal.cs', 'RangeExport.cs', 'ModWork.cs', 'ExportStorage.cs') |
     ForEach-Object { Join-Path $root ('src\' + $_) }
 & $compiler /nologo /target:exe /platform:x86 /debug:pdbonly /warnaserror+ /main:PerformanceProgram `
     "/out:$fixture\PerformanceTests.exe" /reference:System.Core.dll /reference:System.Runtime.Serialization.dll `

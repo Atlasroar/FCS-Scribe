@@ -62,6 +62,10 @@ sidecar guidance: [notes safety](Installation-and-Workflow#per-record-notes-outc
 **v0.1.0-beta.19** records the [verified compatibility/provenance matrix](Validation-and-Limitations#s16-compatibility-and-provenance-matrix-beta-19)
 with disposable dependency/locked-layer and Workshop-isolation checks.
 It does not broaden supported executable hashes or resolve inherited ownership.
+**v0.1.0-beta.20** adds opt-in Scribe-owned plain notes and record-linked tasks,
+mod-local settings with optional external project storage, a **Workspace**
+dropdown and **Save Changes** wording. Native Notes/TODO remain separate:
+[notes, tasks and storage](Installation-and-Workflow#scribe-notes-and-mod-to-do-beta-20).
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).
@@ -73,12 +77,15 @@ For evidence and unsupported cases, see [Validation and limitations](Validation-
 | Embedded documentation window | FCS-Scribe toolbar button | An MDI child inside FCS, with change, draft and Workshop tabs |
 | Contextual action help | Hover over a menu action or select it with the keyboard | An explanation at the bottom, separate from operation status |
 | Resumable baseline | Core > Start tracking | A new or validated saved checkpoint and evidence history |
-| Change catalogue | Core > Review changes | Exact before/after evidence and a successfully saved checkpoint |
+| Change catalogue | Core > Save Changes | Exact before/after evidence and a successfully saved checkpoint; not a native mod save |
 | Session consolidation | Core > Compile journal | Append durable session entries to the main journal without duplicates or deleting originals |
 | Review and export settings | Settings | Manual or 30/60/300/600-second reviews and default JSON directory |
 | Manual AI handoff | Core > Export AI packet | Preview/select a recording range; schema-3 JSON retains original batches and uniquely qualified evidence |
 | Editable draft | Draft > Import draft or Paste draft | JSON you can review and edit before applying |
-| Portable draft workspace | Draft > Save workspace or Open workspace | Exact unfinished text plus its original packet, independently reopenable after restart |
+| Portable draft workspace | Workspace > Save workspace or Open workspace | Exact unfinished text plus its original packet, independently reopenable after restart |
+| Plain mod notes | Enable in Settings, then Notes tab | Free-form `notes.txt`, saved on Scribe actions and close |
+| Record-linked mod tasks | Enable in Settings, then native record-list right-click > Add Mod To Do | Separate `todo.txt`; edit/remove/complete in Mod To Do tab |
+| Mod-local project storage | Settings | Mod-local settings/text/default destinations, or an external folder discovered through a small local locator |
 | Approved record notes | Apply approved notes | Appended FCS Notes/TODO entries; FCS is marked dirty, not saved |
 | Workshop information | Workshop info tab or Workshop > Export Workshop info | Local/staged/cached metadata, source details and warnings |
 | Preview-image archive | Workshop > Archive preview image | A new, byte-identical copy of the local PNG/JPEG/GIF preview |
@@ -90,11 +97,12 @@ mode, then select **FCS-Scribe** on the FCS toolbar. Scribe opens as a standard
 MDI child inside FCS, rather than a separate owned desktop window. Selecting
 the toolbar action again brings the existing Scribe window forward.
 
-Beta 3 uses five top-level entries inside Scribe:
+Beta 20 uses six top-level entries inside Scribe (beta 3 introduced grouping):
 
-- **Core:** Start tracking, Review changes, Compile journal and Export AI packet.
+- **Core:** Start tracking, Save Changes, Compile journal and Export AI packet.
 - **Workshop:** Export Workshop info and Archive preview image.
-- **Draft:** Import draft, Paste draft, and, since beta 7, Save workspace and Open workspace.
+- **Draft:** Import draft and Paste draft.
+- **Workspace:** Save workspace and Open workspace (under Draft in betas 7-19).
 - **Apply approved notes:** a separate approval action.
 - **Settings:** a separate configuration action, called Plugin settings in beta 2.
 
@@ -104,7 +112,8 @@ disabled while an action is running and do not merge into the parent FCS menu.
 Narrow windows keep remaining entries accessible through an overflow menu.
 Automatic work waits until open menus close rather than interrupting selection.
 The last operation's status remains visible separately. The **Changes and
-warnings**, **Editable draft JSON**, and **Workshop info** tabs are unchanged.
+warnings**, **Editable draft JSON**, and **Workshop info** tabs remain.
+Beta 20 adds **Notes** and **Mod To Do** tabs, independently enabled in Settings.
 The published beta 2 uses the earlier flat button row.
 
 The adapter rejects unsupported executable builds, read-only sessions and
@@ -176,7 +185,10 @@ packet instead.
 
 ## 3. Review changes: inspect the evidence
 
-After starting tracking, edit normally in FCS and select **Review changes**.
+After starting tracking, edit normally in FCS and select **Core > Save Changes**
+(called **Review changes** before beta 20). Enabled Scribe notes/TODOs are saved
+too. Without tracking, this action can save enabled Scribe text alone.
+It never saves `.mod`, native Notes/TODO or the editable AI draft workspace.
 Read the **Changes and warnings** tab before asking an assistant to describe
 the edits.
 
@@ -294,7 +306,7 @@ See [Data and AI contracts](Data-and-AI-Contracts) for the exact draft shape.
 
 ### Portable draft workspaces (beta 7)
 
-**Draft > Save workspace** writes one JSON containing the exact editable text
+**Workspace > Save workspace** writes one JSON containing the exact editable text
 and its original AI packet, including schema-3 recording evidence. Unfinished,
 invalid or empty draft JSON can be saved without inventing evidence or approving
 notes. The window title marks unsaved work. **Open workspace** validates the
@@ -464,12 +476,17 @@ scheduling; a write failure needs reopen/validation. Closing stops new ticks,
 though an already-running write may finish. Validation, comparison and disk work run in the background;
 live FCS capture remains on its UI thread and can briefly pause large sessions.
 
-JSON save dialogs default to the active `.mod` file's own directory. Choose
+JSON save dialogs default to the Scribe project folder (the active `.mod`
+directory unless external project storage is enabled). Choose
 another existing default directory in settings or another location in an
 individual dialog. Changing defaults does not move the active tracking file.
 Exports cannot overwrite recognized active or inactive tracking anchors or
-reserved storage. Settings persist at
-`%LOCALAPPDATA%\FCS-Scribe\settings.json`.
+reserved storage. Since beta 20, settings persist at
+`<project folder>\FCS-Scribe.settings.json`. Earlier user-wide
+`%LOCALAPPDATA%\FCS-Scribe\settings.json` is preserved, not silently migrated.
+Missing mod-local settings start Manual with notes/TODO disabled. Independently
+enable text features and choose project storage in Settings; see the
+[complete workflow](Installation-and-Workflow#scribe-notes-and-mod-to-do-beta-20).
 Beta 9 keeps the window usable when that file is corrupt, unsupported,
 unreadable or names an unavailable custom directory. A persistent recovery
 banner identifies the reason/path. Manual tracking and active-mod export

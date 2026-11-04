@@ -707,6 +707,16 @@ in this table.
 
 ## Working order
 
+**User-directed beta 20 exception:** implement Scribe-owned plain `notes.txt`,
+separate record-linked `todo.txt`, opt-in **Add Mod To Do** immediately below
+native **Add Todo Item**, mod-local settings/default destinations with an
+optional external root, **Save Changes** wording and a **Workspace** dropdown.
+This explicitly requested feature work does not close S09 or authorize native
+notes-button hijacking, live installation or the discussed vanilla text diff.
+Existing tracking/workspaces are not migrated and native notes are untouched.
+Core/storage and targeted copied-native evidence are recorded in
+[Validation and limitations](wiki/Validation-and-Limitations.md#scribe-notes-and-todos-beta-20).
+
 1. Keep S09 results and remaining exceptions explicit; untested is not passed, and the gate remains open until its support scope is explicitly accepted.
 2. S10/S11 are addressed in betas 12/13; S12's tested scope is explicitly accepted after betas 14/15 and the actual-editor soak. S13-S16's bounded storage/portability/notes/compatibility work is covered in betas 16-19. Next finish S09's remaining interactive checks and explicitly review the MVP support scope, retaining unverified custom-stack/headroom, cross-machine and physical-failure boundaries. Keep independently scoped changes, regression evidence and the requested PR/merge/beta-release cycle; publishing partial progress does not close unrelated acceptance gates.
 3. Close the stabilization/MVP acceptance gate and any exposed issues before implementing new feature expansion.
