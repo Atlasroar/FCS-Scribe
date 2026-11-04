@@ -18,6 +18,8 @@ exact SHA-256, not just its display version:
 
 Unknown builds are rejected. Do not remove the guard to try another build:
 inspect and validate its integration first. GOG compatibility is not claimed.
+The [verified configuration matrix](Validation-and-Limitations#s16-compatibility-and-provenance-matrix-beta-19)
+separates disposable native-host evidence from full FCS Extended acceptance.
 
 ## Install a release
 

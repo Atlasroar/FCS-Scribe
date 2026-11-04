@@ -34,6 +34,14 @@ The plugin therefore waits for WinForms `Application.Idle`, finds the actual
 `baseForm`, and adds a toolbar action on the editor UI thread. It does not need
 Harmony or native hooks.
 
+These three upstream revisions were rechecked on 2026-11-04 and remain the
+same. RE_Kenshi/KenshiLib describe native **game** plugins; their API/compiler/
+hook guidance does not establish a stable managed FCS editing API. Scribe
+does not introduce either native runtime or additional hooks. The bounded
+[S16 matrix](wiki/Validation-and-Limitations.md#s16-compatibility-and-provenance-matrix-beta-19)
+records tested configurations separately from unresolved ownership and full
+loader/UI acceptance.
+
 ## Installed-build evidence
 
 Assembly identity: `forgotten construction set, Version=2.1.0.0`.

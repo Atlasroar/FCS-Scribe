@@ -59,6 +59,9 @@ not automatic path/history rebinding or journal merging:
 **v0.1.0-beta.18** adds readback-confirmed per-record note outcomes, explicit
 unconfirmed-write reporting, safe retry evidence and approval-time shared
 sidecar guidance: [notes safety](Installation-and-Workflow#per-record-notes-outcomes-and-safe-retries-beta-18).
+**v0.1.0-beta.19** records the [verified compatibility/provenance matrix](Validation-and-Limitations#s16-compatibility-and-provenance-matrix-beta-19)
+with disposable dependency/locked-layer and Workshop-isolation checks.
+It does not broaden supported executable hashes or resolve inherited ownership.
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).

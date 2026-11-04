@@ -49,7 +49,7 @@ internal static class IntegrationTests
                     try { result = Run(args.Contains("--settings-recovery"), args.Contains("--schedule"),
                         args.Contains("--exports"), args.Contains("--tracking-recovery"), args.Contains("--sampling"),
                         args.Contains("--performance"), args.Contains("--notes-safety") || args.Contains("--notes-reopen"),
-                        args.Contains("--notes-reopen")); }
+                        args.Contains("--notes-reopen"), args.Contains("--compatibility"), args.Contains("--workshop-provenance")); }
                     finally { host.Close(); }
                 }));
             };
@@ -59,7 +59,7 @@ internal static class IntegrationTests
     }
 
     private static int Run(bool settingsOnly, bool scheduleOnly, bool exportsOnly, bool recoveryOnly, bool samplingOnly,
-        bool performanceOnly, bool notesOnly, bool notesReopen)
+        bool performanceOnly, bool notesOnly, bool notesReopen, bool compatibilityOnly, bool workshopOnly)
     {
         Form editor = null;
         try
@@ -78,7 +78,7 @@ internal static class IntegrationTests
             Type fileMode = assembly.GetType("forgotten_construction_set.navigation+ModFileMode", true);
             string output = Path.Combine(directory, "mods", "scribe-test.mod");
             FcsAdapter.Call(nav, "setActiveFilename", output, Enum.Parse(fileMode, "USER"));
-            bool stacked = performanceOnly && Directory.Exists(Path.Combine(directory, "dependencies"));
+            bool stacked = (performanceOnly || compatibilityOnly) && Directory.Exists(Path.Combine(directory, "dependencies"));
             ((IList)FcsAdapter.Field(editor, "activeMods")).Add(stacked ? "gamedata.base" : "fixture.mod");
             ((IList)FcsAdapter.Field(editor, "activeMods")).Add("scribe-test.mod");
             Check((bool)FcsAdapter.Call(data, "load", stacked ? Path.Combine(directory, "dependencies", "gamedata.base") :
@@ -101,6 +101,18 @@ internal static class IntegrationTests
             object todo = FcsAdapter.Field(editor, "todoList");
             FcsAdapter.Call(todo, "LoadAll");
             var adapter = new FcsAdapter(assembly, editor);
+            if (compatibilityOnly)
+            {
+                CheckCompatibility(adapter, editor, data, nav, assembly, output);
+                Console.WriteLine("PASS: " + passed + " compatibility/provenance integration checks");
+                return 0;
+            }
+            if (workshopOnly)
+            {
+                CheckWorkshop(adapter, editor, data, nav, assembly);
+                Console.WriteLine("PASS: " + passed + " Workshop provenance/isolation integration checks");
+                return 0;
+            }
             if (notesOnly)
             {
                 if (notesReopen) CheckNotesReopened(adapter, output);
@@ -1242,6 +1254,117 @@ internal static class IntegrationTests
         using (var copied = JournalProject.Open(Path.Combine(backup, "mods", Path.GetFileName(path))))
             Check(copied.EntryCount == 3 && copied.PendingCount == 0 &&
                 copied.Fingerprint == adapter.Capture().Fingerprint(), "the complete copied tracking set replays the saved state without mod restoration");
+    }
+
+    private static void CheckCompatibility(FcsAdapter adapter, Form editor, object data, object nav,
+        Assembly assembly, string modPath)
+    {
+        string originalHash = TrackingStorage.HashFile(modPath);
+        bool dirty = (bool)FcsAdapter.Property(nav, "HasChanges");
+        Check(TrackingStorage.HashFile(assembly.Location) == FcsAdapter.SupportedHash,
+            "the tested native executable matches the exact supported hash, not merely its version label");
+        Reject<NotSupportedException>(() => FcsAdapter.CheckVersion(typeof(IntegrationTests).Assembly),
+            "a different executable is rejected by the hash guard");
+        Reject<NotSupportedException>(() => new FcsAdapter(typeof(IntegrationTests).Assembly, null),
+            "constructor rejects an unsupported assembly before any editor reflection");
+        Put(editor, "mergeModsMode", true);
+        try { Reject<NotSupportedException>(() => adapter.Capture(), "merge mode cannot use the normal editing adapter"); }
+        finally { Put(editor, "mergeModsMode", false); }
+        Type fileMode = assembly.GetType("forgotten_construction_set.navigation+ModFileMode", true);
+        FcsAdapter.Call(nav, "setActiveFilename", Path.ChangeExtension(modPath, ".translation"), Enum.Parse(fileMode, "USER"));
+        try { Reject<NotSupportedException>(() => adapter.Capture(), "non-mod filenames cannot bypass the editing guard"); }
+        finally { FcsAdapter.Call(nav, "setActiveFilename", modPath, Enum.Parse(fileMode, "USER")); }
+        object ou = FcsAdapter.Field(nav, "ou");
+        Put(ou, "gameData", Activator.CreateInstance(data.GetType()));
+        try { Reject<InvalidOperationException>(() => adapter.Capture(), "an old adapter rejects a replaced native data session"); }
+        finally { Put(ou, "gameData", data); }
+
+        Snapshot initial = adapter.Capture();
+        Check(initial.LoadOrder.SequenceEqual(((IEnumerable)FcsAdapter.Field(editor, "activeMods")).Cast<string>()) &&
+            initial.Dependencies.SequenceEqual(((IEnumerable)FcsAdapter.Field(FcsAdapter.Field(data, "header"), "Dependencies")).Cast<string>()) &&
+            initial.LockedMods.SequenceEqual(((IEnumerable)FcsAdapter.Field(data, "lockedMods")).Cast<string>()),
+            "loaded order, declared dependencies and locked context retain their separate native meanings");
+        var baseCells = initial.Records.SelectMany(x => x.Cells).Where(x => x.Layer == "base").ToList();
+        Check(baseCells.Count > 0 && baseCells.All(x => x.Source == "base:unresolved") &&
+            initial.Warnings.Any(x => x.Contains("field-level source mod provenance is unresolved")),
+            "flattened inherited fields/names/references retain unresolved ownership even with named dependencies");
+        var tracker = new Tracker(initial);
+        Check(tracker.Export(adapter.Capture()).Changes.Count == 0, "a loaded dependency stack is not reported as new gameplay edits");
+        IDictionary records = (IDictionary)FcsAdapter.Field(data, "items");
+        string id = initial.Records.First(x => x.Cells.Any(c => c.Path == "/name" && c.Layer == "base")).Id;
+        object item = records[id];
+        string activeName = (string)FcsAdapter.Field(item, "modName");
+        string baseName = (string)FcsAdapter.Field(item, "baseName");
+        try
+        {
+            Set(item, "Name", (string)FcsAdapter.Property(item, "Name") + " S16 active edit");
+            Packet packet = tracker.Export(adapter.Capture());
+            Check(packet.Changes.Any(x => x.RecordId == id && x.Layer == "active" &&
+                x.AfterSource == initial.ModName), "active name evidence identifies only the writable active mod");
+        }
+        finally { Put(item, "modName", activeName); }
+        try
+        {
+            Put(item, "baseName", baseName + " S16 inherited change");
+            Reject<InvalidOperationException>(() => tracker.Export(adapter.Capture()),
+                "changed inherited dependency values cannot become active-mod evidence");
+        }
+        finally { Put(item, "baseName", baseName); }
+        IList order = (IList)FcsAdapter.Field(editor, "activeMods");
+        object first = order[0], second = order[1];
+        try
+        {
+            order[0] = second; order[1] = first;
+            Reject<InvalidOperationException>(() => tracker.Export(adapter.Capture()),
+                "changed reported load order rejects instead of silently rebasing the history");
+        }
+        finally { order[0] = first; order[1] = second; }
+        Check(tracker.Export(adapter.Capture()).Changes.Count == 0,
+            "restoring the exact native context and test edits preserves the original no-op baseline");
+
+        string lockedPath = Path.Combine(Directory.GetCurrentDirectory(), "s16-locked.mod");
+        File.Copy(Path.Combine(Directory.GetCurrentDirectory(), "fixture.mod"), lockedPath);
+        Type mode = assembly.GetType("forgotten_construction_set.GameData+ModMode", true);
+        Check((bool)FcsAdapter.Call(data, "load", lockedPath, Enum.Parse(mode, "LOCKED"), false, false),
+            "load a controlled copied overlay through the actual native LOCKED mode");
+        FcsAdapter.Call(data, "resolveAllReferences");
+        order.Add(Path.GetFileName(lockedPath));
+        Snapshot locked = adapter.Capture();
+        var lockedCells = locked.Records.SelectMany(x => x.Cells).Where(x => x.Layer == "locked").ToList();
+        Check(locked.LockedMods.Contains(lockedPath) && lockedCells.Count > 0 &&
+            lockedCells.All(x => x.Source == "locked:unresolved"),
+            "native locked overlay fields/names/references retain unresolved source ownership");
+        Check(locked.Records.SelectMany(x => x.Cells).Where(x => x.Layer == "effective" &&
+            x.Source == "locked:unresolved").Any(), "effective locked values do not infer a source filename from load order");
+        Reject<InvalidOperationException>(() => tracker.Export(locked),
+            "adding a real locked overlay requires a fresh tracking context");
+        var lockedTracker = new Tracker(locked);
+        Check(lockedTracker.Export(adapter.Capture()).Changes.Count == 0,
+            "an explicitly fresh locked-stack baseline does not invent gameplay changes");
+        string lockedId = locked.Records.First(x => x.Cells.Any(c => c.Layer == "locked")).Id;
+        object lockedItem = records[lockedId];
+        string lockedName = (string)FcsAdapter.Field(lockedItem, "lockedName");
+        try
+        {
+            Put(lockedItem, "lockedName", lockedName + " S16 locked change");
+            Reject<InvalidOperationException>(() => lockedTracker.Export(adapter.Capture()),
+                "locked-layer changes cannot be attributed to the active mod");
+        }
+        finally { Put(lockedItem, "lockedName", lockedName); }
+        IList lockedMods = (IList)FcsAdapter.Field(data, "lockedMods");
+        object lockedFile = lockedMods[0];
+        try
+        {
+            lockedMods.RemoveAt(0);
+            Reject<InvalidOperationException>(() => lockedTracker.Export(adapter.Capture()),
+                "changed reported locked context rejects even when captured values still match");
+        }
+        finally { lockedMods.Insert(0, lockedFile); }
+        Check(lockedTracker.Export(adapter.Capture()).Changes.Count == 0 &&
+            TrackingStorage.HashFile(modPath) == originalHash &&
+            TrackingStorage.HashFile(lockedPath) == TrackingStorage.HashFile(Path.Combine(Directory.GetCurrentDirectory(), "fixture.mod")) &&
+            (bool)FcsAdapter.Property(nav, "HasChanges") == dirty,
+            "capture/context guards preserve disk mod bytes, controlled overlay bytes and editor dirty state");
     }
 
     private static void CheckNotesSafetyWindow(FcsAdapter adapter, Form editor, Assembly assembly, string modPath)

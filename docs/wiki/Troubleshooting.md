@@ -57,8 +57,9 @@ passed one test-mod configuration without reported errors or sustained
 unresponsiveness; additional dependency/extension stacks remain unverified.
 
 Profiling-only errors: `Entries must divide evenly across Sessions.` requires
-positive evenly divisible dimensions; `VanillaStack is restricted to
-PerformanceOnly profiling.` requires both flags. `Performance host compilation
+positive evenly divisible dimensions. `VanillaStack requires PerformanceOnly or
+CompatibilityOnly.` requires one of those mutually exclusive selectors alongside
+`-VanillaStack`; older releases restricted it to profiling. `Performance host compilation
 failed.`, `Performance run failed; fixture retained at ...` and `Native performance
 run failed; fixture retained at ...` are failed measurements, not passing
 budgets: inspect the reported compiler/exception output, retain the fixture
@@ -488,7 +489,8 @@ diagnostic evidence; the final wrapper line alone is not the root cause.
 | `Plugin compilation failed.` | Read the compiler errors, correct the source/environment, then rebuild. A failed build is not installed. |
 | `Test compilation failed.` | Resolve the preceding core-test compiler errors; do not interpret this as a test pass/fail result. |
 | `Core tests failed.` | Inspect the preceding assertion/exception and fix the regression before packaging. |
-| `Choose at most one targeted integration suite.` | Use only one of `-SettingsOnly`, `-ScheduleOnly`, `-ExportsOnly`, or omit all for the default combined run. |
+| `Choose at most one targeted integration suite.` | Use only one of `-SettingsOnly`, `-ScheduleOnly`, `-ExportsOnly`, `-RecoveryOnly`, `-SamplingOnly`, `-NotesOnly`, `-CompatibilityOnly` or `-PerformanceOnly`; omit all for the default combined checks. |
+| `Compatibility tests failed; disposable fixture retained at <path>` / `Workshop provenance tests failed; disposable fixture retained at <path>` | A targeted host failed, not a compatibility pass. Inspect the preceding assertion/compiler/native exception and retain the fixture privately. The Workshop host intentionally logs injected failures, but must end with PASS and exit successfully. These checks do not authorize bypassing the executable guard or treating cached values as published Steam data. |
 | `Integration test compilation failed.` | Inspect compiler output and verify the supported FCS/contract paths. |
 | `Integration tests failed; disposable fixture retained at <path>` | Inspect the retained copy and full output. Do not run mutation fixtures on the original mod or delete evidence before diagnosis. |
 | `Settings recovery tests failed; disposable fixture retained at <path>` | Inspect the settings suite's assertions/output in the retained fixture before changing recovery behavior. |

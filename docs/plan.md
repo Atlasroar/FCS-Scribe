@@ -430,9 +430,27 @@ remain unverified; S09 is not closed.
 
 ### S16. Compatibility and provenance boundaries
 
-- [ ] Retain the exact executable guard and document a verified compatibility matrix; do not treat unsupported builds as compatible.
-- [ ] Exercise representative dependency stacks and keep unresolved base/locked ownership visible rather than inferring source mods.
-- [ ] Keep cached/staged Workshop values distinct from published Steam truth; BFrizzleFoShizzle's documentation remains authoritative.
+- [x] Retain the exact executable guard and document a verified compatibility matrix; do not treat unsupported builds as compatible.
+- [x] Exercise the available representative dependency stack and keep unresolved base/locked ownership visible rather than inferring source mods.
+- [x] Keep cached/staged Workshop values distinct from published Steam truth; BFrizzleFoShizzle's documentation remains authoritative.
+
+Beta 19 adds bounded compatibility evidence, not runtime behavior or broader
+executable support. 664 core checks/build, 23 copied official-data and 26
+four-file vanilla-plus-representative-mod compatibility checks passed, each
+including a controlled copied overlay loaded through native LOCKED mode.
+Separate single-dependency Workshop hosts each passed 114 provenance/isolation
+checks; that is not full-stack Workshop evidence. Guards reject a differing
+assembly, merge/non-mod paths, replaced data sessions, changed reported
+loaded/locked context and changed inherited/locked values. Active evidence is
+attributed only to the active mod; flattened inherited ownership remains
+unresolved. Mod/overlay bytes and dirty state remain unchanged.
+
+The three designated upstream revisions were rechecked without changes;
+their managed editor versus native game API boundaries remain authoritative.
+No live installation, new hooks, dependency resolver or source-mod inference.
+Custom stacks, other extensions, other builds, physical failures and full
+interactive startup/approval remain unverified. S09 and explicit MVP support
+scope acceptance still precede feature expansion.
 
 ## 1. Integration feasibility and compatibility
 
@@ -673,7 +691,7 @@ stabilization work is distinct from new feature expansion:
 | S13: storage/distribution (beta 16) | Bounded closed tracking-copy/restore/compiled-archival cases and private pre-upload guidance are complete. No automated backups, pruning, native upload protection or physical storage-failure guarantee. |
 | S14: portability (beta 17) | Tracking-only moves, explicit fresh-baseline workflow and divergent-history failures verified on disposable same-host native fixtures. No automatic relocation/merging, cross-machine installation or path-alias/network guarantee. |
 | S15: notes safety (beta 18) | Per-record readback/outcomes, sidecar approval boundary and native partial/retry/Save/cold-test-process cases complete for bounded fixtures. No rollback/auto-save or physical mid-write guarantee. |
-| S16: compatibility/provenance | Maintain the verified build/configuration matrix, test available dependency stacks and keep unresolved field ownership and cached Workshop context explicit. |
+| S16: compatibility/provenance (beta 19) | Exact-build/configuration matrix, available copied dependency stack/controlled locked overlay, source-label guards and independent Workshop provenance/isolation cases verified. Other builds/custom stacks/extensions and full interactive acceptance remain unverified; no inferred ownership or published Steam truth. |
 
 After stabilization and explicit acceptance, five expansion areas remain in
 scope. They are not shipped or approved for implementation merely by appearing
@@ -690,7 +708,7 @@ in this table.
 ## Working order
 
 1. Keep S09 results and remaining exceptions explicit; untested is not passed, and the gate remains open until its support scope is explicitly accepted.
-2. S10/S11 are addressed in betas 12/13; S12's tested scope is explicitly accepted after betas 14/15 and the actual-editor soak. S13-S15's bounded storage/portability/notes work is covered in betas 16-18. Scope S16 next, retaining unverified custom-stack/headroom, cross-machine and physical-failure boundaries. Keep independently scoped changes, regression evidence and the requested PR/merge/beta-release cycle; publishing partial progress does not close unrelated acceptance gates.
+2. S10/S11 are addressed in betas 12/13; S12's tested scope is explicitly accepted after betas 14/15 and the actual-editor soak. S13-S16's bounded storage/portability/notes/compatibility work is covered in betas 16-19. Next finish S09's remaining interactive checks and explicitly review the MVP support scope, retaining unverified custom-stack/headroom, cross-machine and physical-failure boundaries. Keep independently scoped changes, regression evidence and the requested PR/merge/beta-release cycle; publishing partial progress does not close unrelated acceptance gates.
 3. Close the stabilization/MVP acceptance gate and any exposed issues before implementing new feature expansion.
 4. Then scope OCS design, broader session history and Markdown independently. Markdown/history do not inherently require OCS; do not couple them to a new runtime without a concrete requirement.
 5. Validate dependency provenance before wiki-ready exports. Direct AI remains optional and requires an explicit provider/credential/consent decision.
