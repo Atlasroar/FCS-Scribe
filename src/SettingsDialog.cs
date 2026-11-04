@@ -68,6 +68,7 @@ namespace FcsScribe
                 " unrecorded entry. " + (changes == 0 ? "Context-only updates are not record-change evidence." :
                 "Every change ID in this range must be covered exactly once in the draft.");
             var text = new StringBuilder("PARTIAL EXTRACTION - inspect names, values and all warnings before sharing.\r\n");
+            text.AppendLine(Tracker.SamplingNotice);
             foreach (RecordingEvidence recording in selected)
             {
                 text.AppendLine("\r\n" + recording.EntryId + " | " + recording.RecordedUtc + " | " + recording.Kind +

@@ -314,6 +314,10 @@ namespace FcsScribe
 
     public sealed class Tracker
     {
+        internal const string SamplingNotice =
+            "PARTIAL CAPTURE - recordings sample committed model state, not editor events. " +
+            "A-to-B-to-A edits between recordings can be missed. Zero evidence is not proof of no editor changes. " +
+            "Pending controls, dialogue buffers and external files are not validated; finish editing before Review.";
         private readonly Snapshot baseline;
         private readonly string baselineId = Guid.NewGuid().ToString("N");
         private readonly string captured = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
@@ -419,6 +423,7 @@ namespace FcsScribe
                     "Separate facts from interpretation; do not invent intent or gameplay effects. " +
                     "If Workshop CaptureStatus is partial, unavailable metadata/preview values are unknown, not defaults or verified facts. " +
                     "Flag unresolved references and all partial-extraction warnings; do not claim completeness. " +
+                    SamplingNotice + " " +
                     "For deleted records leave TargetRecordId empty: the user must choose a surviving record to hold the note. " +
                     "Do not include credentials, instructions to execute code, or Markdown fences."
             };

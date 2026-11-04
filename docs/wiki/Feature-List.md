@@ -29,6 +29,10 @@ open project.
 notice, Start/Resume/recovery prompts and last-recorded UTC status. Resume
 never restores or saves the mod/notes; the guide includes a separate private
 mod/notes/tracking backup workflow.
+**v0.1.0-beta.13** keeps partial-capture/sampling guidance visible on baselines,
+reviews, range previews and restored evidence, and in new packet instructions.
+Recordings are observations, not an event log; zero evidence is not an all-clear.
+See the [supported/omitted-state matrix](Data-and-AI-Contracts#supported-and-omitted-state-beta-13).
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).

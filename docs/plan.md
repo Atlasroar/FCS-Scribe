@@ -285,13 +285,29 @@ verify unchanged files, reversal recording and saved state ahead of history.
 Normal FCS save/reload and byte-identical complete backup/replay are covered.
 This does not force physical power/process failure or claim complete native
 dialog/backup-restoration/relocation acceptance. The user explicitly selected
-S10 while leaving S09's earlier untested boundaries open. S11 is next.
+S10 while leaving S09's earlier untested boundaries open.
 
 ### S11. Support boundary: partial capture and interval sampling
 
-- [ ] Keep a clear supported/omitted-state matrix, including pending controls, dialogue buffers and external files.
-- [ ] Explain and verify that A-to-B-to-A edits between recordings are not an event log; zero evidence is not proof of no editor changes.
-- [ ] Verify real control-commit behavior and retain explicit partial-extraction warnings wherever results are presented.
+- [x] Keep a clear supported/omitted-state matrix, including pending controls, dialogue buffers and external files.
+- [x] Explain and verify that A-to-B-to-A edits between recordings are not an event log; zero evidence is not proof of no editor changes.
+- [x] Verify real control-commit behavior and retain explicit partial-extraction warnings wherever results are presented.
+
+S11 is addressed in beta 13 as a bounded support contract, not complete
+control/editor coverage. All new baselines display existing capture warnings.
+Shared sampling guidance appears in review/range/restored-packet presentation
+and new packet instructions without changing snapshot fingerprints or original
+historical packets. The capture matrix explicitly separates supported model
+layers from pending controls, dialogue buffers, external files and event history.
+
+Recorded checks: 598 core, plugin build, 22 isolated native sampling checks
+each on copied vanilla/representative data, plus the 94 representative recovery
+checks. A real bound native Name textbox tests pending text, wired Enter/Escape
+events and actual LostFocus commits; separate sampled reversals persist while
+unsampled reversals produce no entry. Review never flushes controls or saves.
+This is not physical keyboard acceptance or evidence for every numeric,
+dropdown/reference/dialogue control. The broader interactive control-commit
+item remains open, as do S09 and S12-S16. S12 is next.
 
 ### S12. Performance: full capture and growing history
 
@@ -550,15 +566,14 @@ saved-data backend where it has passed cross-validation.
 
 ## Remaining delivery scope
 
-The grouped-menu cleanup and S01-S08 have shipped; beta 12 addresses S10's
-tracking-versus-recovery support boundary. The bounded S09 physical
+The grouped-menu cleanup and S01-S08 have shipped; betas 12/13 address S10's
+tracking-versus-recovery and S11's partial-capture/sampling support boundaries. The bounded S09 physical
 pass is recorded, not silently promoted to full acceptance. The remaining
 stabilization work is distinct from new feature expansion:
 
 | Item | Remaining deliverable |
 |---|---|
 | S09: acceptance | Retain the completed evidence and explicit untested exceptions; resolve or explicitly agree the remaining support scope before closing the gate. |
-| S11: partial capture | Publish a supported/omitted-state matrix, explain sampling/reversals and verify more control-commit routes without removing partial-extraction warnings. |
 | S12: performance | Measure realistic capture/history latency and 32-bit memory use, define budgets and optimize without weakening integrity checks. |
 | S13: storage/distribution | Validate complete backup/restore and safe compiled-session archival; make pre-upload privacy and missing-file risks clear without automatic pruning. |
 | S14: portability | Define verified relocation/new-baseline guidance and divergent-history handling without bypassing path/load-order identity or automatically merging journals. |
@@ -580,7 +595,7 @@ in this table.
 ## Working order
 
 1. Keep S09 results and remaining exceptions explicit; untested is not passed, and the gate remains open until its support scope is explicitly accepted.
-2. With S10 addressed in beta 12, address the remaining S11-S16 stabilization items in order, one independently scoped issue at a time, retaining regression evidence and accepted support boundaries. Each addressed issue follows the requested PR, merge and beta-release cycle.
+2. With S10/S11 addressed in betas 12/13, address the remaining S12-S16 stabilization items in order, one independently scoped issue at a time, retaining regression evidence and accepted support boundaries. Each addressed issue follows the requested PR, merge and beta-release cycle.
 3. Close the stabilization/MVP acceptance gate and any exposed issues before implementing new feature expansion.
 4. Then scope OCS design, broader session history and Markdown independently. Markdown/history do not inherently require OCS; do not couple them to a new runtime without a concrete requirement.
 5. Validate dependency provenance before wiki-ready exports. Direct AI remains optional and requires an explicit provider/credential/consent decision.

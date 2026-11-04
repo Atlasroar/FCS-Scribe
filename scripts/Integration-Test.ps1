@@ -4,11 +4,12 @@ param(
     [switch]$SettingsOnly,
     [switch]$ScheduleOnly,
     [switch]$ExportsOnly,
-    [switch]$RecoveryOnly
+    [switch]$RecoveryOnly,
+    [switch]$SamplingOnly
 )
 $ErrorActionPreference = 'Stop'
 if (([int]$SettingsOnly.IsPresent + [int]$ScheduleOnly.IsPresent + [int]$ExportsOnly.IsPresent +
-    [int]$RecoveryOnly.IsPresent) -gt 1) {
+    [int]$RecoveryOnly.IsPresent + [int]$SamplingOnly.IsPresent) -gt 1) {
     throw 'Choose at most one targeted integration suite.'
 }
 $root = Split-Path $PSScriptRoot -Parent
@@ -32,25 +33,29 @@ $sources = @(Get-ChildItem (Join-Path $root 'src') -Filter '*.cs' | ForEach-Obje
 if ($LASTEXITCODE -ne 0) { throw 'Integration test compilation failed.' }
 Push-Location $fixture
 try {
-    if (-not $SettingsOnly -and -not $ScheduleOnly -and -not $ExportsOnly -and -not $RecoveryOnly) {
+    if (-not $SettingsOnly -and -not $ScheduleOnly -and -not $ExportsOnly -and -not $RecoveryOnly -and -not $SamplingOnly) {
         & (Join-Path $fixture 'IntegrationTests.exe')
         if ($LASTEXITCODE -ne 0) { throw "Integration tests failed; disposable fixture retained at $fixture" }
     }
-    if (-not $ScheduleOnly -and -not $ExportsOnly -and -not $RecoveryOnly) {
+    if (-not $ScheduleOnly -and -not $ExportsOnly -and -not $RecoveryOnly -and -not $SamplingOnly) {
         & (Join-Path $fixture 'IntegrationTests.exe') --settings-recovery
         if ($LASTEXITCODE -ne 0) { throw "Settings recovery tests failed; disposable fixture retained at $fixture" }
     }
-    if (-not $SettingsOnly -and -not $ExportsOnly -and -not $RecoveryOnly) {
+    if (-not $SettingsOnly -and -not $ExportsOnly -and -not $RecoveryOnly -and -not $SamplingOnly) {
         & (Join-Path $fixture 'IntegrationTests.exe') --schedule
         if ($LASTEXITCODE -ne 0) { throw "Scheduling tests failed; disposable fixture retained at $fixture" }
     }
-    if (-not $SettingsOnly -and -not $ScheduleOnly -and -not $RecoveryOnly) {
+    if (-not $SettingsOnly -and -not $ScheduleOnly -and -not $RecoveryOnly -and -not $SamplingOnly) {
         & (Join-Path $fixture 'IntegrationTests.exe') --exports
         if ($LASTEXITCODE -ne 0) { throw "Export protection tests failed; disposable fixture retained at $fixture" }
     }
-    if (-not $SettingsOnly -and -not $ScheduleOnly -and -not $ExportsOnly) {
+    if (-not $SettingsOnly -and -not $ScheduleOnly -and -not $ExportsOnly -and -not $SamplingOnly) {
         & (Join-Path $fixture 'IntegrationTests.exe') --tracking-recovery
         if ($LASTEXITCODE -ne 0) { throw "Tracking recovery boundary tests failed; disposable fixture retained at $fixture" }
+    }
+    if (-not $SettingsOnly -and -not $ScheduleOnly -and -not $ExportsOnly -and -not $RecoveryOnly) {
+        & (Join-Path $fixture 'IntegrationTests.exe') --sampling
+        if ($LASTEXITCODE -ne 0) { throw "Sampling boundary tests failed; disposable fixture retained at $fixture" }
     }
 }
 finally { Pop-Location }
