@@ -483,8 +483,8 @@ relevant error excerpt. Do not upload entire real projects/notes by default.
 This catalogue covers the explicit runtime errors, warning strings, structured
 Workshop issue codes, recovery/approval notices and script failure messages in
 **v0.1.0-beta.11**. It is a troubleshooting reference, **not a claim that every
-failure path has passed physical acceptance**. S09 testing is paused and the
-full acceptance gate remains open; see
+failure path has passed physical acceptance**. A bounded real-editor pass is
+documented, but the full S09 acceptance gate remains open; see
 [Validation and limitations](Validation-and-Limitations).
 
 Message definitions and guards are maintained in

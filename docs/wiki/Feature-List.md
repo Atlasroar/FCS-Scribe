@@ -486,6 +486,11 @@ There is no automatic pruning or history-management UI yet.
 | Direct AI-provider connections | Optional integration after the manual workflow is reliable |
 
 These are roadmap items, not buttons or behaviors available in the beta.
+The [remaining delivery scope](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/plan.md#remaining-delivery-scope)
+separates S09-S16 stabilization from these five expansion areas and records
+their prerequisites. The bounded beta 11 physical results and untested
+exceptions are in [Validation and limitations](Validation-and-Limitations#real-fcs-extended-acceptance-beta-11);
+they do not close the acceptance gate.
 See the [working feature plan](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/plan.md)
 and [OpenConstructionSet integration](OpenConstructionSet-Integration) for
 their checklists and boundaries.
