@@ -37,6 +37,11 @@ See the [supported/omitted-state matrix](Data-and-AI-Contracts#supported-and-omi
 reproducible x86 profiling without weakening hash/chain checks. Full-capture
 memory and a sustained real-editor soak remain open; see
 [measured performance limits](Validation-and-Limitations#s12-performance-measurements-partial-beta-14).
+**v0.1.0-beta.15** shares immutable strings within individual captures/loaded
+baselines without sharing mutable cells/values or changing evidence. The
+30-cycle copied official-data peak fell from 1,662.8 to 896.7 MiB; capture
+still takes seconds. Custom-stack headroom and a real-editor soak remain open:
+[bounded memory improvement](Validation-and-Limitations#beta-15-snapshot-local-string-sharing).
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).

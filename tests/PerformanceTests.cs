@@ -85,7 +85,13 @@ internal static class PerformanceTests
             for (int i = 0; i < iterations; i++)
             {
                 Measure(report, "native-capture", () => state = capture());
-                Measure(report, "unchanged-review", () => project.Record(state));
+                Measure(report, "unchanged-review", () => {
+                    Packet packet = project.Record(state);
+                    if (packet.Changes.Count != 0 || packet.SourceFingerprint != project.Fingerprint ||
+                        project.EntryCount != 0 || state.Records.Count != report.Records ||
+                        state.Records.Sum(x => x.Cells.Count) != report.Cells)
+                        throw new Exception("Repeated native capture changed the model, context or recorded coverage.");
+                });
             }
             report.Sessions = 1;
             report.StorageBytes = new FileInfo(path).Length +
@@ -108,6 +114,23 @@ internal static class PerformanceTests
             state.Records.Add(record);
         }
         return state;
+    }
+
+    public static void VerifyStringSharing(string path)
+    {
+        using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            string sourceHash = TrackingStorage.HashFile(path);
+            TrackingDocument document = Json.ReadStream<TrackingDocument>(stream);
+            document.Validate();
+            string stateHash = Json.StreamHash(document.State);
+            document.State.ShareStrings();
+            if (document.State.Fingerprint() != document.StateFingerprint ||
+                Json.StreamHash(document.State) != stateHash || TrackingStorage.HashFile(path) != sourceHash)
+                throw new Exception("String sharing changed a saved baseline's fingerprint, serialized state or source bytes.");
+            Console.WriteLine("PASS: existing baseline string-sharing compatibility; " +
+                document.State.Records.Count + " records, " + document.State.Records.Sum(x => x.Cells.Count) + " cells");
+        }
     }
 
     public static void History(string directory, string source, int records, int entries, int sessions, int largeCells)
@@ -159,6 +182,11 @@ internal static class PerformanceProgram
     {
         try
         {
+            if (args.Length == 2 && args[0] == "--verify-string-sharing")
+            {
+                PerformanceTests.VerifyStringSharing(args[1]);
+                return 0;
+            }
             if (args.Length != 6) throw new ArgumentException("Expected directory, source, records, entries, sessions and large-record cells.");
             int records = Int32.Parse(args[2], CultureInfo.InvariantCulture);
             int entries = Int32.Parse(args[3], CultureInfo.InvariantCulture);

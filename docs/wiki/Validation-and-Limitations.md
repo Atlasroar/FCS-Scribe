@@ -186,7 +186,9 @@ saved-state verification remain omitted. S09 and S12-S16 remain open.
 
 **S12 remains open.** The user selected publishing bounded history/profiling
 improvements while retaining full-capture memory work and a sustained real
-FCS Extended soak. The measurements below are local Windows/.NET Framework
+FCS Extended soak. Beta 15 adds the bounded memory improvement described below;
+the beta 14 measurements remain historical comparison evidence.
+The measurements below are local Windows/.NET Framework
 x86 test-host observations, not universal support limits or a production SLA.
 Runs used fresh processes and copied/synthetic data; some independent jobs
 ran concurrently, so small timing differences are not isolated CPU benchmarks.
@@ -269,7 +271,49 @@ do not bypass validation, drop uncompiled files, force collection or assume
 archival fixes full-capture allocation. Performance optimization does not
 change the partial-capture contract.
 
-### Integrity and acceptance boundaries
+### Beta 15: snapshot-local string sharing
+
+Equal immutable cell strings now share storage within one native capture or
+validated loaded baseline. This includes field paths, layer/source labels,
+reference IDs, kinds and value text. Cells and their mutable `Value` objects
+remain separate. The pool is local to one capture/load, not global interning
+or a retained adapter cache. No records are omitted, values truncated, forced
+collection introduced or evidence/schema/fingerprint contracts changed.
+
+The same 55,130-record / 1,339,047-cell official-data stress configuration,
+in fresh x86 processes over **30 capture/review cycles**, measured:
+
+| Measurement | Beta 14 code | Beta 15 code |
+| --- | --- | --- |
+| Process lifetime peak working set | 1,662.8 MiB | 896.7 MiB |
+| Native capture median; range | 4.15 s; 3.34-5.50 s | 4.44 s; 4.04-4.97 s |
+| Unchanged review median; maximum | 2.41 s; 2.79 s | 2.41 s; 3.49 s |
+| Create full baseline / resume | 44.95 s / 30.81 s | 45.11 s / 30.88 s |
+| Managed / private bytes after final unchanged review | 1,122.7 / 1,162.9 MiB | 367.5 / 404.3 MiB |
+
+Peak working set fell about **46%** in these runs, not to a universal memory
+ceiling. Capture's median was about 7% slower in this comparison; this is a
+memory improvement, not a capture-speed fix. Managed/private values are
+endpoints, not isolated peaks. Natural GC timing affects all these results,
+and native/editor/extension allocations and fragmentation still matter.
+
+All repeated captures retained the initial record/cell counts and produced
+zero recorded changes with matching fingerprints. A full baseline saved by
+the pre-change beta 14 host was separately validated and compacted without
+changing its state fingerprint, serialized-state hash or source-file bytes.
+616 core checks include exact serialization and distinct mutable ownership.
+The complete copied-vanilla integration matrix passed again (269 general,
+16 settings, 24 scheduling, 24 export, 95 recovery and 22 sampling checks).
+All samples from reruns of the three synthetic history workloads stayed within
+the published local timing/128 MiB envelopes, including retained replay.
+
+This accelerated native test is **not a multi-hour interactive FCS Extended
+soak**, nor a representative custom dependency/extension stack. S12 remains
+open for those cases and practical headroom/latency assessment. Use Manual
+where necessary and keep ordinary mod/notes backups; no automatic Save,
+pruning, memory threshold or safe-stack-size promise is added.
+
+### Beta 14 integrity and acceptance boundaries
 
 608 core checks passed, including changed/empty/missing fully compiled
 sessions, invalidation after a new recording, reopened retained history and

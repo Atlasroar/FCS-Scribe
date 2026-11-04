@@ -31,6 +31,28 @@ namespace FcsScribe
         [DataMember(Order = 4)] public string ReferencedId;
     }
 
+    internal sealed class SnapshotStrings
+    {
+        // Keep the pool local to one capture/load, never the adapter or process lifetime.
+        private readonly Dictionary<string, string> strings = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        private string Share(string text)
+        {
+            if (text == null) return null;
+            string shared;
+            if (strings.TryGetValue(text, out shared)) return shared;
+            strings.Add(text, text);
+            return text;
+        }
+
+        internal void Share(Cell cell)
+        {
+            cell.Path = Share(cell.Path); cell.Layer = Share(cell.Layer);
+            cell.Source = Share(cell.Source); cell.ReferencedId = Share(cell.ReferencedId);
+            cell.Value.Kind = Share(cell.Value.Kind); cell.Value.Text = Share(cell.Value.Text);
+        }
+    }
+
     [DataContract]
     public sealed class Record
     {
@@ -164,6 +186,13 @@ namespace FcsScribe
         }
 
         internal static string Key(Cell cell) { return cell.Layer + ":" + cell.Path; }
+
+        internal void ShareStrings()
+        {
+            var strings = new SnapshotStrings();
+            foreach (Record record in Records)
+                foreach (Cell cell in record.Cells) strings.Share(cell);
+        }
 
         internal Snapshot Context()
         {
