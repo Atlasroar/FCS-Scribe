@@ -108,6 +108,134 @@ internal static class JournalTests
                 "compiled archival is accepted only after reopening with the original journal intact");
     }
 
+    private static void CopyDirectory(string source, string destination)
+    {
+        Directory.CreateDirectory(destination);
+        foreach (string file in Directory.GetFiles(source))
+            File.Copy(file, Path.Combine(destination, Path.GetFileName(file)));
+        foreach (string child in Directory.GetDirectories(source))
+            CopyDirectory(child, Path.Combine(destination, Path.GetFileName(child)));
+    }
+
+    private static void CopyTrackingSet(string source, string destination)
+    {
+        File.Copy(source, destination);
+        foreach (string suffix in new[] { ".bak", ".legacy.bak" })
+            if (File.Exists(source + suffix)) File.Copy(source + suffix, destination + suffix);
+        CopyDirectory(source + ".scribe", destination + ".scribe");
+    }
+
+    private static Dictionary<string, string> TrackingHashes(string path)
+    {
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (string suffix in new[] { "", ".bak", ".legacy.bak" })
+            if (File.Exists(path + suffix)) result.Add("baseline" + suffix, TrackingStorage.HashFile(path + suffix));
+        string storage = path + ".scribe";
+        foreach (string file in Directory.GetFiles(storage, "*", SearchOption.AllDirectories))
+            result.Add("storage\\" + file.Substring(storage.Length + 1), TrackingStorage.HashFile(file));
+        return result;
+    }
+
+    private static bool SameHashes(Dictionary<string, string> before, string path)
+    {
+        Dictionary<string, string> after = TrackingHashes(path);
+        return before.Count == after.Count && before.All(x => after.ContainsKey(x.Key) && after[x.Key] == x.Value);
+    }
+
+    private static void RejectBrokenCopy<T>(string source, string destination, Action<string> damage) where T : Exception
+    {
+        CopyTrackingSet(source, destination);
+        damage(destination);
+        Dictionary<string, string> before = TrackingHashes(destination);
+        Reject<T>(() => { using (JournalProject.Open(destination)) { } }, "incomplete/mixed copy rejected: " + Path.GetFileName(destination));
+        Check(SameHashes(before, destination), "rejection preserves remaining copied bytes: " + Path.GetFileName(destination));
+    }
+
+    private static void CheckTrackingSetSafety(string directory)
+    {
+        string source = Path.Combine(directory, "backup-source.json"), first, middle, last;
+        string originalEvidence;
+        using (var project = JournalProject.Create(source, State("10")))
+        {
+            project.BeginSession(); first = Path.GetFileName(project.SessionPath);
+            project.Record(State("11")); project.Compile();
+            project.BeginSession(); middle = Path.GetFileName(project.SessionPath);
+            project.Record(State("12"));
+            project.BeginSession(); last = Path.GetFileName(project.SessionPath);
+            project.Record(State("13"));
+            originalEvidence = Json.Write(project.ExportRecordings(State("13")));
+        }
+        File.Copy(source, source + ".bak");
+        Dictionary<string, string> originals = TrackingHashes(source);
+        string copy = Path.Combine(directory, "complete-copy.json");
+        CopyTrackingSet(source, copy);
+        Check(SameHashes(originals, copy), "a closed complete copy preserves baseline, backups and all storage bytes");
+        using (var restored = JournalProject.Open(copy))
+        {
+            Check(restored.EntryCount == 3 && restored.PendingCount == 2 && restored.Fingerprint == State("13").Fingerprint(),
+                "a complete copied set replays compiled and pending history under the same mod identity");
+            Check(Json.Write(restored.ExportRecordings(State("13"))) == originalEvidence,
+                "a copied set preserves original evidence identities and values");
+            Check(restored.Compile() == 2 && restored.Compile() == 0,
+                "pending copied sessions compile once without duplicate history");
+        }
+
+        string archived = Path.Combine(directory, "compiled-archive.json");
+        CopyTrackingSet(source, archived);
+        using (var project = JournalProject.Open(archived)) project.Compile();
+        string archivedSession = Path.Combine(archived + ".scribe", "sessions", first);
+        string heldSession = Path.Combine(directory, "held-compiled-session.jsonl");
+        File.Move(archivedSession, heldSession);
+        using (var restored = JournalProject.Open(archived))
+            Check(restored.EntryCount == 3 && restored.PendingCount == 0 &&
+                restored.Fingerprint == State("13").Fingerprint() &&
+                Json.Write(restored.ExportRecordings(State("13"))) == originalEvidence,
+                "closed fully compiled session archival retains complete replay and original evidence");
+        string journal = Path.Combine(archived + ".scribe", "journal.jsonl");
+        string heldJournal = Path.Combine(directory, "held-main-journal.jsonl");
+        File.Move(journal, heldJournal);
+        Dictionary<string, string> damaged = TrackingHashes(archived);
+        Reject<InvalidDataException>(() => JournalProject.Open(archived),
+            "archived originals plus a missing journal cannot silently reconstruct a partial history");
+        Check(SameHashes(damaged, archived), "missing-journal rejection preserves the incomplete archive");
+        File.Move(heldJournal, journal);
+        using (var restored = JournalProject.Open(archived))
+            Check(restored.EntryCount == 3 && restored.PendingCount == 0,
+                "restoring the exact journal makes the archived-session set usable again");
+
+        string rebuild = Path.Combine(directory, "journal-rebuild.json");
+        CopyTrackingSet(source, rebuild);
+        File.Move(Path.Combine(rebuild + ".scribe", "journal.jsonl"), Path.Combine(directory, "held-rebuild-journal.jsonl"));
+        using (var restored = JournalProject.Open(rebuild))
+            Check(restored.EntryCount == 3 && restored.PendingCount == 3 && restored.Compile() == 3 &&
+                restored.Fingerprint == State("13").Fingerprint(),
+                "all intact originals can reconstruct a missing journal, with every recovered entry pending compilation");
+
+        string pendingCopy = Path.Combine(directory, "pending-away.json");
+        string heldPending = Path.Combine(directory, "held-pending-session.jsonl");
+        RejectBrokenCopy<InvalidDataException>(source, pendingCopy,
+            path => File.Move(Path.Combine(path + ".scribe", "sessions", last), heldPending));
+        File.Move(heldPending, Path.Combine(pendingCopy + ".scribe", "sessions", last));
+        using (var restored = JournalProject.Open(pendingCopy))
+            Check(restored.EntryCount == 3 && restored.PendingCount == 2,
+                "restoring an accidentally archived pending session restores the complete history");
+        RejectBrokenCopy<InvalidDataException>(source, Path.Combine(directory, "middle-away.json"),
+            path => File.Move(Path.Combine(path + ".scribe", "sessions", middle), Path.Combine(directory, "held-middle.jsonl")));
+        RejectBrokenCopy<InvalidDataException>(source, Path.Combine(directory, "marker-away.json"),
+            path => File.Move(Path.Combine(path + ".scribe", "project.json"), Path.Combine(directory, "held-marker.json")));
+        RejectBrokenCopy<IOException>(source, Path.Combine(directory, "baseline-away.json"),
+            path => File.Move(path, Path.Combine(directory, "held-baseline.json")));
+
+        string foreign = Path.Combine(directory, "foreign-copy-source.json");
+        using (var project = JournalProject.Create(foreign, State("90")))
+        { project.BeginSession(); project.Record(State("91")); project.Compile(); }
+        RejectBrokenCopy<InvalidDataException>(source, Path.Combine(directory, "foreign-marker.json"),
+            path => File.Copy(Path.Combine(foreign + ".scribe", "project.json"), Path.Combine(path + ".scribe", "project.json"), true));
+        RejectBrokenCopy<InvalidDataException>(source, Path.Combine(directory, "foreign-journal.json"),
+            path => File.Copy(Path.Combine(foreign + ".scribe", "journal.jsonl"), Path.Combine(path + ".scribe", "journal.jsonl"), true));
+        Check(SameHashes(originals, source), "copy/restore/archive exercises never mutate the original closed tracking set");
+    }
+
     public static int Run()
     {
         string directory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "journal-test-" + Guid.NewGuid().ToString("N"));
@@ -118,6 +246,7 @@ internal static class JournalTests
             CheckRangeExports(directory);
             CheckSampling(directory);
             CheckCompiledSessionGuards(directory);
+            CheckTrackingSetSafety(directory);
             string invalid = Path.Combine(directory, "game.mod");
             Reject<InvalidDataException>(() => JournalProject.Create(invalid, State("10")), "mod targets rejected before creating session storage");
             Check(!Directory.Exists(invalid + ".scribe"), "invalid targets leave no storage next to game/mod files");

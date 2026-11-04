@@ -274,8 +274,93 @@ Neither Yes nor No saves the mod/notes.
 This is a manual backup workflow, not a new restoration tool, relocation
 guarantee or power-loss-safe snapshot service. The tracking catalogue cannot
 reconstruct excluded assets/buffers. Do not distribute private backups or an
-entire shared notes file with a mod; redistribution permissions and S13/S14's
-broader archival/portability work remain separate.
+entire shared notes file with a mod. The storage procedures below do not grant
+redistribution permission or establish S14's mod-relocation support.
+
+### Complete tracking sets and restore failures
+
+Beta 16 adds the same **PRIVATE TRACKING SET** notice to the main window and
+Start/Resume chooser. The default remains the active mod folder; the warning
+does not move files, create backups or protect a native Workshop upload.
+
+Keep the baseline JSON and **entire matching `.json.scribe` folder** together,
+including `project.json`, `journal.jsonl` when present, all session logs and
+recovery originals/backups. Retain associated baseline `.bak` and
+`.legacy.bak` files when present. A marker backup by itself is not a substitute
+for a coherent project. Close all writers before copying or restoring.
+
+| Missing or mixed component | Consequence and safe response |
+|---|---|
+| Baseline JSON | Deltas cannot replace the original full anchor. Restore the exact baseline from the matching private backup. |
+| `project.json` for a modern journal-enabled baseline | Resume rejects missing/incomplete storage. Restore the complete matching set, not an empty folder or a marker from another project. |
+| Latest or middle uncompiled session | The required head or chain cannot replay. Restore the exact missing session; do not archive pending logs or edit IDs/hashes. |
+| Compiled session original, with its entries intact in `journal.jsonl` | Closed-project archival can replay from the journal; follow the procedure below, not deletion based on age. |
+| `journal.jsonl`, with **all** original session history intact | Resume can replay the originals. Recovered entries are pending; Compile reconstructs the journal. Preserve the damaged set first and validate a private copy. |
+| Journal plus required archived/missing originals | The remaining files cannot reconstruct the required chain; Resume rejects it. Restore the exact journal or the complete original history from the same project. |
+| Foreign marker or journal | Identity/chain validation rejects mixed projects. Restore a coherent set; never merge files to make validation pass. |
+
+These are tracking-storage rules, not mod/notes restoration. A copied tracking
+root can replay under the same mod identity; moving the `.mod`, changing load
+order or merging divergent histories is not thereby supported. Older compatible
+anchors without `JournalVersion` cannot themselves detect missing sidecars.
+A coherent older backup can load its older head: Scribe cannot prove that a
+newer backup/history exists elsewhere. Keep backup times, inventories and hashes,
+and compare expected recording counts/head before treating restoration as complete.
+
+### Safely archiving compiled session originals
+
+There is **no automatic pruning or archive UI**. Keeping the originals is the
+simplest recovery option. If storage management is necessary:
+
+1. In the correct project, explicitly Compile until there are no pending
+   recordings. Resolve errors first. Then close Scribe and all FCS instances
+   and wait for writers to finish; never move observed files while open.
+2. Make and hash-check a complete private backup using the workflow above.
+   Validate a disposable copy under the same mod identity before changing
+   the working set, then close its writers too.
+3. Move only known **fully compiled session `.jsonl` originals** to a private
+   archive outside upload content. Keep the baseline, `project.json`, main
+   `journal.jsonl`, all pending sessions and recovery/backups. Age, filename or
+   an empty pending display before a failed compilation is not proof of eligibility.
+4. Resume the working project and inspect retained history, recording count
+   and current-state comparison. Previously compiled recordings must remain
+   available from the main journal without duplicates or new pending debt.
+   If validation fails, close writers and restore the exact archived originals
+   or the complete known-good set; do not bypass the guard.
+
+Archival reduces redundant originals, **not the required full baseline**.
+It also makes the main journal more important: losing it after originals
+have been removed can make the working set unrecoverable without the archive.
+Keep that archive and complete backups private.
+
+### Before a Workshop upload
+
+Baselines contain the full captured loaded model, including dependency data.
+Journals contain changed complete records; recovery files and backups retain
+originals. Draft workspaces preserve original AI packets and opaque draft text.
+These are private working material, not mod distribution assets. Compact
+exports still require review before sharing.
+
+1. Save deliberately through FCS, resolve errors, close writers and make a
+   verified complete private backup outside every upload/staging location.
+2. Inspect the **actual content selected by your native uploader**, including
+   nested/hidden files. Do not assume it excludes `.scribe`, JSON or backups.
+   Scribe neither inspects nor blocks native uploads; no Steam upload/filter
+   behavior is established by these checks.
+3. Keep the chosen tracking baseline, its entire matching storage folder,
+   associated backups and saved draft workspaces out of the selected content.
+   Do not delete every JSON file indiscriminately: a mod can have legitimate
+   JSON assets. Preserve private working originals and use your publisher's
+   supported content-selection workflow. If its selected contents cannot be
+   confirmed, do not upload.
+4. Do not resume a tracking project against a relocated publication copy or
+   mix private history from different paths. If files were temporarily set
+   aside with writers closed, restore the matching set to its original location
+   before Resume. Check saved mod/notes and any discrepancy separately.
+
+Do not distribute shared Notes/TODO sidecars wholesale: they can include other
+mods' annotations. These manual safeguards are not an upload scrubber, a
+backup wizard, proof of redistribution rights or a mod-relocation guarantee.
 
 ## Capture Workshop information and the preview
 
@@ -346,7 +431,9 @@ destination. They retain formatted UTF-8 output and do not rotate a neighboring
 `.bak`. A pre-commit failure leaves the prior destination intact; no partial
 success is reported. Checks are not a universal lock or protection against
 every filesystem alias, hostile last-instant replacement or power loss.
-Keep backups; S09 interactive acceptance and S13 storage/privacy work remain.
+Keep backups; S09 full interactive acceptance remains open. Follow the
+[S13 storage/privacy procedures](#complete-tracking-sets-and-restore-failures)
+before copying, archiving or preparing an upload.
 
 ## Recovery and lifecycle
 

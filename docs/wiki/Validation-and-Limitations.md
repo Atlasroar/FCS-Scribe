@@ -180,11 +180,12 @@ Name text editor's routes are established here. Numeric/dropdown/reference/
 dialogue editors, separate modal buffers and every possible focus route are
 not newly verified. Earlier S09 user evidence covers one real field-to-Scribe
 route, not all controls. External assets/layouts, complete event history and
-saved-state verification remain omitted. S09 and S12-S16 remain open.
+saved-state verification remain omitted. At beta 13 publication, S09 and
+S12-S16 remained open; later scoped evidence is recorded below.
 
 ## S12 performance measurements: partial beta 14
 
-**S12 remains open.** The user selected publishing bounded history/profiling
+**At beta 14 publication, S12 remained open.** The user selected publishing bounded history/profiling
 improvements while retaining full-capture memory work and a sustained real
 FCS Extended soak. Beta 15 adds the bounded memory improvement described below;
 the beta 14 measurements remain historical comparison evidence.
@@ -309,8 +310,8 @@ the published local timing/128 MiB envelopes, including retained replay.
 
 This accelerated native test is **not a multi-hour interactive FCS Extended
 soak**, nor a representative custom dependency/extension stack. The actual-editor
-soak below is separate evidence for one configuration; S12 remains open for
-custom-stack coverage and practical headroom/latency assessment. Use Manual
+soak below is separate evidence for one configuration; custom-stack coverage
+and practical headroom/latency remain unverified. Use Manual
 where necessary and keep ordinary mod/notes backups; no automatic Save,
 pruning, memory threshold or safe-stack-size promise is added.
 
@@ -361,7 +362,8 @@ Those are not extra samples or a new maximum from the two-hour process.
 No AI notes application or Workshop upload was part of this test, and it
 does not establish native notes retention or full S09 acceptance.
 
-**The observed soak/restart case passed; S12 is not globally closed.**
+**The observed soak/restart case passed. The owner explicitly accepted S12
+for this tested scope and authorized S13, not universal support.**
 Additional intended custom dependency/extension stacks, practical headroom
 and measured UI latency remain unverified. Raw baselines/native files must
 remain private; the figures above are aggregate evidence only.
@@ -390,6 +392,41 @@ scheduling, export, recovery and sampling suites pass separately. The later
 beta 15 actual-editor soak covers one configuration only; representative
 custom stacks, broader memory/latency headroom and the previously untested
 S09 boundaries remain open.
+
+## S13 storage safety (beta 16)
+
+639 core checks passed, including 23 added complete-set assertions on closed
+disposable tracking projects. They verify byte-identical copies with baseline
+backups and complete storage, compiled/pending replay, original evidence and
+fingerprints, and idempotent compilation. A separate closed-copy archival
+case retains complete evidence in the main journal after removing a fully
+compiled original.
+
+Missing latest/middle pending sessions, missing marker/baseline and foreign
+marker/journal cases reject without changing the remaining file bytes.
+Restoring exact missing files permits replay. With all originals intact, a
+missing main journal reconstructs as pending history and can be compiled.
+With required originals archived too, Resume rejects the incomplete chain;
+restoring the exact journal permits replay. The source set stays unchanged.
+These checks do not claim preservation of empty directories, access times or
+the absence of an empty writer-lock file after a failed Open.
+
+Copied official-data and representative-mod recovery runs each passed 98
+checks, including shared main-window/chooser notices, default chooser button
+visibility and narrow-window warning wrapping. Native recovery behavior
+remains covered on disposable copies; no live mod, notes or tracking data
+was mutated by these automated checks.
+
+The [manual backup/restore, archive and pre-upload procedures](Installation-and-Workflow#complete-tracking-sets-and-restore-failures)
+retain the active-mod-folder default. No schema, identity, replay, hash,
+flush or retention rule changes; no automatic pruning or backup/archive
+wizard. Baselines include full loaded/dependency data. Scribe does not inspect,
+filter or block native Workshop uploads, and no Steam upload was tested.
+Older compatible roots cannot prove missing sidecars; coherent old backups
+cannot prove newer history exists. Tracking-copy replay under the same mod
+identity is not S14 mod relocation or complete mod/notes restoration.
+Physical disk/power/access failures and every third-party sync/storage tool
+remain outside this bounded evidence.
 
 ## Reproduce
 
@@ -455,7 +492,7 @@ pass. Existing automated coverage is not promoted to physical acceptance.
 | Capture breadth | Deletions, reference/quantity/removal and nested-instance semantics remain automated/disposable-copy evidence, not additional physical mutations in this pass. One focus route does not establish all UI control commits. |
 | Additional storage/settings failures | Physical power/disk/access failures, all initialization retry boundaries, unreadable/concurrent settings repair and manual compiled-session archival were not exhaustively exercised. |
 | Workshop breadth | Real asynchronous Steam upload/refresh and every populated metadata/image-format boundary were not physically exercised. No publishing was performed for acceptance. |
-| Performance and restoration | The large baseline is one observation, not large-stack/history profiling or proof of mod restoration. S12 and the remaining support-boundary work remain open. |
+| Performance and restoration | The beta 11 physical baseline alone was not large-stack/history profiling or proof of mod restoration. Later S12 profiling/soak evidence has an explicitly accepted tested scope; broader configurations and mod restoration remain unverified. |
 
 The [working plan](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/plan.md)
 retains the overall gate. Recording these results/exceptions is not an implicit

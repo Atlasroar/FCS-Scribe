@@ -307,7 +307,7 @@ events and actual LostFocus commits; separate sampled reversals persist while
 unsampled reversals produce no entry. Review never flushes controls or saves.
 This is not physical keyboard acceptance or evidence for every numeric,
 dropdown/reference/dialogue control. The broader interactive control-commit
-item remains open, as do S09 and S12-S16. S12 is next.
+item remains open; S09 and subsequent support-boundary work are tracked separately below.
 
 ### S12. Performance: full capture and growing history
 
@@ -316,12 +316,15 @@ item remains open, as do S09 and S12-S16. S12 is next.
 - [x] Cover retained compiled sessions and large changed records; record an accelerated 30-cycle x86 capture/review run and its memory warning boundary.
 - [x] Reduce repeated immutable cell-string storage in individual captures/loaded baselines; preserve exact evidence and separate mutable ownership, with a matching 30-cycle x86 comparison.
 - [x] Observe a two-hour beta 15 actual-editor session in Manual mode, with reversible recordings, compilation and cold Resume; retain precise measured/user-reported boundaries.
-- [ ] Cover additional intended custom dependency/extension stacks and practical memory/latency headroom, or explicitly agree a narrower support scope, before closing S12.
+- [x] Explicitly agree a narrower tested support scope: the owner accepted S12 for the verified configuration; custom dependency/extension stacks and broader memory/latency headroom remain unverified.
 
 Beta 14 publishes **partial S12 progress, not closure**. The user explicitly
 selected publishing the bounded profiling/history improvements while leaving
-memory work and a real-editor soak open. S13 is not automatically next.
-Beta 15 follows with bounded snapshot-local string sharing, not S12 closure.
+memory work and a real-editor soak open. S13 was not automatically next.
+Beta 15 initially followed with bounded snapshot-local string sharing, not
+S12 closure. After the documented two-hour soak and cold Resume, the owner
+explicitly accepted S12 for the tested scope and authorized S13. This closes
+the agreed bounded gate, not untested configurations or universal support.
 
 Compilation still hashes the entire journal and every observed session.
 Already validated, fully compiled sessions skip redundant JSON/packet parsing;
@@ -363,13 +366,26 @@ sampled working set peaked at 497.1 MiB. The process lifetime peak was
 remained unchanged across cold restart and final no-op checks. This includes
 idle periods, not continuous editing; physical operation latencies were not
 measured. One observed configuration passed, not all S12 support boundaries.
-Custom-stack coverage and broader practical headroom remain open.
+Custom-stack coverage and broader practical headroom remain unverified,
+outside the explicitly accepted S12 scope.
 
 ### S13. Storage safety: incomplete backups and accidental distribution
 
-- [ ] Make the anchor/marker/journal/uncompiled-session dependency clear and validate restore/copy workflows.
-- [ ] Provide practical safe-archival and pre-Workshop-upload guidance while retaining the requested active-mod-folder default.
-- [ ] Cover missing or wrongly archived files and privacy warnings for full loaded/dependency data; never silently prune required history.
+- [x] Make the anchor/marker/journal/uncompiled-session dependency clear and validate closed tracking restore/copy workflows.
+- [x] Provide practical safe-archival and pre-Workshop-upload guidance while retaining the requested active-mod-folder default.
+- [x] Cover missing or wrongly archived files and privacy warnings for full loaded/dependency data; never silently prune required history.
+
+Beta 16 adds shared persistent main-window/chooser guidance and a precise
+missing-marker error, not a backup wizard or upload hook. 639 core checks
+include 23 complete-set assertions for byte-preserving copies/rejection,
+compiled/pending replay, original evidence, safe closed compiled-session
+archival, journal reconstruction from all originals and exact-file restoration.
+Copied official-data and representative recovery runs each pass 98 checks,
+including default/narrow-window notice layout. No live data was changed.
+Complete mod/notes backups remain separate; old coherent sets cannot prove
+newer history exists, legacy roots cannot prove missing sidecars, and copying
+tracking storage does not establish S14 mod relocation. No native upload was
+tested or intercepted. Physical storage failures remain unverified.
 
 ### S14. Portability: path identity and divergent histories
 
@@ -624,8 +640,8 @@ stabilization work is distinct from new feature expansion:
 | Item | Remaining deliverable |
 |---|---|
 | S09: acceptance | Retain the completed evidence and explicit untested exceptions; resolve or explicitly agree the remaining support scope before closing the gate. |
-| S12: performance (partial betas 14-15) | History/memory improvements and one two-hour actual-editor soak are documented; additional intended custom-stack coverage and practical headroom/scope agreement remain open. |
-| S13: storage/distribution | Validate complete backup/restore and safe compiled-session archival; make pre-upload privacy and missing-file risks clear without automatic pruning. |
+| S12: performance (accepted tested scope) | The owner accepted the bounded history/memory/actual-editor evidence. Custom stacks and broader practical headroom/latency remain explicitly unverified, not blocking S13 under this decision. |
+| S13: storage/distribution (beta 16) | Bounded closed tracking-copy/restore/compiled-archival cases and private pre-upload guidance are complete. No automated backups, pruning, native upload protection or physical storage-failure guarantee. |
 | S14: portability | Define verified relocation/new-baseline guidance and divergent-history handling without bypassing path/load-order identity or automatically merging journals. |
 | S15: notes safety | Improve per-record failure/retry guidance, clarify separate sidecar backup/distribution, and validate partial application without promising rollback. |
 | S16: compatibility/provenance | Maintain the verified build/configuration matrix, test available dependency stacks and keep unresolved field ownership and cached Workshop context explicit. |
@@ -645,7 +661,7 @@ in this table.
 ## Working order
 
 1. Keep S09 results and remaining exceptions explicit; untested is not passed, and the gate remains open until its support scope is explicitly accepted.
-2. With S10/S11 addressed in betas 12/13 and bounded S12 improvements plus one actual-editor soak documented for betas 14/15, finish S12's remaining custom-stack/practical-headroom scope before moving to S13-S16. Keep independently scoped changes, regression evidence and the requested PR/merge/beta-release cycle; publishing partial progress does not close an issue.
+2. S10/S11 are addressed in betas 12/13; S12's tested scope is explicitly accepted after betas 14/15 and the actual-editor soak. S13's bounded storage/distribution work is covered in beta 16. Scope S14 next, retaining unverified custom-stack/headroom boundaries. Keep independently scoped changes, regression evidence and the requested PR/merge/beta-release cycle; publishing partial progress does not close unrelated acceptance gates.
 3. Close the stabilization/MVP acceptance gate and any exposed issues before implementing new feature expansion.
 4. Then scope OCS design, broader session history and Markdown independently. Markdown/history do not inherently require OCS; do not couple them to a new runtime without a concrete requirement.
 5. Validate dependency provenance before wiki-ready exports. Direct AI remains optional and requires an explicit provider/credential/consent decision.

@@ -217,7 +217,8 @@ namespace FcsScribe
                     }
                 }
                 else if (root.JournalVersion != 0)
-                    throw new InvalidDataException("The project's session storage is missing. Restore its .json.scribe folder.");
+                    throw new InvalidDataException("The project's session storage is missing or incomplete. " +
+                        "Restore its matching .json.scribe folder, including project.json.");
                 if (File.Exists(JournalPath))
                 {
                     ReadLines(JournalPath, false, null, line => {

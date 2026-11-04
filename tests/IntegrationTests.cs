@@ -289,6 +289,21 @@ internal static class IntegrationTests
             using (var choice = new TrackingChoiceDialog())
                 Check(choice.Controls.OfType<FlowLayoutPanel>().Single().Controls.OfType<Label>()
                     .Any(x => x.Text == trackingNotice.Text), "the Start/Resume chooser shares the persistent boundary guidance");
+            var storageNotice = (Label)FcsAdapter.Field(window, "storageNotice");
+            Check(storageNotice.Text == TrackingChoiceDialog.StorageText &&
+                storageNotice.Text.Contains("project.json") && storageNotice.Text.Contains("journal.jsonl") &&
+                storageNotice.Text.Contains("sessions") && storageNotice.Text.Contains("full loaded/dependency data") &&
+                storageNotice.Text.Contains("does not inspect or block"),
+                "persistent storage guidance names the complete private set without promising native-upload protection");
+            using (var choice = new TrackingChoiceDialog())
+            {
+                Check(choice.Controls.OfType<FlowLayoutPanel>().Single().Controls.OfType<Label>()
+                    .Any(x => x.Text == storageNotice.Text), "the chooser shares the same storage/distribution warning");
+                choice.ShowInTaskbar = false; choice.Opacity = 0; choice.Show(); choice.PerformLayout();
+                var layout = choice.Controls.OfType<FlowLayoutPanel>().Single();
+                Check(layout.Controls.OfType<FlowLayoutPanel>().Single().Bottom <= layout.ClientSize.Height - layout.Padding.Bottom,
+                    "the tracking chooser keeps its buttons visible below both notices at its default size");
+            }
             var menus = actions.Items.Cast<ToolStripMenuItem>().ToList();
             Check(menus.Select(x => x.Text.Replace("&", "")).SequenceEqual(
                 new[] { "Core", "Workshop", "Draft", "Apply approved notes", "Settings" }),
@@ -342,6 +357,9 @@ internal static class IntegrationTests
                 Check(trackingNotice.MaximumSize.Width == window.ClientSize.Width &&
                     trackingNotice.Height >= trackingNotice.GetPreferredSize(trackingNotice.MaximumSize).Height,
                     "the tracking boundary notice wraps rather than clipping in a narrow window");
+                Check(storageNotice.MaximumSize.Width == window.ClientSize.Width &&
+                    storageNotice.Height >= storageNotice.GetPreferredSize(storageNotice.MaximumSize).Height,
+                    "the complete-set privacy notice wraps rather than clipping in a narrow window");
                 Check(actions.OverflowButton.Visible && menus.Last().Placement == ToolStripItemPlacement.Overflow,
                     "narrow windows retain access to actions through the overflow menu");
                 actions.OverflowButton.ShowDropDown();

@@ -45,7 +45,12 @@ still takes seconds. Custom-stack headroom remains open:
 A later [two-hour actual-editor soak](Validation-and-Limitations#beta-15-two-hour-actual-editor-soak)
 passed one Manual-mode test-mod configuration, including eight recorded
 rename/restore cycles, compilation and cold Resume. No additional dependencies
-or extensions were reported; this does not close all S12 support boundaries.
+or extensions were reported. The owner subsequently accepted S12 for this
+tested scope; custom stacks and broader headroom/latency remain unverified.
+**v0.1.0-beta.16** adds shared persistent complete-set/privacy guidance,
+clarifies the missing-marker error and verifies closed tracking-copy/restore
+and compiled-session archival cases. It does not automate backups or protect
+native uploads; see [storage procedures](Installation-and-Workflow#complete-tracking-sets-and-restore-failures).
 
 For installation and prerequisites, see [Installation and workflow](Installation-and-Workflow).
 For evidence and unsupported cases, see [Validation and limitations](Validation-and-Limitations).
@@ -503,6 +508,12 @@ sessions are redundant. Keep the baseline, `project.json`, main journal and
 all uncompiled sessions. New projects detect a missing storage folder/head;
 older compatible baseline JSONs cannot signal missing sidecars themselves.
 There is no automatic pruning or history-management UI yet.
+The main window and chooser share a **PRIVATE TRACKING SET** warning naming
+the marker, journal, sessions and recovery/backups, full loaded/dependency
+data and lack of native-upload protection. The active-mod-folder default is
+unchanged. Use the [verified closed-copy and archival procedure](Installation-and-Workflow#safely-archiving-compiled-session-originals),
+not filename age or manual hash edits. Retain private complete backups:
+archiving originals makes loss of the main journal harder to recover from.
 
 ## Planned features: not implemented
 

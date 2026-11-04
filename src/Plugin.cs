@@ -93,6 +93,8 @@ namespace FcsScribe
             BorderStyle = BorderStyle.FixedSingle, MaximumSize = new System.Drawing.Size(1040, 0) };
         private readonly Label trackingNotice = new Label { Dock = DockStyle.Top, AutoSize = true,
             BorderStyle = BorderStyle.FixedSingle, Text = TrackingChoiceDialog.BoundaryText };
+        private readonly Label storageNotice = new Label { Dock = DockStyle.Top, AutoSize = true,
+            BorderStyle = BorderStyle.FixedSingle, Text = TrackingChoiceDialog.StorageText };
         private readonly Label compilationNotice = new Label { Dock = DockStyle.Bottom, AutoSize = true,
             Visible = false, BorderStyle = BorderStyle.FixedSingle };
         private const string HelpHint = "Hover over a menu action, or select it with the keyboard, to see what it does.";
@@ -163,6 +165,7 @@ namespace FcsScribe
             };
             Controls.Add(tabs);
             Controls.Add(settingsNotice);
+            Controls.Add(storageNotice);
             Controls.Add(trackingNotice);
             Controls.Add(actions);
             Controls.Add(compilationNotice);
@@ -171,10 +174,12 @@ namespace FcsScribe
             ClientSizeChanged += delegate {
                 settingsNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
                 trackingNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
+                storageNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
                 compilationNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
             };
             settingsNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
             trackingNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
+            storageNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
             compilationNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
             status.Text = "No tracking project open. Start/Resume manages recorded evidence, not saved mod/notes files.";
             timer.Tick += async delegate {
