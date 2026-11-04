@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Troubleshooting and known warnings
+    url: https://github.com/Atlasroar/FCS-Scribe/wiki/Troubleshooting
+    about: Check installation guidance, exact error messages and safe recovery steps first.
+  - name: Report a security vulnerability privately
+    url: https://github.com/Atlasroar/FCS-Scribe/security/advisories/new
+    about: Do not disclose vulnerabilities, exploit details or sensitive files in public issues.

@@ -34,6 +34,12 @@ remain editable drafts and require human review and approval.
 - [OpenConstructionSet integration](https://github.com/Atlasroar/FCS-Scribe/wiki/OpenConstructionSet-Integration): planned read-only saved-data analysis and its boundaries; not implemented.
 - [References and knowledge credits](https://github.com/Atlasroar/FCS-Scribe/wiki/References-and-Knowledge-Credits): authoritative sources, supplementary research, AI assistance and licensing.
 
+## Support and security
+
+Use the [focused issue forms](https://github.com/Atlasroar/FCS-Scribe/issues/new/choose)
+for bugs, test results and requests. Report vulnerabilities privately using the
+[security policy](SECURITY.md); do not attach private baselines or shared notes.
+
 ## Authoritative upstream references
 
 BFrizzleFoShizzle's documentation is authoritative for integration decisions

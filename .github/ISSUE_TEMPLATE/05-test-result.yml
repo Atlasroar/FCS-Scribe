@@ -1,0 +1,102 @@
+name: Acceptance or regression test result
+description: Record a pass, failure, blocked test or untested boundary with reproducible evidence.
+title: "[Test] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use disposable mods/notes and copies for destructive recovery tests.
+        A blocked/unavailable test is not a pass. Separate observed UI behavior from independent file checks.
+        Do not publish full baselines, real shared notes, proprietary binaries or private mod content.
+        Security-sensitive failures belong in [private reporting](https://github.com/Atlasroar/FCS-Scribe/security/advisories/new).
+  - type: input
+    id: test-id
+    attributes:
+      label: Plan item, test case or regression reference
+      placeholder: S09 / specific test name / related issue or PR
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Exact release or source commit tested
+    validations:
+      required: true
+  - type: dropdown
+    id: method
+    attributes:
+      label: Test method
+      options:
+        - Physical FCS Extended interaction
+        - Automated core checks
+        - Disposable-copy FCS integration checks
+        - Configuration or installation verification
+    validations:
+      required: true
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: Outcome
+      options:
+        - Passed within the stated scope
+        - Failed
+        - Partially completed
+        - Blocked by setup or another guard
+        - Not run or unavailable
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment, preconditions and isolation
+      placeholder: |
+        Windows, FCS version/store/hash if known, FCS Extended version:
+        Active test mod, dependencies/load order and additional extensions:
+        Editor mode; live original versus disposable copy:
+        Recording interval, settings recovery and pending counts:
+        Backup/isolation precautions and starting state:
+    validations:
+      required: true
+  - type: textarea
+    id: cases
+    attributes:
+      label: Test cases and expected versus observed results
+      description: For each case include steps, exact targets, prompts and timing thresholds. Explain skipped steps or manual mistakes/corrections.
+      placeholder: |
+        Case:
+        Preconditions:
+        Steps/command:
+        Expected:
+        Observed:
+        Wait/early/late checkpoints if timed:
+        Repeat/no-op/restart result:
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and remaining exceptions
+      description: State which facts are user-observed and which were independently verified. Do not generalize one focus route or one mod stack to all configurations.
+      placeholder: |
+        UI/timing observations:
+        File hashes/counts, exact byte preservation and safe excerpts:
+        Whether FCS Save, Review, Compile and approval were actually performed:
+        Unexpected manual edits or corrected expectations:
+        Untested/blocked boundaries and follow-up:
+    validations:
+      required: true
+  - type: upload
+    id: attachments
+    attributes:
+      label: Test evidence uploads
+      description: Optional screenshots/video, redacted log output, result tables or small synthetic fixtures you can share. Keep unmodified originals locally.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Evidence checks
+      options:
+        - label: I distinguished passed, blocked and untested cases and stated the actual tested scope.
+          required: true
+        - label: I reviewed this public report/uploads for secrets, proprietary/private data and unrelated annotations.
+          required: true

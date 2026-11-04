@@ -1,0 +1,96 @@
+name: AI packets, drafts, workspaces or record notes
+description: Report evidence validation, stale/duplicate handling, approval or Notes/TODO behavior.
+title: "[Draft/Notes] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not reapply a stale draft, delete batch markers or reduce a complete draft just to bypass validation.
+        Applying notes is not saving; Notes/TODO sidecars are separate from `.mod` files and Workshop change notes.
+        Preserve the current draft and inspect possible partial application before retrying or saving.
+        Do not upload shared `__TODO__` files, full baselines, private AI conversations or credentials.
+        Security-impacting reports should use [private reporting](https://github.com/Atlasroar/FCS-Scribe/security/advisories/new).
+  - type: input
+    id: version
+    attributes:
+      label: FCS-Scribe release or source commit
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Editor environment
+      placeholder: |
+        Windows, FCS version/store/hash if known and FCS Extended version:
+        Other extensions and safe-to-share mod/load-order details:
+        Normal/read-only mode and current tracking state:
+    validations:
+      required: true
+  - type: dropdown
+    id: operation
+    attributes:
+      label: Affected operation
+      options:
+        - AI recording-range export or response template
+        - Import or paste
+        - Save/Open portable workspace or unsaved-draft prompt
+        - Draft validation or stale state
+        - Approval, duplicate protection or retry
+        - Existing/inherited notes or TODO category
+        - Normal FCS Save or notes after restart
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Packet and draft details
+      description: Use synthetic IDs or redacted excerpts where possible; preserve the unmodified originals locally.
+      placeholder: |
+        Packet schema; recording range/count and change count:
+        Outer response template or nested archival template used:
+        Original packet available; associated workspace or text-only draft:
+        Missing/repeated citation IDs or exact validation message:
+        Gameplay, load-order or Workshop/context changes since export:
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Exact sequence, expected result and observed result
+      placeholder: |
+        Steps and prompts (Yes/No/Cancel):
+        Expected:
+        Actual:
+        Frequency/minimal disposable reproduction:
+    validations:
+      required: true
+  - type: textarea
+    id: notes-state
+    attributes:
+      label: Notes/save timeline if applicable
+      description: Do not assume Apply saved or that tracking restores annotations. Describe manual edits too.
+      placeholder: |
+        Existing active/inherited text and native note/TODO category:
+        Pending/completed targets and batch-marker count before/after:
+        Approval accepted or cancelled; partial-application count:
+        Normal FCS Save performed and any native save error:
+        What persisted after closing only Scribe versus restarting FCS:
+        Manual replacement/deletion or accidental editing of the wrong notes/Workshop field:
+  - type: textarea
+    id: errors
+    attributes:
+      label: Exact errors and relevant log excerpt
+      render: text
+  - type: upload
+    id: attachments
+    attributes:
+      label: Safe draft/notes evidence
+      description: Optional screenshots or minimal synthetic packet/response/workspace and target-only excerpts. Never attach an entire shared notes file or private loaded baseline.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Public-report safety
+      options:
+        - label: I reviewed the prose, IDs and uploads for secrets, private mod content and unrelated notes, and have permission to share them.
+          required: true
