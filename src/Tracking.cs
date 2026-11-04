@@ -162,7 +162,12 @@ namespace FcsScribe
                 var result = new LoadedTracking();
                 TrackingDocument document = Json.ReadStream<TrackingDocument>(stream);
                 if (document == null) throw new InvalidDataException("The JSON is empty.");
-                if (document.Format == TrackingDocument.FormatName) { document.Validate(); result.Document = document; }
+                if (document.Format == TrackingDocument.FormatName)
+                {
+                    document.Validate();
+                    document.State.ShareStrings();
+                    result.Document = document;
+                }
                 else if (document.Format != null) throw new InvalidDataException("Unknown tracking document format.");
                 else
                 {

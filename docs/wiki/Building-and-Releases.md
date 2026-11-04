@@ -110,6 +110,21 @@ is restricted to profiling and copies official `gamedata.base`, `Newwworld.mod`,
 `Dialogue.mod` and `rebirth.mod` into the disposable fixture, loading them
 before the chosen copied active mod. It never uses the original files as
 write targets. Profile iterations default to three (range 1-120).
+Repeated native captures must retain record/cell counts and produce zero
+recorded changes with matching fingerprints; these checks are included in
+the unchanged-review measurement, not an extra capture fingerprint pass.
+
+After `Profile.ps1` builds a host, check string-sharing compatibility against
+a **copied** older full tracking baseline without opening/writing the project:
+
+```powershell
+& '.\build\performance-fixtures\<fixture>\PerformanceTests.exe' --verify-string-sharing '<copied-baseline.json>'
+```
+
+This validates the document, then compares its state fingerprint, serialized
+state hash and original file hash before/after in-memory compaction. It does
+not rewrite the baseline or validate the matching journal/session set; normal
+Resume remains necessary for project validation.
 
 Reports are JSON under ignored `build\performance-fixtures` or
 `build\integration-fixtures`. They include source revision/working-tree label,

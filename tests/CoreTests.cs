@@ -283,11 +283,61 @@ internal static class CoreTests
         finally { Directory.Delete(directory, true); }
     }
 
+    private static void CheckSnapshotStringSharing()
+    {
+        Snapshot state = State();
+        foreach (Cell cell in state.Records[0].Cells)
+        {
+            cell.Path = new string(cell.Path.ToCharArray());
+            cell.Layer = new string(cell.Layer.ToCharArray());
+            cell.Value.Kind = new string(cell.Value.Kind.ToCharArray());
+            cell.Value.Text = new string(cell.Value.Text.ToCharArray());
+            cell.Source = new string(cell.Source.ToCharArray());
+        }
+        Cell first = state.Records[0].Cells[0], second = state.Records[0].Cells[1];
+        state.Records[0].Cells.Add(Cell("/fields/Case", "effective", "string", null));
+        state.Records[0].Cells.Add(Cell("/fields/case", "effective", "string", ""));
+        state.Records[0].Cells.Add(Cell("/fields/missing", "effective", "missing", null));
+        Check(!Object.ReferenceEquals(first.Path, second.Path) &&
+            !Object.ReferenceEquals(first.Value.Text, second.Value.Text), "sharing fixture starts with distinct equal strings");
+        string serialized = Json.Write(state), fingerprint = state.Fingerprint();
+        state.ShareStrings();
+        Check(Json.Write(state) == serialized && state.Fingerprint() == fingerprint,
+            "snapshot string sharing preserves exact serialization and fingerprint");
+        Check(Object.ReferenceEquals(first.Path, second.Path) &&
+            Object.ReferenceEquals(first.Value.Text, second.Value.Text) &&
+            Object.ReferenceEquals(first.Source, second.Source), "equal immutable cell strings share storage");
+        Check(Object.ReferenceEquals(first, state.Records[0].Cells[0]) &&
+            !Object.ReferenceEquals(first, second) && !Object.ReferenceEquals(first.Value, second.Value),
+            "string sharing neither replaces cells nor aliases mutable values");
+        first.Value.Text = "11";
+        Check(second.Value.Text == "10", "editing one shared-text value cannot modify another cell");
+        Check(state.Records[0].Cells.Single(x => x.Path == "/fields/Case").Value.Text == null &&
+            state.Records[0].Cells.Single(x => x.Path == "/fields/case").Value.Text == "" &&
+            state.Records[0].Cells.Single(x => x.Path == "/fields/missing").Value.Kind == "missing",
+            "ordinal paths, null, empty and missing stay distinct");
+        string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sharing-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            TrackingDocument document = TrackingDocument.Create(Clone(State()), null);
+            string json = Json.Write(document);
+            File.WriteAllText(path, json);
+            string hash = TrackingStorage.HashFile(path);
+            LoadedTracking loaded = TrackingStorage.Load(path);
+            Check(Json.Write(loaded.Document) == json && TrackingStorage.HashFile(path) == hash,
+                "loading compacts immutable strings without changing old document bytes or evidence");
+            Check(Object.ReferenceEquals(loaded.Document.State.Records[0].Cells[0].Path,
+                loaded.Document.State.Records[0].Cells[1].Path), "loaded baselines reuse equal cell strings too");
+        }
+        finally { if (File.Exists(path)) File.Delete(path); }
+    }
+
     public static int Main()
     {
         try
         {
             CheckDraftWorkspace();
+            CheckSnapshotStringSharing();
             Snapshot baseline = State();
             var tracker = new Tracker(baseline);
             Check(tracker.Export(State()).Changes.Count == 0, "unchanged");

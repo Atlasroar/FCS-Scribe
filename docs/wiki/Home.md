@@ -41,7 +41,7 @@ release decisions, and AI-generated record notes require human approval.
 
 ## Current status
 
-The current [v0.1.0-beta.14 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.14)
+The current [v0.1.0-beta.15 prerelease](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.15)
 remains experimental and restricted to the inspected Steam FCS 2.14.2 executable
 hash. It includes local Workshop metadata, preview-image archiving, embedded
 MDI hosting and contextual action help alongside change documentation.
@@ -106,6 +106,12 @@ duplicate work. Reproducible x86 profiles cover growing retained history,
 large record deltas and copied official data. **S12 remains open** for capture
 memory work and a sustained real-editor soak; the measured large configuration
 approached the 32-bit memory boundary.
+Beta 15 shares immutable cell strings within individual captures/loaded
+baselines, reducing the same copied official-data 30-cycle process peak from
+1,662.8 to 896.7 MiB without changing evidence or sharing mutable values.
+Capture still takes seconds; custom-stack headroom and the sustained
+interactive-editor soak remain open. See
+[measured performance limits](Validation-and-Limitations#beta-15-snapshot-local-string-sharing).
 S09 and S12-S16 remain open; these fixes do not close full interactive acceptance.
 
 **FCS notes are per-record editor-side annotations**, stored in

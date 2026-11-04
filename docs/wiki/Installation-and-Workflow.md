@@ -93,11 +93,12 @@ instructions. Existing history is not rewritten. Consult the
 
 ## Checkpoint scheduling and storage
 
-For large stacks, start with **Manual**. The partial S12 profile in beta 14
-measured several-second UI-thread captures and a roughly 1.66 GiB peak working
-set in a larger copied-data x86 host. Faster history compilation does not fix
-full-capture memory pressure; a longer interval reduces frequency, not each
-pause/peak. See [performance limits](Validation-and-Limitations#s12-performance-measurements-partial-beta-14).
+For large stacks, start with **Manual**. Beta 15's snapshot-local string sharing
+reduced the same copied-data 30-cycle x86 process peak from beta 14's
+1,662.8 MiB to 896.7 MiB, but native capture still takes several seconds.
+This is not a universal memory fix; a longer interval reduces frequency,
+not each pause/peak. See
+[performance limits](Validation-and-Limitations#beta-15-snapshot-local-string-sharing).
 No verified universal record-count/memory ceiling or multi-hour safety claim
 is available; normal mod/notes saving and separate backups remain essential.
 

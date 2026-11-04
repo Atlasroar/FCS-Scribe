@@ -40,13 +40,18 @@ Use `Get-FileHash -Algorithm SHA256 -LiteralPath '<actual FCS executable>'`
 in PowerShell to check the file you launch. See
 [Installation and workflow](Installation-and-Workflow) for the full setup.
 
-## Large stacks and profiling (partial S12, beta 14)
+## Large stacks and profiling (partial S12, betas 14-15)
 
 Faster compilation does not make capture memory-safe for every 32-bit session.
 If Review pauses for seconds or memory approaches the process limit, use Manual,
 save the mod and notes normally, preserve the complete tracking set and reopen
 when safe. Do not delete uncompiled logs or bypass hash checks. See
 [measured workloads, profiling and unresolved memory limits](Validation-and-Limitations#s12-performance-measurements-partial-beta-14).
+
+Beta 15 shares immutable strings within individual captures/loaded baselines.
+The copied official-data 30-cycle profile peaked at 896.7 MiB rather than
+beta 14's 1,662.8 MiB, but Review still pauses for seconds. This is not a safe
+memory threshold, leak-free guarantee or completed interactive-editor soak.
 
 Profiling-only errors: `Entries must divide evenly across Sessions.` requires
 positive evenly divisible dimensions; `VanillaStack is restricted to

@@ -91,6 +91,7 @@ namespace FcsScribe
                 snapshot.Warnings.AddRange(snapshot.Workshop.Issues.Select(x =>
                     "Workshop " + x.Component + " unavailable [" + x.Code + "]: " + x.Message +
                     " Gameplay capture continues; unavailable values are not validated."));
+            var strings = new SnapshotStrings();
             foreach (DictionaryEntry pair in items)
             {
                 object item = pair.Value;
@@ -102,7 +103,7 @@ namespace FcsScribe
                 };
                 if ((state & (16 | 32)) != 0)
                     snapshot.Warnings.Add("Missing/invalid record state: " + record.Id + ".");
-                CaptureItem(item, record, "", snapshot, 0);
+                CaptureItem(item, record, "", snapshot, 0, strings);
                 record.Cells = record.Cells.OrderBy(Snapshot.Key, StringComparer.Ordinal).ToList();
                 snapshot.Records.Add(record);
             }
@@ -304,7 +305,7 @@ namespace FcsScribe
             return preview.Info;
         }
 
-        private void CaptureItem(object item, Record record, string prefix, Snapshot snapshot, int depth)
+        private void CaptureItem(object item, Record record, string prefix, Snapshot snapshot, int depth, SnapshotStrings strings)
         {
             if (depth > 8) throw new NotSupportedException("Nested instance depth exceeds supported extraction at " + record.Id + prefix);
             foreach (string layer in new[] { "base", "mod", "locked" })
@@ -313,43 +314,43 @@ namespace FcsScribe
                 if (name == null) continue;
                 string scope = layer == "mod" ? "active" : layer;
                 Add(record, prefix + "/name", scope, Value.Of("string", name),
-                    scope == "active" ? snapshot.ModName : scope + ":unresolved", null);
+                    scope == "active" ? snapshot.ModName : scope + ":unresolved", null, strings);
             }
             var data = (IDictionary)Field(item, "data");
             var active = (IDictionary)Field(item, "modData");
             var locked = (IDictionary)Field(item, "lockedData");
-            CaptureFields(data, record, prefix, "base", snapshot.ModName);
-            CaptureFields(active, record, prefix, "active", snapshot.ModName);
-            CaptureFields(locked, record, prefix, "locked", snapshot.ModName);
+            CaptureFields(data, record, prefix, "base", snapshot.ModName, strings);
+            CaptureFields(active, record, prefix, "active", snapshot.ModName, strings);
+            CaptureFields(locked, record, prefix, "locked", snapshot.ModName, strings);
             var keys = data.Keys.Cast<string>().Union(active.Keys.Cast<string>()).Union(locked.Keys.Cast<string>());
             foreach (string key in keys)
             {
                 string source = locked.Contains(key) ? "locked:unresolved" :
                     active.Contains(key) ? snapshot.ModName : "base:unresolved";
                 Add(record, prefix + "/fields/" + Escape(key), "effective",
-                    Scalar(item.GetType().GetProperty("Bah", Flags).GetValue(item, new object[] { key })), source, null);
+                    Scalar(item.GetType().GetProperty("Bah", Flags).GetValue(item, new object[] { key })), source, null, strings);
             }
-            CaptureReferences((IDictionary)Field(item, "references"), record, prefix + "/references", snapshot);
+            CaptureReferences((IDictionary)Field(item, "references"), record, prefix + "/references", snapshot, strings);
             // FCS moves the same reference object between these collections on removal/re-add.
-            CaptureReferences((IDictionary)Field(item, "removed"), record, prefix + "/references", snapshot);
+            CaptureReferences((IDictionary)Field(item, "removed"), record, prefix + "/references", snapshot, strings);
             foreach (DictionaryEntry entry in (IDictionary)Field(item, "instances"))
             {
                 string path = prefix + "/instances/" + Escape((string)entry.Key);
                 int state = Convert.ToInt32(Call(entry.Value, "getState"), CultureInfo.InvariantCulture);
-                Add(record, path + "/present", "effective", Value.Of("boolean", (state & 8) == 0 ? "true" : "false"), null, null);
-                Add(record, path + "/name", "effective", Value.Of("string", (string)Property(entry.Value, "Name")), null, null);
-                CaptureItem(entry.Value, record, path, snapshot, depth + 1);
+                Add(record, path + "/present", "effective", Value.Of("boolean", (state & 8) == 0 ? "true" : "false"), null, null, strings);
+                Add(record, path + "/name", "effective", Value.Of("string", (string)Property(entry.Value, "Name")), null, null, strings);
+                CaptureItem(entry.Value, record, path, snapshot, depth + 1, strings);
             }
         }
 
-        private void CaptureFields(IDictionary fields, Record record, string prefix, string layer, string modName)
+        private void CaptureFields(IDictionary fields, Record record, string prefix, string layer, string modName, SnapshotStrings strings)
         {
             foreach (DictionaryEntry field in fields)
                 Add(record, prefix + "/fields/" + Escape((string)field.Key), layer, Scalar(field.Value),
-                    layer == "active" ? modName : layer + ":unresolved", null);
+                    layer == "active" ? modName : layer + ":unresolved", null, strings);
         }
 
-        private void CaptureReferences(IDictionary lists, Record record, string prefix, Snapshot snapshot)
+        private void CaptureReferences(IDictionary lists, Record record, string prefix, Snapshot snapshot, SnapshotStrings strings)
         {
             foreach (DictionaryEntry list in lists)
             foreach (object reference in (IEnumerable)list.Value)
@@ -362,12 +363,12 @@ namespace FcsScribe
                     if (value == null) continue;
                     string name = layer == "original" ? "base" : layer == "mod" ? "active" : "locked";
                     Add(record, path, name, ReferenceValue(value),
-                        name == "active" ? snapshot.ModName : name + ":unresolved", id);
+                        name == "active" ? snapshot.ModName : name + ":unresolved", id, strings);
                 }
                 object effective = Property(reference, "Values");
                 Add(record, path, "effective", effective == null ? Value.Of("null", null) : ReferenceValue(effective),
                     Field(reference, "locked") != null ? "locked:unresolved" :
-                    Field(reference, "mod") != null ? snapshot.ModName : "base:unresolved", id);
+                    Field(reference, "mod") != null ? snapshot.ModName : "base:unresolved", id, strings);
                 if (!items.Contains(id) ||
                     (Convert.ToInt32(Call(items[id], "getState"), CultureInfo.InvariantCulture) & 8) != 0)
                     snapshot.Warnings.Add("Unresolved reference " + id + " from " + record.Id + path + ".");
@@ -380,9 +381,12 @@ namespace FcsScribe
                 Value.Of("removed-reference", null) : Scalar(value);
         }
 
-        private static void Add(Record record, string path, string layer, Value value, string source, string referenceId)
+        private static void Add(Record record, string path, string layer, Value value, string source, string referenceId,
+            SnapshotStrings strings)
         {
-            record.Cells.Add(new Cell { Path = path, Layer = layer, Value = value, Source = source, ReferencedId = referenceId });
+            var cell = new Cell { Path = path, Layer = layer, Value = value, Source = source, ReferencedId = referenceId };
+            strings.Share(cell);
+            record.Cells.Add(cell);
         }
 
         private static Value Scalar(object value)
