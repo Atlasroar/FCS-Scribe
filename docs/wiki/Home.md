@@ -103,15 +103,19 @@ scoped native Name textbox commit/cancel/focus evidence.
 Beta 14 publishes partial S12 progress: already compiled sessions keep full-file
 hash checks without redundant JSON/packet parsing; Resume/recording remove
 duplicate work. Reproducible x86 profiles cover growing retained history,
-large record deltas and copied official data. **S12 remains open** for capture
-memory work and a sustained real-editor soak; the measured large configuration
-approached the 32-bit memory boundary.
+large record deltas and copied official data. At that release, capture memory
+work and a sustained real-editor soak remained open; the measured large
+configuration approached the 32-bit memory boundary.
 Beta 15 shares immutable cell strings within individual captures/loaded
 baselines, reducing the same copied official-data 30-cycle process peak from
 1,662.8 to 896.7 MiB without changing evidence or sharing mutable values.
-Capture still takes seconds; custom-stack headroom and the sustained
-interactive-editor soak remain open. See
+Capture still takes seconds; see
 [measured performance limits](Validation-and-Limitations#beta-15-snapshot-local-string-sharing).
+The later [two-hour actual-editor soak](Validation-and-Limitations#beta-15-two-hour-actual-editor-soak)
+passed the observed test-mod configuration: eight durable rename/restore
+cycles in the timed window, compilation, cold Resume and unchanged evidence.
+No extra dependencies/extensions were reported. Custom-stack headroom and
+broader S12 scope remain open; this is not universal memory/latency acceptance.
 S09 and S12-S16 remain open; these fixes do not close full interactive acceptance.
 
 **FCS notes are per-record editor-side annotations**, stored in

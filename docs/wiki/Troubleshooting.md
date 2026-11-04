@@ -51,7 +51,10 @@ when safe. Do not delete uncompiled logs or bypass hash checks. See
 Beta 15 shares immutable strings within individual captures/loaded baselines.
 The copied official-data 30-cycle profile peaked at 896.7 MiB rather than
 beta 14's 1,662.8 MiB, but Review still pauses for seconds. This is not a safe
-memory threshold, leak-free guarantee or completed interactive-editor soak.
+memory threshold or leak-free guarantee. A later
+[two-hour actual-editor soak](Validation-and-Limitations#beta-15-two-hour-actual-editor-soak)
+passed one test-mod configuration without reported errors or sustained
+unresponsiveness; additional dependency/extension stacks remain unverified.
 
 Profiling-only errors: `Entries must divide evenly across Sessions.` requires
 positive evenly divisible dimensions; `VanillaStack is restricted to

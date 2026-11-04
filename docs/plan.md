@@ -315,7 +315,8 @@ item remains open, as do S09 and S12-S16. S12 is next.
 - [x] Establish workload-specific measured regression envelopes and reduce redundant hashing/parsing without dropping integrity checks.
 - [x] Cover retained compiled sessions and large changed records; record an accelerated 30-cycle x86 capture/review run and its memory warning boundary.
 - [x] Reduce repeated immutable cell-string storage in individual captures/loaded baselines; preserve exact evidence and separate mutable ownership, with a matching 30-cycle x86 comparison.
-- [ ] Verify sustained real FCS Extended use, including representative custom dependencies/extensions and practical memory/latency headroom, before closing S12.
+- [x] Observe a two-hour beta 15 actual-editor session in Manual mode, with reversible recordings, compilation and cold Resume; retain precise measured/user-reported boundaries.
+- [ ] Cover additional intended custom dependency/extension stacks and practical memory/latency headroom, or explicitly agree a narrower support scope, before closing S12.
 
 Beta 14 publishes **partial S12 progress, not closure**. The user explicitly
 selected publishing the bounded profiling/history improvements while leaving
@@ -347,7 +348,22 @@ This is not a speed improvement, universal memory ceiling or real-editor soak.
 Pools are discarded after each capture/load; only immutable strings share,
 never mutable cells/values. Full pre-change baseline compatibility, core/native
 regressions and all three existing synthetic history envelopes were verified.
-Custom-stack and multi-hour interactive acceptance remain open.
+The subsequent November 4 actual-editor soak observed the same process for
+7,204.15 seconds with 1,428 five-second samples. The test-mod baseline contained
+54,952 records / 1,326,402 cells; no extra dependencies/extensions were reported.
+The journal proves eight forward/reverse Name cycles during the timed window
+(16 changed observations), plus two setup observations: all 18 unique recordings
+were compiled and retained. The user reported no errors or sustained
+unresponsiveness, successful midpoint/end compilation, cold Resume without
+discrepancy, an unchanged Review and two no-op compilations.
+
+Sampled private memory started/ended at 398.7/342.8 MiB (maximum 437.3 MiB);
+sampled working set peaked at 497.1 MiB. The process lifetime peak was
+775.1 MiB, already present before the timed window. Baseline/journal bytes
+remained unchanged across cold restart and final no-op checks. This includes
+idle periods, not continuous editing; physical operation latencies were not
+measured. One observed configuration passed, not all S12 support boundaries.
+Custom-stack coverage and broader practical headroom remain open.
 
 ### S13. Storage safety: incomplete backups and accidental distribution
 
@@ -608,7 +624,7 @@ stabilization work is distinct from new feature expansion:
 | Item | Remaining deliverable |
 |---|---|
 | S09: acceptance | Retain the completed evidence and explicit untested exceptions; resolve or explicitly agree the remaining support scope before closing the gate. |
-| S12: performance (partial betas 14-15) | History-work and snapshot-string storage reductions shipped; practical custom-stack headroom and a sustained real-editor soak remain open. |
+| S12: performance (partial betas 14-15) | History/memory improvements and one two-hour actual-editor soak are documented; additional intended custom-stack coverage and practical headroom/scope agreement remain open. |
 | S13: storage/distribution | Validate complete backup/restore and safe compiled-session archival; make pre-upload privacy and missing-file risks clear without automatic pruning. |
 | S14: portability | Define verified relocation/new-baseline guidance and divergent-history handling without bypassing path/load-order identity or automatically merging journals. |
 | S15: notes safety | Improve per-record failure/retry guidance, clarify separate sidecar backup/distribution, and validate partial application without promising rollback. |
@@ -629,7 +645,7 @@ in this table.
 ## Working order
 
 1. Keep S09 results and remaining exceptions explicit; untested is not passed, and the gate remains open until its support scope is explicitly accepted.
-2. With S10/S11 addressed in betas 12/13 and bounded S12 improvements published in betas 14/15, finish S12's custom-stack/real-editor boundaries before moving to S13-S16. Keep independently scoped changes, regression evidence and the requested PR/merge/beta-release cycle; publishing partial progress does not close an issue.
+2. With S10/S11 addressed in betas 12/13 and bounded S12 improvements plus one actual-editor soak documented for betas 14/15, finish S12's remaining custom-stack/practical-headroom scope before moving to S13-S16. Keep independently scoped changes, regression evidence and the requested PR/merge/beta-release cycle; publishing partial progress does not close an issue.
 3. Close the stabilization/MVP acceptance gate and any exposed issues before implementing new feature expansion.
 4. Then scope OCS design, broader session history and Markdown independently. Markdown/history do not inherently require OCS; do not couple them to a new runtime without a concrete requirement.
 5. Validate dependency provenance before wiki-ready exports. Direct AI remains optional and requires an explicit provider/credential/consent decision.
