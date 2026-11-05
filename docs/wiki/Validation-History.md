@@ -7,6 +7,45 @@ For current supported use and open gates, see
 [Validation and limitations](Validation-and-Limitations). For what changed
 in each release, see [Release history](Release-History).
 
+## Markdown changelog exports (beta 22)
+
+The owner-selected feature passed **763 core checks**, a warnings-as-errors
+plugin build, **110 mod-work/menu** and **35 export-protection** checks in
+targeted copied native hosts. The native fixture was a small pre-existing
+single-record disposable copy, not a new full official-data/custom-stack
+acceptance run. Its captured gameplay, native notes/dirty state and saved mod
+bytes remained unchanged by export.
+
+Core coverage includes deterministic/culture-independent output, exact typed
+values and control escapes, missing/null/empty/false/removal distinctions,
+unresolved references, stored/effective grouping, original/qualified evidence,
+ordered reversals, context-only/pending warnings, complete reviewed prose,
+missing/duplicate/stale/target rejection and original schema-1 packets.
+Storage cases include intact generated replacement, stale/edited/unrelated/
+damaged/renamed tracking rejection, reserved locations, injected write/flush/
+precommit failures, external conversion and actual Windows sharing denial.
+
+Copied native checks verify both actions' menu/help/busy behavior; factual
+export leaves the draft association alone. Reviewed export retains exact
+draft text, packet/workspace association and native state, rejects late
+destination-selection revisions/missing evidence/stale data, and produces
+identical output after Open workspace in a fresh Scribe window without
+tracking. Export with tracking open preserves its head/session bytes and
+does not create a compiled journal.
+
+Actual GFM rendering of **synthetic-only** content verified two eight-column
+field/name tables, three evidence anchors/citation links, and no injected
+images/scripts/external links. GFM auto-link behavior initially interpreted
+literal escaped URLs as links; colon entities fixed that rendering issue,
+with a regression check. The slim synthetic profiling runner also compiled
+and ran with 20 records, 4 entries, 2 sessions and 10 large-record cells;
+that is a compiler smoke check, not a new performance envelope.
+
+No live installation, original mod/sidecar repair, OCS/runtime dependency,
+AI-provider connection, schema change or physical beta 22 acceptance is claimed.
+Beta 21's owner-reported checklist and saved-mod discrepancy below retain their
+own scope; they do not certify the new Markdown actions.
+
 ## Shared warnings and help (beta 21)
 
 The user-directed footer cleanup passed **694 core checks**, a warnings-as-errors

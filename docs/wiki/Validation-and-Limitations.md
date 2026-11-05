@@ -36,6 +36,7 @@ hash identifies a test dependency, not an additional runtime whitelist.
 | Historical physical acceptance | The specifically recorded editor/version/configuration and user observations | Blanket acceptance of the current release or other stacks |
 | Performance profiles and soak | Measured workloads and one accepted bounded actual-editor soak | Universal record-count, memory, latency or leak-free guarantees |
 | CodeQL | Static analysis within its available context | A Windows plugin build, native acceptance or proof of no vulnerabilities |
+| Markdown exports | Deterministic typed/evidence-linked output, synthetic GFM rendering and guarded copied-native export paths | A new physical beta 22 acceptance pass, complete gameplay interpretation, vanilla comparisons or a tracking/workspace backup |
 
 The current notes/task feature has copied-native evidence on official-data and
 representative fixtures. Its detailed scope is recorded under
@@ -60,6 +61,11 @@ A saved test `.mod` byte change across the later restart remains unexplained
 despite the reported native discard; the seven checked Scribe files remained
 unchanged. The earlier byte-identical restart and this later discrepancy are
 separate observations.
+
+Current Markdown exports have [beta 22 core/rendering/copied-native evidence](Validation-History#markdown-changelog-exports-beta-22).
+Facts and reviewed prose remain separate, with exact values and evidence links.
+The owner's beta 21 checklist does not establish physical acceptance of these
+new actions or resolve the earlier saved-mod discrepancy.
 
 ## Capture and provenance limits
 
@@ -117,7 +123,7 @@ belong in [Building and releases](Building-and-Releases#reproduce-performance-me
 
 ## Remaining interactive acceptance
 
-The owner accepted the current feature checklist for the tested configuration
+The owner accepted beta 21's feature checklist for the tested configuration
 and explicitly directed feature work to continue. Remaining S09 support/test
 boundaries are not silently marked passed: broader workflow/control coverage,
 final original annotation-block retention, additional dependency/extension
@@ -135,7 +141,7 @@ independent verification; untested configurations are not passed.
 
 ## Not implemented
 
-OCS saved-data integration, Markdown changelog exports, wiki-ready gameplay
+OCS saved-data integration, wiki-ready gameplay
 exports, direct AI-provider connections, native notes-button redirection and
 plain-text vanilla comparisons are not current features.
 

@@ -42,10 +42,11 @@ required by the plugin.
 ## Current status
 
 The current release is
-[v0.1.0-beta.21](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.21).
+[v0.1.0-beta.22](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.22).
 It remains experimental and restricted to the inspected Steam FCS 2.14.2
-executable hash. The owner accepted the current feature checklist for the
-tested setup; broader support and an unexplained saved-mod byte change remain
+executable hash. The owner accepted beta 21's feature checklist for the tested
+setup. Markdown exports have core/copied-native evidence, not a new physical
+acceptance pass; broader support and an unexplained saved-mod byte change remain
 outside that acceptance. See [supported scope and limitations](Validation-and-Limitations).
 
 **Save boundaries matter:** Scribe Save Changes saves enabled Scribe work and

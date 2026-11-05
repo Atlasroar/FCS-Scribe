@@ -9,6 +9,38 @@ with `ModFileName`, `ExportedUtc`, and `Workshop`. The implementation is in
 `src\Core.cs`; the actual serialized response template is the authority for
 field names. Future schema changes need explicit compatibility decisions.
 
+## Markdown export contract
+
+Markdown is a derived human-readable output, not a new AI response, tracking
+or workspace schema. Existing JSON packets and evidence identities are
+unchanged. `src\MarkdownExport.cs` validates the packet and renders deterministic
+UTF-8/LF text for identical packet/draft input; it does not capture data or
+implement a second diff engine.
+
+Recording order, original packet/session/entry identities, current-at-export
+context and qualified evidence IDs remain explicit. Record/path grouping keeps
+stored/effective views together without dropping citations or collapsing
+observed reversals. Values show their captured kind and quoted payload text;
+missing/null/removal kinds, empty strings, false/zero, precision and literal
+control escapes stay distinct. Current and every selected recording's warnings
+remain visible. Unresolved references/ownership stay unresolved.
+
+Reviewed export adds a separate prose section only after the shared
+batch/fingerprint/target/exactly-once checks against a fresh live snapshot.
+It uses an empty notes lookup, not native completed-block state: exporting a
+draft is neither application nor proof it was applied. Explicit numeric
+evidence anchors link each prose citation to its factual row. Untrusted text
+is escaped, including literal URLs that would otherwise become GFM auto-links.
+
+The first line is `<!-- FCS-Scribe Markdown export v1: <body SHA-256> -->`,
+followed by LF and the exact UTF-8 body. The body hash allows replacement only
+of intact generated files; it is not authorship/signing. The displayed packet
+serialization hash uses the repository's JSON serializer, not the byte hash
+of a separately pretty-printed `.json` file. Keep that original packet and
+workspace for audit/reuse; Markdown cannot resume tracking or restore a draft.
+`ExportStorage` applies reserved-location, observed-hash and precommit
+classification guards before the shared flushed atomic write.
+
 ## Snapshots and changes
 
 Snapshots identify the active mod, loaded-mod order, declared dependencies,

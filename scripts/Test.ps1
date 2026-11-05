@@ -9,9 +9,10 @@ New-Item -ItemType Directory -Force -Path $out | Out-Null
 $sources = @((Join-Path $root 'src\Core.cs'), (Join-Path $root 'src\Tracking.cs'), (Join-Path $root 'src\Journal.cs'),
     (Join-Path $root 'src\RangeExport.cs'), (Join-Path $root 'src\DraftWorkspace.cs'), (Join-Path $root 'src\SettingsStorage.cs'),
     (Join-Path $root 'src\ExportStorage.cs'),
+    (Join-Path $root 'src\MarkdownExport.cs'),
     (Join-Path $root 'src\ModWork.cs'),
     (Join-Path $root 'tests\CoreTests.cs'), (Join-Path $root 'tests\TrackingTests.cs'), (Join-Path $root 'tests\JournalTests.cs'),
-    (Join-Path $root 'tests\ModWorkTests.cs'))
+    (Join-Path $root 'tests\ModWorkTests.cs'), (Join-Path $root 'tests\MarkdownTests.cs'))
 & $compiler /nologo /target:exe /warnaserror+ "/out:$out\CoreTests.exe" `
     /reference:System.Core.dll /reference:System.Runtime.Serialization.dll $sources
 if ($LASTEXITCODE -ne 0) { throw 'Test compilation failed.' }

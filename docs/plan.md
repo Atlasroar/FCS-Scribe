@@ -37,7 +37,7 @@ reusable for saved-data analysis and eventual wiki generation.
 | Beta 2 | Resumable tracking and session journals | Full initial baseline, timestamped delta logs and durable replay implemented; beta 5 adds range selection, beta 7 adds independent draft workspaces, and broader history management remains planned |
 | Beta 2 | Recording, compilation and export settings | Manual/30/60/300/600-second recording, explicit/30-minute compilation and active-mod defaults implemented |
 | Beta 3 stabilization | Grouped window menus | Core, Workshop, Draft and Workspace dropdowns with standalone approval/settings implemented; guided beta 21 UI checks and owner checklist report Pass |
-| Next | Markdown export | Planned; use the existing verified catalogue rather than a second diff engine |
+| Beta 22 | Markdown export | Implemented from the existing catalogue: range facts or validated reviewed prose, typed values/evidence links, deterministic escaping and guarded `.md` writes; physical acceptance is not implied |
 | Next, staged | OCS integration | Repository assessment complete; optional read-only saved-data backend planned, not installed or implemented |
 | Later | Wiki-ready export | Planned after dependency/provenance validation |
 | Optional | Direct AI connection | Planned only after the manual workflow is reliable |
@@ -683,10 +683,23 @@ output formats remain unimplemented and need individually agreed scope.
 
 ### Markdown changelogs/documentation
 
-- [ ] Export readable Markdown from the same verified catalogue and reviewed notes.
-- [ ] Retain stable IDs/evidence links, exact quantities, source/layer labels, unresolved references, and partial-extraction warnings.
-- [ ] Keep factual changes separate from interpretation and avoid duplicating stored/effective entries as separate edits.
-- [ ] Test deterministic output and correct escaping of untrusted names/text.
+- [x] Export readable Markdown from the same verified catalogue and reviewed notes: Core range facts and Draft reviewed prose are separate explicit actions.
+- [x] Retain stable IDs/evidence links, exact quantities, source/layer labels, unresolved references, and partial-extraction warnings.
+- [x] Keep factual changes separate from interpretation and group stored/effective evidence without dropping citations or treating it as separate gameplay edits.
+- [x] Test deterministic output and escaping of untrusted names/text, including actual GFM rendering of synthetic evidence links/tables and inert URLs/images/HTML.
+- [x] Guard `.md` destinations, preserve edited/unrelated/tracking content, recheck observed hashes and share the flushed atomic commit primitive with JSON.
+- [x] Keep drafts/workspaces/native state and recording/compilation unchanged; verify reviewed export from a fresh restored workspace without tracking.
+
+Markdown is implemented for beta 22 without OCS or a new runtime/dependency.
+Reviewed export uses the original associated packet and shared complete
+evidence/current-state checks, not native completed-block lookup or approval.
+It retains explicit captured facts versus user-selected prose, historical
+context and unrecorded entries; it is not a vanilla/net diff or event log.
+Current-release physical acceptance is not inferred from beta 21's owner report.
+Recorded evidence: 763 core checks/build, 110 copied native mod-work/menu and
+35 export checks, plus synthetic GFM rendering and the slim compiler smoke.
+See [Markdown validation](wiki/Validation-History.md#markdown-changelog-exports-beta-22)
+for exact coverage and limitations.
 
 ## 8. Later: wiki-ready exports
 
@@ -732,7 +745,7 @@ next feature independently.
 | Feature | Existing foundation | Remaining feature boundary |
 |---|---|---|
 | Broader session-history UI | Durable journals, Resume, range selection and portable draft workspaces already exist. | Add browsing/retention controls beyond range selection while preserving identities, duplicate protection and explicit draft associations; no silent history pruning. |
-| Markdown changelogs | The typed catalogue and reviewed draft prose already exist. | Deterministic, escaped human-readable exports with evidence IDs, exact values/layers and limitations; no second diff engine is required. |
+| Markdown changelogs (beta 22) | Implemented using the typed catalogue and reviewed draft prose. | Core facts / Draft reviewed Markdown, deterministic escaping, exact values/layers, evidence links and guarded writes; no OCS or second diff engine. Physical current-release acceptance remains separate. |
 | Optional OCS saved-data backend | Repository assessment exists, but no runtime/package integration has shipped. | Pin/validate a version, choose the runtime/process boundary and protocol, then implement read-only saved-data loading and FCS cross-validation. Keep live unsaved tracking usable without OCS. |
 | Wiki-ready mod documentation | Proposed records/relationships/provenance exports only. | Wait for verified dependency interpretation/provenance, then produce auditable linked pages with explicit unresolved data. Flattened load order is not field ownership. |
 | Optional direct AI connection | Manual export/import and approval remain the working path. | Decide provider, credentials, consent, data scope, cancellation and errors explicitly; retain manual use, editable output and approval, with no automatic apply/save. |
@@ -761,8 +774,14 @@ the guided observations and unresolved saved-mod discrepancy, and stop the
 step-by-step physical test prompts. This is explicit scoped authorization to
 advance the backlog, not blanket support or independent native-save evidence.
 
+**User-directed beta 22 feature:** the owner selected Markdown changelog export.
+Implement range facts and separately validated reviewed prose without OCS,
+native writes or draft/history replacement. The feature and scoped automated/
+copied-native evidence are recorded in the wiki; beta 21's checklist report
+does not become a physical Pass for these new actions.
+
 1. Preserve S09 observations and remaining exceptions; owner-reported acceptance and independently verified results remain distinct.
 2. S10/S11 are addressed in betas 12/13; S12's tested scope is explicitly accepted after betas 14/15 and the actual-editor soak. S13-S16's bounded work is covered in betas 16-19. Keep unverified custom-stack/headroom, cross-machine and physical-failure boundaries and the saved-mod discrepancy visible.
 3. Proceed with individually scoped feature work under the owner's accepted configuration. Keep focused changes, regression evidence and the established PR/merge/beta-release cycle for runtime changes; evidence-only documentation does not replace binaries.
-4. Scope Markdown, broader session history or OCS design independently. Markdown/history do not inherently require OCS; do not couple them to a new runtime without a concrete requirement.
+4. Markdown is implemented for beta 22. Scope broader session history or OCS design independently next; neither history nor Markdown inherently requires an OCS runtime.
 5. Validate dependency provenance before wiki-ready exports. Direct AI remains optional and requires an explicit provider/credential/consent decision.

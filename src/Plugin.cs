@@ -140,17 +140,19 @@ namespace FcsScribe
             Text = "FCS-Scribe - experimental documentation";
             Width = 1080;
             Height = 780;
-            var coreMenu = AddMenu("&Core", "Start or resume tracking, save Scribe changes, compile the journal or export an AI packet.");
+            var coreMenu = AddMenu("&Core", "Start or resume tracking, save Scribe changes, compile the journal or export AI/Markdown evidence.");
             AddAsyncAction(coreMenu.DropDownItems, "&Start tracking", "Create or resume a tracking project and begin a new timestamped session log. Replaces the editable draft; does not save or restore the mod.", Start);
             AddAsyncAction(coreMenu.DropDownItems, "&Save Changes", "Save enabled Scribe notes/TODOs and record captured changes to the tracking journal. Does NOT save the .mod, native FCS annotations or editable AI draft workspace.", Review);
             AddAsyncAction(coreMenu.DropDownItems, "&Compile journal", "Consolidate durable session entries without duplicates or deleting originals. Automatic mode compiles once the oldest pending recording is 30 minutes old, including time closed or manual.", Compile);
             AddAsyncAction(coreMenu.DropDownItems, "&Export AI packet", "Choose and preview an inclusive range of recordings, including earlier sessions or unrecorded edits, then save an AI packet. Does not record, compile or send anything online. Replaces the editable draft.", Export);
+            AddAsyncAction(coreMenu.DropDownItems, "Export &Markdown", "Choose and preview a recording range, then export readable captured facts with exact typed values, evidence IDs and warnings. No AI required; does not record, compile, apply notes or replace the editable draft.", ExportMarkdown);
             var workshopMenu = AddMenu("&Workshop", "Export local Workshop information or archive the original preview image.");
             AddAction(workshopMenu.DropDownItems, "&Export Workshop info", "Save current local Workshop information, availability warnings and preview-image details as JSON. No tracking baseline required; Workshop-only errors do not pause gameplay recording.", ExportWorkshop, false);
             AddAction(workshopMenu.DropDownItems, "&Archive preview image", "Copy the local Workshop preview, byte-for-byte, to a new image file outside Kenshi. Unavailable images fail explicitly without pausing gameplay recording. Does not download or change the original.", ArchivePreview, false);
-            var draftMenu = AddMenu("&Draft", "Import or paste an AI response into the editable draft.");
+            var draftMenu = AddMenu("&Draft", "Import or paste an AI response, or export reviewed draft prose and its original evidence as Markdown.");
             AddAsyncAction(draftMenu.DropDownItems, "&Import draft", "Load an AI response JSON into the editable draft. Requires an exported batch; save/discard protection keeps existing work safe.", Import);
             AddAsyncAction(draftMenu.DropDownItems, "&Paste draft", "Replace the editable draft with clipboard text after save/discard protection. Nothing is applied by pasting.", Paste);
+            AddAsyncAction(draftMenu.DropDownItems, "Export reviewed &Markdown", "After reviewing the prose, export the complete current-state-valid draft and its original catalogue as Markdown. Facts and prose stay separate. No native notes lookup, approval, application or mod save; restored workspaces need no open tracking project.", ExportReviewedMarkdown);
             var workspaceMenu = AddMenu("&Workspace", "Save or restore a portable AI draft workspace. Scribe notes/TODO files are separate.");
             AddAsyncAction(workspaceMenu.DropDownItems, "&Save workspace", "Atomically save exact editable text, even unfinished JSON, together with its original AI packet. This is separate from tracking and does not save the mod.", SaveWorkspaceAction);
             AddAsyncAction(workspaceMenu.DropDownItems, "&Open workspace", "Restore draft text and its original packet after restart. Validate the bundle, report stale/invalid drafts, and require fresh validation and approval before applying.", OpenWorkspace);
@@ -487,22 +489,32 @@ namespace FcsScribe
             }
         }
 
-        private async Task Export()
+        private async Task<Packet> SelectRecordingRange()
         {
             if (tracker == null) throw new InvalidOperationException("Select Start tracking first.");
             Snapshot current = adapter.Capture();
             status.Text = "Validating recording sources for range selection. No history is being changed.";
             var recordings = await Task.Run(() => project.ExportRecordings(current));
-            if (closing) return;
+            if (closing) return null;
             if (recordings.Count == 0) throw new InvalidOperationException("No recorded or pending changes to document.");
             Packet packet;
             using (var selection = new RecordingRangeDialog(recordings))
             {
-                if (selection.ShowDialog(this) != DialogResult.OK) return;
+                if (selection.ShowDialog(this) != DialogResult.OK)
+                {
+                    status.Text = "Recording-range selection cancelled; no export or history advancement.";
+                    return null;
+                }
                 int first = selection.First, last = selection.Last;
                 packet = await Task.Run(() => RangeExport.Create(project.ProjectId, recordings, first, last, current));
             }
-            if (closing) return;
+            return closing ? null : packet;
+        }
+
+        private async Task Export()
+        {
+            Packet packet = await SelectRecordingRange();
+            if (packet == null) return;
             if (!await ConfirmDraftReplacement("exporting a new AI packet")) return;
             using (var dialog = new SaveFileDialog { Filter = "JSON packet (*.json)|*.json", FileName = "fcs-scribe-ai-packet.json",
                 InitialDirectory = ExportDirectory(), RestoreDirectory = true })
@@ -526,6 +538,65 @@ namespace FcsScribe
             if (adapter.Capture().Fingerprint() != packet.SourceFingerprint)
                 throw new InvalidOperationException("The editor changed while selecting the range. Export again to review the current recordings and pending edits.");
             ExportStorage.WriteJson(path, packet, project == null ? null : project.PathName);
+        }
+
+        private async Task ExportMarkdown()
+        {
+            Packet packet = await SelectRecordingRange();
+            if (packet != null) await SaveMarkdownDialog(packet, null, draftRevision);
+        }
+
+        private async Task ExportReviewedMarkdown()
+        {
+            if (exported == null)
+                throw new InvalidOperationException("Export an AI packet or Open workspace with its original packet before exporting reviewed Markdown.");
+            long revision = draftRevision;
+            NoteDraft notes = Json.Read<NoteDraft>(draft.Text);
+            TrackingDocument.ValidatePacket(exported);
+            DraftValidation.Pending(exported, notes, adapter.Capture(), delegate { return ""; });
+            await SaveMarkdownDialog(exported, notes, revision);
+        }
+
+        private async Task SaveMarkdownDialog(Packet packet, NoteDraft notes, long revision)
+        {
+            using (var dialog = new SaveFileDialog { Filter = "Markdown (*.md)|*.md",
+                FileName = notes == null ? "fcs-scribe-changes.md" : "fcs-scribe-reviewed.md",
+                InitialDirectory = ExportDirectory(), RestoreDirectory = true })
+            {
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                {
+                    status.Text = "Markdown export cancelled; no Markdown file written. Draft and history retained.";
+                    return;
+                }
+                await SaveMarkdownPath(dialog.FileName, packet, notes, revision);
+            }
+            if (closing) return;
+            status.Text = packet.Changes.Count + " evidence rows exported as Markdown" +
+                (notes == null ? "." : " with reviewed draft prose, not native approval.") +
+                " No recording/compilation, native notes, mod save or draft/workspace replacement. " +
+                "Inspect private content before sharing.";
+        }
+
+        private async Task SaveMarkdownPath(string path, Packet packet, NoteDraft notes, long expectedRevision)
+        {
+            if (notes != null && expectedRevision != draftRevision)
+                throw new InvalidOperationException("The editable draft changed while choosing the Markdown destination. Review its latest text and export again.");
+            string anchor = project == null ? null : project.PathName;
+            string hash = ExportStorage.ObserveMarkdownTarget(path, anchor);
+            long revision = draftRevision;
+            Snapshot current = adapter.Capture();
+            if (current.Fingerprint() != packet.SourceFingerprint)
+                throw new InvalidOperationException("The editor changed after the packet/range was captured. Review and export current evidence again.");
+            status.Text = "Rendering Markdown from captured evidence; draft/workspace and native files are unchanged.";
+            string text = await Task.Run(() => notes == null ? MarkdownExport.Render(packet) :
+                MarkdownExport.RenderReviewed(packet, notes, current));
+            if (closing) return;
+            if (notes != null && draftRevision != revision)
+                throw new InvalidOperationException("The editable draft changed during Markdown export. Review its latest text and export again.");
+            if (adapter.Capture().Fingerprint() != packet.SourceFingerprint)
+                throw new InvalidOperationException("The editor changed during Markdown export. Review and export current evidence again.");
+            status.Text = "Writing the guarded Markdown export; no recording, compilation or native save.";
+            await Task.Run(() => ExportStorage.WriteMarkdown(path, text, anchor, hash, null));
         }
 
         private async Task Import()
