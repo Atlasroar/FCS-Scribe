@@ -246,14 +246,24 @@ universal alias/race/power-loss guarantee; S09 interactive acceptance is next.
 - [ ] Run the interactive acceptance items in sections 1-5B on disposable mods/notes, including the new menu UI.
 - [ ] Exercise startup/discovery, focus commits, dialogs, scheduling, resize/minimize/close/restart, other extensions and visible failure paths.
 - [x] Record actual results and remaining exceptions; standalone form/method checks do not close this gate.
+- [x] Record the bounded beta 21 real-editor footer/menu/tab and Scribe text/settings restart follow-up without closing the overall gate.
 
 A bounded real FCS Extended beta 11 pass on November 3-4, 2026 is recorded in
-[Validation and limitations](wiki/Validation-and-Limitations.md#real-fcs-extended-acceptance-beta-11).
+[Validation history](wiki/Validation-History.md#real-fcs-extended-acceptance-beta-11).
 It covers the supported normal-editing startup/UI, real add/scalar/rename
 evidence, manual AI handoff, workspace/approval/save/restart, all recording
 intervals, compilation, native Workshop export/PNG archive, copy-only journal
 recovery/rejection, legacy conversion, export guards and settings repair/reload.
 The final original project has 12 distinct fully compiled recordings.
+
+A [November 5 beta 21 follow-up](wiki/Validation-History.md#real-fcs-extended-follow-up-november-5-2026)
+confirmed the installed DLL matches the released archive. User-operated
+mouse/keyboard/overflow help, tab settings transitions and Scribe notes/task
+persistence passed, including a full FCS Extended restart. Independent
+before/after hashes confirmed unchanged notes, completed-task, settings and
+test `.mod` bytes. Native shared sidecars were not independently compared;
+this did not replay the full tracking/AI/native-annotation workflow or override
+the earlier decision not to rerun final original-block retention.
 
 **S09 remains open.** Broader stacks/independent extensions, merge/translation
 and unsupported builds, physically contested project writers, deliberate notes
@@ -716,6 +726,12 @@ notes-button hijacking, live installation or the discussed vanilla text diff.
 Existing tracking/workspaces are not migrated and native notes are untouched.
 Core/storage and targeted copied-native evidence are recorded in
 [Validation and limitations](wiki/Validation-and-Limitations.md#scribe-notes-and-todos-beta-20).
+
+**User-directed beta 21 cleanup:** shared bottom warnings/temporary menu help
+and separate operation status are shipped. The scoped real-editor follow-up
+above covers the new layout, tab messaging and Scribe text/settings restart
+persistence only. S09 and explicit MVP support-scope acceptance remain open;
+this is not authorization for deferred feature expansion.
 
 1. Keep S09 results and remaining exceptions explicit; untested is not passed, and the gate remains open until its support scope is explicitly accepted.
 2. S10/S11 are addressed in betas 12/13; S12's tested scope is explicitly accepted after betas 14/15 and the actual-editor soak. S13-S16's bounded storage/portability/notes/compatibility work is covered in betas 16-19. Next finish S09's remaining interactive checks and explicitly review the MVP support scope, retaining unverified custom-stack/headroom, cross-machine and physical-failure boundaries. Keep independently scoped changes, regression evidence and the requested PR/merge/beta-release cycle; publishing partial progress does not close unrelated acceptance gates.

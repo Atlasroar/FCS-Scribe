@@ -13,7 +13,7 @@ work. Detailed test counts, measurements and dated observations belong in
 | Editing mode | A writable active `.mod` in normal editing mode; read-only, merge and translation sessions are rejected |
 | Dependencies and extensions | Specific copied official-data/representative configurations have evidence; arbitrary custom stacks and other extensions are not broadly accepted |
 | GOG and other builds | Not verified/supported by the current executable adapter |
-| FCS Extended startup and physical UI | Partial historical observations exist; complete current-release interactive acceptance remains open |
+| FCS Extended startup and physical UI | Scoped beta 21 startup/footer/text-persistence observations exist for one test setup; complete current-release interactive acceptance remains open |
 
 Supported executable SHA-256:
 
@@ -42,6 +42,13 @@ representative fixtures. Its detailed scope is recorded under
 [Scribe notes and TODOs](Validation-History#scribe-notes-and-todos-beta-20).
 Use [Building and releases](Building-and-Releases#run-checks-and-inspect-the-supported-build)
 to reproduce checks; passing a runner is not physical acceptance.
+
+The [beta 21 real-editor follow-up](Validation-History#real-fcs-extended-follow-up-november-5-2026)
+adds user-operated footer/menu/tab checks and Scribe text/settings persistence
+through a full FCS restart. Installed DLL bytes matched the release archive;
+test notes/tasks/settings and `.mod` bytes were independently unchanged across
+that restart. It does not establish complete native-annotation or tracking/AI
+workflow acceptance.
 
 ## Capture and provenance limits
 
@@ -100,8 +107,8 @@ belong in [Building and releases](Building-and-Releases#reproduce-performance-me
 ## Remaining interactive acceptance
 
 The S09 gate remains open. Historical acceptance does not implicitly approve
-the current release. Remaining boundaries include current-release startup and
-interactive menu/workflow coverage, final original annotation-block retention,
+the current release. Remaining boundaries include complete workflow/control
+coverage beyond the scoped beta 21 follow-up, final original annotation-block retention,
 additional dependency/extension configurations, competing project writers,
 physical save/access failures and real asynchronous Steam behavior.
 
