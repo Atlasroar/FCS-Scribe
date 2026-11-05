@@ -7,6 +7,47 @@ For current supported use and open gates, see
 [Validation and limitations](Validation-and-Limitations). For what changed
 in each release, see [Release history](Release-History).
 
+## Recording-history browser (beta 23)
+
+The owner-selected read-only browser passed **769 core checks**, a
+warnings-as-errors plugin build, **65 export/history** and **113 menu/mod-work**
+checks on a small pre-existing single-record disposable native fixture.
+This is not a new full official-data/custom-stack or physical FCS Extended
+acceptance run, and no live DLL was installed.
+
+Core checks confirm repeated catalogues retain exact original order/packets,
+detached edits cannot mutate stored evidence, and changed markers, edited
+compiled sessions and disappeared observed sources fail without a partial
+catalogue or history advancement. Existing hash/chain checks are reused.
+
+Copied UI cases cover empty/legacy/pending/context-only states, session and
+case-insensitive name/ID/value/warning searches, historical Workshop warning/
+availability detail, qualified evidence and source labels, multi-selection
+and both export formats. Full inclusive range previews retain intervening
+unselected entries; cancelling the selector returns to browsing without
+accepting bounds. Opening/cancelling the actual Core action leaves enabled
+unsaved Scribe notes, the unfinished draft/packet, tracking bytes/head/debt
+and native model/notes/dirty state/mod bytes unchanged. Selected exports reuse
+existing guarded writers and original ordered evidence.
+
+The initial copied-window action exposed `Win32Exception: Error creating
+window handle` while resolving its hidden model-only MDI owner. Reparenting
+that uncreated window did not preserve the MDI-child relationship. The final
+fixture constructs and shows its Scribe owner in a standard MDI host from the
+start, verifies its handle/parent before and after nested selectors, and passes
+the actual action. No production owner fallback, error suppression or guard
+bypass was added; this does not certify the complete native startup workflow.
+
+An initial core run also reported an unexpected file-replacement `IOException`
+inside the existing Markdown replacement test. The unchanged storage code
+passed the subsequent and final 769-check runs; the cause was not established.
+The final menu suite's malformed-TODO recovery log is an expected injected case.
+
+History retention/pruning, saved/applied-state certification, additional
+runtime/OCS integration and physical acceptance remain outside this feature.
+The beta 21 owner report and unresolved saved-mod byte discrepancy are retained
+separately below, not overwritten by these copied-host checks.
+
 ## Markdown changelog exports (beta 22)
 
 The owner-selected feature passed **763 core checks**, a warnings-as-errors

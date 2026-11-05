@@ -19,11 +19,14 @@ namespace FcsScribe
         public int First { get { return first.SelectedIndex; } }
         public int Last { get { return last.SelectedIndex; } }
 
-        public RecordingRangeDialog(IList<RecordingEvidence> recordings)
+        public RecordingRangeDialog(IList<RecordingEvidence> recordings, int firstIndex = 0, int lastIndex = -1)
         {
             if (recordings == null || recordings.Count == 0) throw new ArgumentException("Recordings are required.", "recordings");
+            if (lastIndex == -1) lastIndex = recordings.Count - 1;
+            if (firstIndex < 0 || lastIndex < firstIndex || lastIndex >= recordings.Count)
+                throw new ArgumentException("Choose a valid initial inclusive range.");
             this.recordings = recordings;
-            Text = "Choose AI recording range";
+            Text = "Choose recording range";
             Width = 980; Height = 680; MinimumSize = new System.Drawing.Size(660, 480);
             StartPosition = FormStartPosition.CenterParent; MaximizeBox = false; MinimizeBox = false;
             var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 8, Padding = new Padding(12) };
@@ -45,12 +48,10 @@ namespace FcsScribe
             layout.Controls.Add(buttons, 0, 7);
             foreach (RecordingEvidence recording in recordings)
             {
-                string label = (first.Items.Count + 1) + " | " + recording.RecordedUtc + " | " +
-                    (recording.Kind == "pending" ? "UNRECORDED editor changes" : recording.Kind) +
-                    " | " + recording.Packet.Changes.Count + " change IDs | session " + (recording.SessionId ?? "(legacy)");
+                string label = Label(recording, first.Items.Count);
                 first.Items.Add(label); last.Items.Add(label);
             }
-            first.SelectedIndex = 0; last.SelectedIndex = recordings.Count - 1;
+            first.SelectedIndex = firstIndex; last.SelectedIndex = lastIndex;
             first.SelectedIndexChanged += delegate { UpdateRange(); };
             last.SelectedIndexChanged += delegate { UpdateRange(); };
             Controls.Add(layout); AcceptButton = export; CancelButton = cancel;
@@ -66,17 +67,50 @@ namespace FcsScribe
             summary.Text = !valid ? "Choose a last recording at or after the first." :
                 selected.Count + " entries, " + changes + " change IDs, " + selected.Count(x => x.Kind == "pending") +
                 " unrecorded entry. " + (changes == 0 ? "Context-only updates are not record-change evidence." :
-                "Every change ID in this range must be covered exactly once in the draft.");
+                "All evidence is retained; an AI draft must cover every change ID exactly once.");
+            preview.Text = Preview(selected);
+        }
+
+        internal static string Label(RecordingEvidence recording, int index)
+        {
+            return (index + 1) + " | " + recording.RecordedUtc + " | " +
+                (recording.Kind == "pending" ? "UNRECORDED editor changes" : recording.Kind) +
+                " | " + recording.Packet.Changes.Count + " change IDs | session " + (recording.SessionId ?? "(legacy)");
+        }
+
+        internal static string Preview(IEnumerable<RecordingEvidence> recordings)
+        {
             var text = new StringBuilder("PARTIAL EXTRACTION - inspect names, values and all warnings before sharing.\r\n");
             text.AppendLine(Tracker.SamplingNotice);
-            foreach (RecordingEvidence recording in selected)
+            text.AppendLine("Original fingerprints/context describe each observation, not the current or saved mod. Source labels are not proof of field ownership.");
+            foreach (RecordingEvidence recording in recordings)
             {
                 text.AppendLine("\r\n" + recording.EntryId + " | " + recording.RecordedUtc + " | " + recording.Kind +
-                    " | original batch " + recording.Packet.BatchId);
+                    " | session " + (recording.SessionId ?? "(legacy)") + " | original batch " + recording.Packet.BatchId);
+                text.AppendLine("Original baseline: " + recording.Packet.BaselineId +
+                    "\r\nOriginal source fingerprint: " + recording.Packet.SourceFingerprint +
+                    "\r\nScope: " + recording.Packet.Context.Scope +
+                    "\r\nLoaded order: " + String.Join(", ", recording.Packet.Context.LoadOrder) +
+                    "\r\nDeclared dependencies: " + String.Join(", ", recording.Packet.Context.Dependencies) +
+                    "\r\nLocked mods: " + String.Join(", ", recording.Packet.Context.LockedMods));
                 foreach (string warning in recording.Packet.Context.Warnings) text.AppendLine("WARNING: " + warning);
+                WorkshopMetadata workshop = recording.Packet.Context.Workshop;
+                if (workshop != null)
+                {
+                    text.AppendLine("Workshop source: " + (workshop.Source ?? "(not captured)") +
+                        " | capture status: " + (workshop.CaptureStatus ?? "(not captured)"));
+                    foreach (string warning in workshop.Warnings) text.AppendLine("WORKSHOP WARNING: " + warning);
+                    if (workshop.Issues != null)
+                        foreach (WorkshopIssue issue in workshop.Issues)
+                        {
+                            if (issue == null) throw new InvalidDataException("Missing Workshop issue in recording evidence.");
+                            text.AppendLine("WORKSHOP ISSUE: " + issue.Component + " | " + issue.Code + " | " + issue.Message);
+                        }
+                }
+                if (recording.Packet.Changes.Count == 0) text.AppendLine("Context-only observation: no record-change evidence.");
                 ScribeWindow.AppendChanges(text, RangeExport.Changes(new[] { recording }));
             }
-            preview.Text = text.ToString();
+            return text.ToString();
         }
     }
 

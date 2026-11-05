@@ -344,7 +344,7 @@ internal static class IntegrationTests
             Check(window.MainMenuStrip == actions && !actions.AllowMerge && actions.TabStop,
                 "menus stay inside Scribe and support keyboard access without merging into FCS");
             string[][] groups = {
-                new[] { "Start tracking", "Save Changes", "Compile journal", "Export AI packet", "Export Markdown" },
+                new[] { "Start tracking", "Save Changes", "Compile journal", "Browse history", "Export AI packet", "Export Markdown" },
                 new[] { "Export Workshop info", "Archive preview image" },
                 new[] { "Import draft", "Paste draft", "Export reviewed Markdown" },
                 new[] { "Save workspace", "Open workspace" }
@@ -354,7 +354,7 @@ internal static class IntegrationTests
                     menus[i].Text + " contains the requested actions in order");
             var commands = menus.SelectMany(x => x.HasDropDownItems ?
                 x.DropDownItems.Cast<ToolStripMenuItem>() : new[] { x }).ToList();
-            Check(commands.Count == 14, "all original/workspace actions plus factual and reviewed Markdown exports remain available");
+            Check(commands.Count == 15, "all original/workspace/Markdown actions plus read-only history remain available");
             foreach (ToolStripMenuItem item in menus.Take(4).Concat(commands))
             {
                 typeof(ToolStripItem).GetMethod("HandleMouseEnter", Flags).Invoke(item, new object[] { EventArgs.Empty });
@@ -652,7 +652,239 @@ internal static class IntegrationTests
             Check(openProject.HeadId == head && TrackingStorage.HashFile(openProject.SessionPath) == sessionHash &&
                 !File.Exists(Path.Combine(active + ".scribe", "journal.jsonl")),
                 "Markdown export with tracking open neither records nor compiles history");
+            CheckHistoryWindow(adapter, editor, directory);
         }
+    }
+
+    private static void CheckHistoryWindow(FcsAdapter adapter, Form editor, string directory)
+    {
+        // Construct the modal owner in its shown MDI host, rather than reparenting a model-only window.
+        using (var host = new Form { IsMdiContainer = true, ShowInTaskbar = false, Opacity = 0,
+            Width = 1200, Height = 900 })
+        using (var window = new ScribeWindow(adapter, host, Path.Combine(directory, "history-settings.json")))
+        {
+            host.Show(); window.Show();
+            Check(window.IsHandleCreated && window.Visible && window.IsMdiChild && window.MdiParent == host,
+                "history uses a shown MDI owner initialized in that host");
+            RunWindow(window, "StartPath", Path.Combine(directory, "history.json"));
+            CheckHistoryContents(adapter, editor, directory, window);
+        }
+    }
+
+    private static void CheckHistoryContents(FcsAdapter adapter, Form editor, string directory, ScribeWindow window)
+    {
+        var project = (JournalProject)FcsAdapter.Field(window, "project");
+        Snapshot live = adapter.Capture();
+        project.Record(live);
+        using (var empty = new RecordingHistoryDialog(project.ExportRecordings(live)))
+        {
+            Check(((ListBox)FcsAdapter.Field(empty, "entries")).Items.Count == 0 &&
+                !((Button)FcsAdapter.Field(empty, "ai")).Enabled &&
+                !((Button)FcsAdapter.Field(empty, "markdown")).Enabled &&
+                ((TextBox)FcsAdapter.Field(empty, "preview")).Text.Contains("No recordings yet"),
+                "history opens an explicit read-only empty state without inventing evidence");
+        }
+        Snapshot changed = live.Copy(); changed.Records[0].Name += " History browsing fixture";
+        project.Record(changed);
+        string firstSession = project.SessionId;
+        Snapshot context = changed.Copy(); context.Warnings.Add("Historical browser warning");
+        context.Workshop.Warnings.Add("Historical Workshop-only warning");
+        context.Workshop.Issues = new List<WorkshopIssue> {
+            new WorkshopIssue { Component = "History fixture", Code = "unavailable", Message = "Historical availability reason" }
+        };
+        project.Record(context);
+        project.Compile();
+        project.BeginSession();
+        project.Record(live);
+        Put(window, "tracker", project.ResumeTracker());
+        var read = (Task<List<RecordingEvidence>>)FcsAdapter.Call(window, "ReadRecordingHistory", live);
+        AwaitUi(read);
+        List<RecordingEvidence> choices = read.Result;
+        Check(choices.Count == 3 && choices.Count(x => x.SessionId == firstSession) == 2 &&
+            choices.Last().SessionId != firstSession && choices[1].Packet.Changes.Count == 0,
+            "window reads compiled/uncompiled multi-session history once, including context-only observations");
+        Dictionary<string, string> files = Directory.GetFiles(project.DirectoryName, "*", SearchOption.AllDirectories)
+            .Where(x => Path.GetFileName(x) != "writer.lock").Concat(new[] { project.PathName }).ToDictionary(x => x, TrackingStorage.HashFile);
+        string original = Json.Write(choices), head = project.HeadId, fingerprint = live.Fingerprint();
+        int pendingCount = project.PendingCount;
+        Packet existing = new Tracker(live).Export(live);
+        FcsAdapter.Call(window, "AdoptWorkspace", existing, "Unfinished history draft", null, null);
+        long revision = (long)FcsAdapter.Field(window, "draftRevision");
+        var nav = FcsAdapter.Field(editor, "nav");
+        bool dirty = (bool)FcsAdapter.Property(nav, "HasChanges");
+        string modHash = TrackingStorage.HashFile(adapter.ActiveModDirectory() + "\\scribe-test.mod");
+        string nativeNotes = adapter.Notes(live.Records[0].Id);
+        Put(window, "draftDecision", new Func<string, DialogResult>(operation => DialogResult.Cancel));
+        using (var dialog = new RecordingHistoryDialog(choices))
+        {
+            var list = (ListBox)FcsAdapter.Field(dialog, "entries");
+            var filter = (ComboBox)FcsAdapter.Field(dialog, "session");
+            var search = (TextBox)FcsAdapter.Field(dialog, "search");
+            var preview = (TextBox)FcsAdapter.Field(dialog, "preview");
+            Check(list.Items.Count == 3 && list.SelectionMode == SelectionMode.MultiExtended && preview.ReadOnly &&
+                preview.Text.Contains(choices[0].EntryId + ":change-") && preview.Text.Contains("Original source fingerprint:"),
+                "history displays original identities, qualified citations and exact read-only evidence");
+            Check(preview.Text.Contains("History browsing fixture") && preview.Text.Contains("Source labels:") &&
+                preview.Text.Contains(Tracker.SamplingNotice), "history shows names, source labels and sampling boundaries");
+            filter.SelectedItem = firstSession;
+            Check(list.Items.Count == 2, "session filter retains all and only that session's observations");
+            search.Text = "historical browser WARNING";
+            Check(list.Items.Count == 1 && preview.Text.Contains("Context-only observation") &&
+                preview.Text.Contains("Historical Workshop-only warning") && preview.Text.Contains("Historical availability reason"),
+                "case-insensitive history search can inspect context-only warnings and optional availability");
+            search.Text = "Historical availability reason";
+            Check(list.Items.Count == 1, "search includes optional Workshop issue messages");
+            filter.SelectedIndex = 0;
+            search.Text = choices[0].Packet.Changes[0].Path;
+            bool fieldMatches = list.Items.Count == 2;
+            search.Text = choices[0].Packet.Changes[0].After.Text.ToUpperInvariant();
+            Check(fieldMatches && list.Items.Count == 2,
+                "search matches exact field paths and typed name payloads in both directions, without including context-only entries");
+            filter.SelectedIndex = 0; search.Text = choices[2].EntryId;
+            Check(list.Items.Count == 1 && preview.Text.Contains(choices[2].EntryId), "search finds a recording by stable identity");
+            search.Text = "not a matching recording";
+            Check(list.Items.Count == 0 && !((Button)FcsAdapter.Field(dialog, "ai")).Enabled &&
+                preview.Text.Contains("No entries selected"), "empty filters disable export and clear stale preview evidence");
+            search.Text = "";
+            list.ClearSelected(); list.SetSelected(0, true); list.SetSelected(2, true);
+            Check(preview.Text.Contains("\r\n" + choices[0].EntryId + " | ") &&
+                preview.Text.Contains("\r\n" + choices[2].EntryId + " | ") &&
+                !preview.Text.Contains("\r\n" + choices[1].EntryId + " | "),
+                "multi-selection previews exactly the selected original recording blocks, not their baseline references");
+            CheckHistoryExportSelection(dialog, choices, true);
+        }
+        using (var dialog = new RecordingHistoryDialog(choices))
+            CheckHistoryExportSelection(dialog, choices, false);
+        using (var dialog = new RecordingHistoryDialog(choices))
+        using (var cancel = new System.Windows.Forms.Timer { Interval = 20 })
+        {
+            bool clicked = false, cancelledRange = false;
+            cancel.Tick += delegate {
+                var range = Application.OpenForms.OfType<RecordingRangeDialog>().FirstOrDefault();
+                if (range != null)
+                {
+                    cancelledRange = true; ((Button)range.CancelButton).PerformClick();
+                }
+                else if (!clicked)
+                {
+                    clicked = true; ((Button)FcsAdapter.Field(dialog, "ai")).PerformClick();
+                }
+                else if (cancelledRange)
+                {
+                    cancel.Stop(); ((Button)dialog.CancelButton).PerformClick();
+                }
+            };
+            cancel.Start();
+            Check(dialog.ShowDialog(window) == DialogResult.Cancel && cancelledRange && dialog.First == -1 && dialog.Last == -1,
+                "cancelling the nested export selector returns to browsing without accepting a range");
+        }
+        using (var pending = new RecordingHistoryDialog(project.ExportRecordings(changed)))
+        {
+            ((TextBox)FcsAdapter.Field(pending, "search")).Text = "unrecorded";
+            Check(((ListBox)FcsAdapter.Field(pending, "entries")).Items.Count == 1 &&
+                ((TextBox)FcsAdapter.Field(pending, "preview")).Text.Contains("pending"),
+                "unrecorded current state has an explicit separately searchable group, not a durable session entry");
+        }
+        var legacy = Json.Read<List<RecordingEvidence>>(Json.Write(choices));
+        legacy[0].Kind = "checkpoint"; legacy[0].SessionId = null;
+        using (var dialog = new RecordingHistoryDialog(legacy))
+        {
+            ((ComboBox)FcsAdapter.Field(dialog, "session")).SelectedIndex = 1;
+            Check(((ListBox)FcsAdapter.Field(dialog, "entries")).Items.Count == 1 &&
+                ((TextBox)FcsAdapter.Field(dialog, "preview")).Text.Contains("(legacy)"),
+                "legacy evidence remains browseable without inventing a session ID");
+        }
+        var historyAction = window.MainMenuStrip.Items.Cast<ToolStripMenuItem>().First().DropDownItems
+            .Cast<ToolStripMenuItem>().Single(x => x.Text.Replace("&", "") == "Browse history");
+        RunWindow(window, "SaveSettings", new PluginSettings { ModNotesEnabled = true });
+        var work = (ModWorkView)FcsAdapter.Field(window, "modWork");
+        work.Notes.Text = "Unsaved text while reading history";
+        string notesHash = TrackingStorage.HashFile(work.Work.NotesPath);
+        Check(window.IsMdiChild && window.IsHandleCreated && window.Visible,
+            "history retains its initialized MDI owner after nested selectors");
+        using (var cancel = new System.Windows.Forms.Timer { Interval = 20 })
+        {
+            cancel.Tick += delegate {
+                var opened = Application.OpenForms.OfType<RecordingHistoryDialog>().FirstOrDefault();
+                if (opened == null) return;
+                cancel.Stop(); ((Button)opened.CancelButton).PerformClick();
+            };
+            cancel.Start(); historyAction.PerformClick();
+            var timeout = System.Diagnostics.Stopwatch.StartNew();
+            while ((bool)FcsAdapter.Field(window, "busy") && timeout.Elapsed < TimeSpan.FromMinutes(2))
+            { Application.DoEvents(); Thread.Sleep(10); }
+            Check(!(bool)FcsAdapter.Field(window, "busy") &&
+                ((Label)FcsAdapter.Field(window, "status")).Text.StartsWith("History browser closed", StringComparison.Ordinal),
+                "actual Core history action opens and closes through the normal busy/modal guard");
+        }
+        Check(work.Notes.Text == "Unsaved text while reading history" &&
+            TrackingStorage.HashFile(work.Work.NotesPath) == notesHash,
+            "opening/cancelling history does not save even enabled unsaved Scribe text");
+        Check(Json.Write(choices) == original && project.HeadId == head && project.PendingCount == pendingCount &&
+            files.All(x => TrackingStorage.HashFile(x.Key) == x.Value),
+            "history filtering/range previews/cancellation do not mutate evidence or tracking files/head/debt");
+        Check(Object.ReferenceEquals(FcsAdapter.Field(window, "exported"), existing) &&
+            ((TextBox)FcsAdapter.Field(window, "draft")).Text == "Unfinished history draft" &&
+            (long)FcsAdapter.Field(window, "draftRevision") == revision,
+            "read-only history retains unfinished draft and original packet association");
+        Packet selected = RangeExport.Create(project.ProjectId, choices, 0, 2, live);
+        string markdown = Path.Combine(directory, "history-range.md");
+        RunWindow(window, "SaveMarkdownPath", markdown, selected, null, revision);
+        Check(File.ReadAllText(markdown).Contains("Historical browser warning") &&
+            Object.ReferenceEquals(FcsAdapter.Field(window, "exported"), existing),
+            "history-selected Markdown uses the existing guarded renderer without replacing the draft");
+        string aiPath = Path.Combine(directory, "history-range.json");
+        CallWindowAction(window, "SavePacketPath", aiPath, selected);
+        Check(Json.Read<Packet>(File.ReadAllText(aiPath)).Recordings.Select(x => x.EntryId)
+            .SequenceEqual(choices.Select(x => x.EntryId)), "history-selected AI output retains complete original range order and identities");
+        Check(adapter.Capture().Fingerprint() == fingerprint && adapter.Notes(live.Records[0].Id) == nativeNotes &&
+            (bool)FcsAdapter.Property(nav, "HasChanges") == dirty &&
+            TrackingStorage.HashFile(adapter.ActiveModDirectory() + "\\scribe-test.mod") == modHash &&
+            project.HeadId == head && files.All(x => TrackingStorage.HashFile(x.Key) == x.Value),
+            "history and exports leave native model/dirty state/mod bytes and journal storage untouched");
+        string sessionBytes = File.ReadAllText(project.SessionPath);
+        File.AppendAllText(project.SessionPath, "\n");
+        bool rejected = false;
+        try
+        {
+            var invalid = (Task<List<RecordingEvidence>>)FcsAdapter.Call(window, "ReadRecordingHistory", live);
+            AwaitUi(invalid);
+        }
+        catch (IOException) { rejected = true; }
+        finally { File.WriteAllText(project.SessionPath, sessionBytes); }
+        Check(rejected, "history refuses changed source bytes before exposing a catalogue");
+        FcsAdapter.Call(window, "AdoptWorkspace", null, "", null, null);
+    }
+
+    private static void CheckHistoryExportSelection(RecordingHistoryDialog history, IList<RecordingEvidence> choices, bool markdown)
+    {
+        var list = (ListBox)FcsAdapter.Field(history, "entries");
+        list.ClearSelected(); list.SetSelected(0, true); list.SetSelected(2, true);
+        bool inspected = false, clicked = false;
+        using (var choose = new System.Windows.Forms.Timer { Interval = 20 })
+        {
+            choose.Tick += delegate {
+                var range = Application.OpenForms.OfType<RecordingRangeDialog>().FirstOrDefault();
+                if (range == null)
+                {
+                    if (!clicked)
+                    {
+                        clicked = true;
+                        ((Button)FcsAdapter.Field(history, markdown ? "markdown" : "ai")).PerformClick();
+                    }
+                    return;
+                }
+                choose.Stop();
+                Check(range.First == 0 && range.Last == 2 &&
+                    ((TextBox)FcsAdapter.Field(range, "preview")).Text.Contains("\r\n" + choices[1].EntryId + " | "),
+                    "history export previews the entire inclusive range, including the unselected middle entry");
+                inspected = true; ((Button)FcsAdapter.Field(range, "export")).PerformClick();
+            };
+            choose.Start();
+            Check(history.ShowDialog() == DialogResult.OK, "history export requires an explicit successful modal selection");
+        }
+        Check(inspected && history.DialogResult == DialogResult.OK && history.First == 0 && history.Last == 2 &&
+            history.Markdown == markdown, "history returns explicit inclusive bounds and the selected export format");
     }
 
     private static void CheckReviewedMarkdownWindow(FcsAdapter adapter, Form editor, string directory, ScribeWindow window)

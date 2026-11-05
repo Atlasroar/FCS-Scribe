@@ -140,10 +140,11 @@ namespace FcsScribe
             Text = "FCS-Scribe - experimental documentation";
             Width = 1080;
             Height = 780;
-            var coreMenu = AddMenu("&Core", "Start or resume tracking, save Scribe changes, compile the journal or export AI/Markdown evidence.");
+            var coreMenu = AddMenu("&Core", "Start or resume tracking, browse recording history, save Scribe changes, compile the journal or export AI/Markdown evidence.");
             AddAsyncAction(coreMenu.DropDownItems, "&Start tracking", "Create or resume a tracking project and begin a new timestamped session log. Replaces the editable draft; does not save or restore the mod.", Start);
             AddAsyncAction(coreMenu.DropDownItems, "&Save Changes", "Save enabled Scribe notes/TODOs and record captured changes to the tracking journal. Does NOT save the .mod, native FCS annotations or editable AI draft workspace.", Review);
             AddAsyncAction(coreMenu.DropDownItems, "&Compile journal", "Consolidate durable session entries without duplicates or deleting originals. Automatic mode compiles once the oldest pending recording is 30 minutes old, including time closed or manual.", Compile);
+            AddAsyncAction(coreMenu.DropDownItems, "&Browse history", "Read verified session/recording evidence, filter by session or search and preview a complete range before AI/Markdown export. Opening, browsing and closing save nothing; no pruning, native restore or automatic draft replacement.", BrowseHistory, true, false);
             AddAsyncAction(coreMenu.DropDownItems, "&Export AI packet", "Choose and preview an inclusive range of recordings, including earlier sessions or unrecorded edits, then save an AI packet. Does not record, compile or send anything online. Replaces the editable draft.", Export);
             AddAsyncAction(coreMenu.DropDownItems, "Export &Markdown", "Choose and preview a recording range, then export readable captured facts with exact typed values, evidence IDs and warnings. No AI required; does not record, compile, apply notes or replace the editable draft.", ExportMarkdown);
             var workshopMenu = AddMenu("&Workshop", "Export local Workshop information or archive the original preview image.");
@@ -444,6 +445,8 @@ namespace FcsScribe
                 text.AppendLine(change.Id + " | " + change.RecordType + " | " + change.RecordId +
                     " | " + change.DisplayName + "\r\n  " + change.Operation + " " + change.Layer +
                     " " + change.Path + "\r\n  " + Json.Write(change.Before) + " -> " + Json.Write(change.After) +
+                    "\r\n  Source labels: " + (change.BeforeSource ?? "(none captured)") + " -> " +
+                    (change.AfterSource ?? "(none captured)") +
                     (change.ReferencedId == null ? "" : "\r\n  Reference: " + change.ReferencedId +
                     " (" + (change.ReferencedName ?? "UNRESOLVED") + ")"));
         }
@@ -493,8 +496,7 @@ namespace FcsScribe
         {
             if (tracker == null) throw new InvalidOperationException("Select Start tracking first.");
             Snapshot current = adapter.Capture();
-            status.Text = "Validating recording sources for range selection. No history is being changed.";
-            var recordings = await Task.Run(() => project.ExportRecordings(current));
+            var recordings = await ReadRecordingHistory(current);
             if (closing) return null;
             if (recordings.Count == 0) throw new InvalidOperationException("No recorded or pending changes to document.");
             Packet packet;
@@ -515,11 +517,54 @@ namespace FcsScribe
         {
             Packet packet = await SelectRecordingRange();
             if (packet == null) return;
-            if (!await ConfirmDraftReplacement("exporting a new AI packet")) return;
+            await ExportPacket(packet);
+        }
+
+        private Task<System.Collections.Generic.List<RecordingEvidence>> ReadRecordingHistory(Snapshot current)
+        {
+            if (project == null || tracker == null) throw new InvalidOperationException("Select Start tracking first.");
+            status.Text = "Validating recording sources for history/range selection. No history is being changed.";
+            return Task.Run(() => project.ExportRecordings(current));
+        }
+
+        private async Task BrowseHistory()
+        {
+            if (project == null || tracker == null) throw new InvalidOperationException("Select Start tracking first.");
+            Snapshot current = adapter.Capture();
+            var recordings = await ReadRecordingHistory(current);
+            if (closing) return;
+            using (var history = new RecordingHistoryDialog(recordings))
+            {
+                status.Text = recordings.Count + " history entries loaded. Browsing is read-only; close/reopen to refresh.";
+                if (history.ShowDialog(this) != DialogResult.OK)
+                {
+                    status.Text = "History browser closed; draft/workspace, Scribe text and tracking/native files unchanged.";
+                    return;
+                }
+                int first = history.First, last = history.Last;
+                Packet packet = await Task.Run(() => RangeExport.Create(project.ProjectId, recordings, first, last, current));
+                if (closing) return;
+                SaveModWork();
+                if (history.Markdown) await SaveMarkdownDialog(packet, null, draftRevision);
+                else await ExportPacket(packet);
+            }
+        }
+
+        private async Task ExportPacket(Packet packet)
+        {
+            if (!await ConfirmDraftReplacement("exporting a new AI packet"))
+            {
+                status.Text = "AI export cancelled; editable draft/workspace association and history retained.";
+                return;
+            }
             using (var dialog = new SaveFileDialog { Filter = "JSON packet (*.json)|*.json", FileName = "fcs-scribe-ai-packet.json",
                 InitialDirectory = ExportDirectory(), RestoreDirectory = true })
             {
-                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                {
+                    status.Text = "AI export cancelled; no packet written or new draft adopted. History retained.";
+                    return;
+                }
                 if (!String.Equals(Path.GetExtension(dialog.FileName), ".json", StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException("Export requires a .json filename; mod files are never export targets.");
                 SavePacketPath(dialog.FileName, packet);

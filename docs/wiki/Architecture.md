@@ -16,6 +16,7 @@ It does not replace FCS or load an AI provider.
 | `src\ModWork.cs` | Independent plain notes/task files, strict text validation, guarded atomic saves and mod-bound project location | Treat two text files as one transaction, migrate old roots silently or overwrite foreign tasks/settings |
 | `src\ModWorkView.cs` | Plain notes editor, task list/dialog and opt-in native record-menu extension | Replace native Add Todo Item or write native annotations |
 | `src\SettingsDialog.cs` | New/resume choice, recording-range preview, recording/export defaults and notes/task/project-folder configuration | Automatically convert legacy evidence or export a range without confirmation |
+| `src\HistoryDialog.cs` | Detached read-only session/search browsing and selection into the shared inclusive range preview | Filter export evidence silently, edit/prune history or infer saved/applied state |
 | `src\FcsAdapter.cs` | Guard the FCS executable and read/update verified editor objects on the UI thread | Guess APIs, silently omit unsupported values, or write binary mods |
 | `src\WorkshopArchive.cs` | Known-field XML cache contract and bounded, lossless local preview archiving | Contact Steam, overwrite prior archives, or re-encode/replace source images |
 | `src\Plugin.cs` | Implement the upstream plugin interface, attach UI, serialize actions, save enabled Scribe work and guard draft replacement/closing | Automatically trust/apply AI text or save the mod |
@@ -108,6 +109,15 @@ fresh UI-thread current-state and draft-revision checks before writing.
 Markdown destination recognition verifies a format marker and exact body hash;
 JSON and Markdown reuse the same flushed, hash-checked atomic commit primitive.
 Neither Markdown path looks up/applies native annotations or advances history.
+
+The history action captures supported current state on the UI thread and reads
+the same detached, hash-checked `ExportRecordings` catalogue on a worker.
+Session/search filters only affect browsing. Selected original global indices
+seed the shared range selector; every intervening recording is previewed before
+the existing AI/Markdown export flow. Original context, warnings and identity
+remain separate from current export-time validation. Browser open/close runs
+without Scribe text persistence; explicit exports retain ordinary text saves.
+No history model/schema, storage writer, pruning or OCS runtime is added.
 
 ## Independent project writing
 

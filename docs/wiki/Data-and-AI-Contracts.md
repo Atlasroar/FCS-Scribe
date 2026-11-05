@@ -207,6 +207,15 @@ allowed; omitting or duplicating evidence is not.
 
 ## Recording-range packets
 
+**Browse history** reads a detached copy of this same original catalogue after
+observed journal/marker/session hash checks. UI filters do not alter identities,
+order or storage. A multi-selection seeds global inclusive range bounds;
+intervening hidden entries remain part of the preview and output. Empty sessions
+produce no evidence and pending observations stay unrecorded. Browsing neither
+adopts a new draft packet nor certifies saved state or prior note application.
+No JSON/storage schema change is required. See the
+[browser workflow](Installation-and-Workflow#browse-and-export-recording-history).
+
 Schema 3 adds `ProjectId` and ordered `Recordings` alongside the existing
 packet fields. Each recording has `EntryId`, nullable `SessionId`, UTC
 `RecordedUtc`, `Kind` and its unchanged original `Packet`. Kinds are

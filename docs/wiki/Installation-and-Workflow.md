@@ -81,6 +81,35 @@ Existing active and inherited notes are preserved. An existing TODO stays a
 TODO rather than being silently reclassified. Applying notes marks the editor
 dirty but does not save or advance the tracking baseline.
 
+### Browse and export recording history
+
+Start/Resume the matching tracking project, then select **Core > Browse
+history**. This validates observed marker/journal/session bytes before opening
+a detached catalogue; damaged, changed or missing sources fail rather than
+being skipped. No new recording or compilation is performed.
+
+Choose a session or enter a case-insensitive substring search. Names, IDs,
+paths, typed before/after values, source labels and historical warnings are
+searchable. Inspect original identities/context and exact evidence in the
+read-only preview. Ctrl/Shift selects multiple entries. Empty sessions do not
+invent evidence; pending edits are explicitly **UNRECORDED**.
+
+Choose **Export AI range...** or **Export Markdown range...**. The existing
+first/last selector previews the complete inclusive range between the global
+selected entries, including filtered-out or unselected entries in between.
+Review that full preview before continuing to the destination. Cancelling the
+selector returns to browsing; closing the browser adopts no export or draft.
+AI retains save/discard protection before replacing the draft; Markdown facts
+retain its original workspace/packet association. Existing write/current-state
+guards still apply, and nothing records/compiles/saves the mod or native notes.
+
+Opening, filtering or closing history **does not save Scribe notes/tasks**.
+An explicit export uses the normal enabled-text saving behavior. The catalogue
+does not refresh while open; close/reopen after changes. It is sampled history,
+not saved gameplay, a net diff or proof that evidence was already documented.
+No retention, deletion or automatic archive controls are introduced. Large
+histories still require hash checks and detached memory in the 32-bit editor.
+
 ### Export a Markdown changelog
 
 For captured facts without an AI draft, select **Core > Export Markdown**,
@@ -191,7 +220,8 @@ extended.
 **Core > Save Changes** saves enabled notes/TODOs, even without tracking.
 With tracking open it also records the captured gameplay/context evidence.
 Other Scribe actions, eligible automatic recording and normal Scribe close
-also save enabled work. Editable notes/tasks are disabled during asynchronous
+also save enabled work, except read-only **Browse history** without an explicit
+export. Editable notes/tasks are disabled during asynchronous
 actions. This is separate from **Workspace > Save workspace / Open workspace**,
 which preserve the editable AI draft and its original packet. Closing or an
 action that cannot save fails visibly and retains in-memory work; it does not

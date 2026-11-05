@@ -11,6 +11,7 @@ remain editable drafts and require human review and approval.
 
 - [Embedded FCS window and contextual button help](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#1-embedded-window-and-contextual-help).
 - [Resumable tracking with timestamped session logs](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#2-start-tracking-establish-an-explicit-baseline).
+- [Read-only recording-history browser](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#browse-recording-history): filter sessions/search evidence, then preview a complete AI or Markdown export range.
 - [Typed before/after record, field, reference and instance evidence](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#3-save-changes-inspect-and-preserve-scribe-work).
 - [Manual AI-packet export](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#4-export-ai-packet-hand-evidence-to-an-external-assistant), [editable imported/pasted drafts](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#5-import-draft-and-paste-draft-review-before-applying) and [approved FCS Notes/TODO appends](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#6-apply-approved-notes-append-through-fcs).
 - [Markdown changelog exports](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#markdown-changelog-exports): captured facts or validated reviewed prose, with exact values and linked evidence.
