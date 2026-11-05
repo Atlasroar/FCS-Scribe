@@ -7,6 +7,45 @@ For current supported use and open gates, see
 [Validation and limitations](Validation-and-Limitations). For what changed
 in each release, see [Release history](Release-History).
 
+## Markdown changelog exports (beta 22)
+
+The owner-selected feature passed **763 core checks**, a warnings-as-errors
+plugin build, **110 mod-work/menu** and **35 export-protection** checks in
+targeted copied native hosts. The native fixture was a small pre-existing
+single-record disposable copy, not a new full official-data/custom-stack
+acceptance run. Its captured gameplay, native notes/dirty state and saved mod
+bytes remained unchanged by export.
+
+Core coverage includes deterministic/culture-independent output, exact typed
+values and control escapes, missing/null/empty/false/removal distinctions,
+unresolved references, stored/effective grouping, original/qualified evidence,
+ordered reversals, context-only/pending warnings, complete reviewed prose,
+missing/duplicate/stale/target rejection and original schema-1 packets.
+Storage cases include intact generated replacement, stale/edited/unrelated/
+damaged/renamed tracking rejection, reserved locations, injected write/flush/
+precommit failures, external conversion and actual Windows sharing denial.
+
+Copied native checks verify both actions' menu/help/busy behavior; factual
+export leaves the draft association alone. Reviewed export retains exact
+draft text, packet/workspace association and native state, rejects late
+destination-selection revisions/missing evidence/stale data, and produces
+identical output after Open workspace in a fresh Scribe window without
+tracking. Export with tracking open preserves its head/session bytes and
+does not create a compiled journal.
+
+Actual GFM rendering of **synthetic-only** content verified two eight-column
+field/name tables, three evidence anchors/citation links, and no injected
+images/scripts/external links. GFM auto-link behavior initially interpreted
+literal escaped URLs as links; colon entities fixed that rendering issue,
+with a regression check. The slim synthetic profiling runner also compiled
+and ran with 20 records, 4 entries, 2 sessions and 10 large-record cells;
+that is a compiler smoke check, not a new performance envelope.
+
+No live installation, original mod/sidecar repair, OCS/runtime dependency,
+AI-provider connection, schema change or physical beta 22 acceptance is claimed.
+Beta 21's owner-reported checklist and saved-mod discrepancy below retain their
+own scope; they do not certify the new Markdown actions.
+
 ## Shared warnings and help (beta 21)
 
 The user-directed footer cleanup passed **694 core checks**, a warnings-as-errors
@@ -55,6 +94,68 @@ bytes were not independently compared in this pass. It does not rerun or
 override the [earlier final notes checkpoint correction](#final-notes-checkpoint-correction),
 establish other stacks/extensions/builds, test physical failures or Steam
 publishing, or close S09/MVP acceptance. Earlier results retain their own scope.
+
+### Tracking, AI handoff and workspace follow-up: November 5, 2026
+
+The user continued in the same protected beta 21 setup, with Manual recording
+and enabled Scribe notes/tasks. A separate new tracking project preserved older
+acceptance files. The guided portion stopped before a new Resume, reversal
+recording or compilation round trip.
+
+| Area | Observed result and evidence boundary |
+|---|---|
+| New baseline and recording | User confirmed a reversible committed Name edit and an unchanged repeat. Independent inspection found one recording with valid project/session/parent/hash identities, unchanged original baseline bytes and, at that checkpoint, unchanged saved test `.mod` bytes. |
+| Inclusive AI range | User selected that recording as both endpoints. Independent validation confirmed a schema-3 packet, its retained original packet, qualified citations and current-state fingerprint. Export did not advance or compile history. The effective rename and added active name value were two evidence views of one edit. |
+| Complete draft and cancellation | A private response used the actual outer template and cited both changes exactly once for one target. Packet/response checks passed; the user reached live approval for one pending note and chose No. No native append was requested in this guided step. |
+| Incomplete draft | A controlled valid-JSON variant omitted only one citation. The user confirmed missing-evidence rejection before approval, rather than a JSON parsing error. |
+| Workspace | Repository Load/Validate checks confirmed exact complete draft text, original packet and packet checksum. The user restored it after discarding only the deliberately incomplete scratch text and confirmed one pending note passed live validation. |
+| Stale state | After changing the visible Name back without Save Changes, the user confirmed stale rejection before approval and unchanged native notes. This tests that committed Name-field route, not every pending editor control. |
+| Restart and restored workspace | User reported discarding the test edit, restarting FCS, seeing the original name and restoring the old workspace as stale/unapplied, without gameplay restoration. Independent hashes preserved notes, tasks, settings, original baseline, original recording, AI packet and workspace bytes. |
+
+**Unresolved saved-mod discrepancy:** the saved test `.mod` hash changed across
+the last restart. The user explicitly reported discarding without native Save;
+read-only inspection also found the current `.mod.bak` matched the changed file.
+No cause or Scribe attribution was established, and no file was repaired or
+restored by the agent. The earlier unchanged-mod checkpoints remain valid for
+their own times; this later observation is not a passed byte-preservation
+check. Native shared annotation sidecar bytes were not independently compared.
+The investigation and further guided Resume/record/compile steps were paused
+at the user's request.
+
+### Owner checklist decision: November 5, 2026
+
+After switching from interactive prompts to a self-guided checklist, the owner
+directed: "list all as pass, document it and lets continue on features".
+The following are **owner-reported Pass statuses**, not fourteen independently
+observed test executions. They supplement, rather than replace, the guided
+observations and their exceptions above.
+
+| Checklist feature | Owner-reported result |
+|---|---|
+| Window and menus | Pass |
+| Help/warnings footer | Pass |
+| Scribe Notes | Pass |
+| Mod To Do | Pass |
+| Project settings | Pass |
+| Start/Resume tracking | Pass |
+| Save Changes | Pass |
+| Automatic recording | Pass |
+| Compilation | Pass |
+| AI range export | Pass |
+| Draft validation | Pass |
+| Workspace | Pass |
+| Workshop and recovery | Pass |
+| Native annotation application and matching-block retry | Pass |
+
+This is the owner's acceptance decision for the listed current-release feature
+areas and authorization to resume feature work. It does not establish a cause
+for the saved-mod discrepancy, independent native-sidecar integrity, other
+builds/stacks/extensions, physical failures or live Steam behavior. The guided
+native step reached approval and cancelled; the later owner checklist's native
+Pass has no independently captured append/save/retry trace. The earlier choice
+not to rerun final original KEEP/generated-block retention remains recorded.
+No new plugin release, version bump or replacement of beta 21 assets results
+from this evidence-only update.
 
 ## Earlier validation reports
 

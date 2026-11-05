@@ -9,9 +9,10 @@ It does not replace FCS or load an AI provider.
 | `src\Tracking.cs` | Resumable documents, structural/history integrity checks, atomic checkpoint storage and settings | Read live FCS objects from worker threads or claim that legacy packets restore a full baseline |
 | `src\Journal.cs` | Replayable record deltas, timestamped session logs, durable-head marker, writer lease, idempotent compilation, ownership-checked initialization/tail recovery and independent deadlines | Rewrite a full baseline each tick, claim unknown storage, discard uncompiled history or restore mod binaries |
 | `src\RangeExport.cs` | Selected original packets, stable range identity and collision-free qualified evidence in schema-3 AI handoffs | Rewrite saved batches, collapse observed reversals or treat a range as a resumable baseline |
+| `src\MarkdownExport.cs` | Deterministic escaped recording/typed-value Markdown and separately validated, evidence-linked draft prose | Add a second diff engine, infer gameplay intent/provenance, apply notes or treat Markdown as a workspace |
 | `src\DraftWorkspace.cs` | Versioned portable original-packet/exact-text bundles, integrity validation and restored-draft readiness reporting | Invent missing evidence, approve restored text, save mods or treat draft text as tracking history |
 | `src\SettingsStorage.cs` | Explicit load errors with same-stream hashes, cooperating save lease, stale-file checks and unique original-byte repair backups | Silently default invalid settings, overwrite an unreadable original or claim a universal filesystem lock |
-| `src\ExportStorage.cs` | Active/inactive destination classification, reserved storage guards and observed-hash atomic JSON exports | Overwrite recognized tracking data, treat unclassifiable destinations as safe or claim universal filesystem exclusion |
+| `src\ExportStorage.cs` | Active/inactive destination classification, reserved storage guards, intact generated-Markdown recognition and observed-hash atomic exports | Overwrite recognized tracking data or edited Markdown, treat unclassifiable destinations as safe or claim universal filesystem exclusion |
 | `src\ModWork.cs` | Independent plain notes/task files, strict text validation, guarded atomic saves and mod-bound project location | Treat two text files as one transaction, migrate old roots silently or overwrite foreign tasks/settings |
 | `src\ModWorkView.cs` | Plain notes editor, task list/dialog and opt-in native record-menu extension | Replace native Add Todo Item or write native annotations |
 | `src\SettingsDialog.cs` | New/resume choice, recording-range preview, recording/export defaults and notes/task/project-folder configuration | Automatically convert legacy evidence or export a range without confirmation |
@@ -98,6 +99,15 @@ copied changes, not full snapshots/deltas. Source validation and range building
 use detached data on workers; live capture and preview stay on the UI thread.
 Export neither advances recording nor compiles sessions, and current-state
 fingerprints still govern note application for historical ranges.
+
+Markdown shares the existing recording-range selection and packet catalogue.
+Factual export does not replace the editable draft. Reviewed export retains
+its original packet and validates detached draft text/current state before
+rendering facts and prose separately. Rendering/storage run on workers, with
+fresh UI-thread current-state and draft-revision checks before writing.
+Markdown destination recognition verifies a format marker and exact body hash;
+JSON and Markdown reuse the same flushed, hash-checked atomic commit primitive.
+Neither Markdown path looks up/applies native annotations or advances history.
 
 ## Independent project writing
 

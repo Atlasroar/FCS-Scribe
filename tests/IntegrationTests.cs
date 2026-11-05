@@ -344,9 +344,9 @@ internal static class IntegrationTests
             Check(window.MainMenuStrip == actions && !actions.AllowMerge && actions.TabStop,
                 "menus stay inside Scribe and support keyboard access without merging into FCS");
             string[][] groups = {
-                new[] { "Start tracking", "Save Changes", "Compile journal", "Export AI packet" },
+                new[] { "Start tracking", "Save Changes", "Compile journal", "Export AI packet", "Export Markdown" },
                 new[] { "Export Workshop info", "Archive preview image" },
-                new[] { "Import draft", "Paste draft" },
+                new[] { "Import draft", "Paste draft", "Export reviewed Markdown" },
                 new[] { "Save workspace", "Open workspace" }
             };
             for (int i = 0; i < groups.Length; i++)
@@ -354,7 +354,7 @@ internal static class IntegrationTests
                     menus[i].Text + " contains the requested actions in order");
             var commands = menus.SelectMany(x => x.HasDropDownItems ?
                 x.DropDownItems.Cast<ToolStripMenuItem>() : new[] { x }).ToList();
-            Check(commands.Count == 12, "all ten original actions plus two workspace actions remain available");
+            Check(commands.Count == 14, "all original/workspace actions plus factual and reviewed Markdown exports remain available");
             foreach (ToolStripMenuItem item in menus.Take(4).Concat(commands))
             {
                 typeof(ToolStripItem).GetMethod("HandleMouseEnter", Flags).Invoke(item, new object[] { EventArgs.Empty });
@@ -593,6 +593,10 @@ internal static class IntegrationTests
             Packet packet = new Tracker(current).Export(current);
             Reject<InvalidOperationException>(() => CallWindowAction(window, "SavePacketPath", inactive, packet),
                 "AI export write path rejects another project's anchor");
+            bool markdownRejected = false;
+            try { RunWindow(window, "SaveMarkdownPath", Path.Combine(inactive + ".scribe", "sessions", "new.md"), packet, null, 0L); }
+            catch (InvalidOperationException) { markdownRejected = true; }
+            Check(markdownRejected, "Markdown window export rejects inactive reserved storage");
             Check(originals.All(x => TrackingStorage.HashFile(x.Key) == x.Value) &&
                 Directory.GetFiles(directory, "*", SearchOption.AllDirectories).Length == originals.Count,
                 "rejected actual window writes preserve the complete inactive project");
@@ -615,6 +619,19 @@ internal static class IntegrationTests
             Reject<InvalidDataException>(() => CallWindowAction(window, "SaveWorkshopPath", valid, workshop),
                 "actual Workshop write path refuses damaged JSON");
             Check(File.ReadAllText(valid) == "{ damaged JSON", "damaged destination remains untouched");
+            string markdown = Path.Combine(directory, "ordinary.md");
+            RunWindow(window, "SaveMarkdownPath", markdown, packet, null, 0L);
+            Check(File.ReadAllText(markdown).Contains("No record-change evidence") &&
+                FcsAdapter.Field(window, "exported") == null && FcsAdapter.Field(window, "project") == null,
+                "factual Markdown exports without adopting a draft packet or starting tracking");
+            File.AppendAllText(markdown, "\nmanual edit");
+            string markdownHash = TrackingStorage.HashFile(markdown);
+            markdownRejected = false;
+            try { RunWindow(window, "SaveMarkdownPath", markdown, packet, null, 0L); }
+            catch (InvalidDataException) { markdownRejected = true; }
+            Check(markdownRejected && TrackingStorage.HashFile(markdown) == markdownHash,
+                "actual Markdown window path preserves edited generated files");
+            CheckReviewedMarkdownWindow(adapter, editor, directory, window);
             string workspace = Path.Combine(directory, "workspace.json");
             RunWindow(window, "SaveWorkspacePath", workspace);
             File.Copy(standalone, workspace + ".bak");
@@ -629,7 +646,86 @@ internal static class IntegrationTests
             string active = ((JournalProject)FcsAdapter.Field(window, "project")).PathName;
             Reject<InvalidOperationException>(() => CallWindowAction(window, "SaveWorkshopPath", active, workshop),
                 "current project remains protected after Start");
+            var openProject = (JournalProject)FcsAdapter.Field(window, "project");
+            string head = openProject.HeadId, sessionHash = TrackingStorage.HashFile(openProject.SessionPath);
+            RunWindow(window, "SaveMarkdownPath", Path.Combine(directory, "tracked.md"), new Tracker(adapter.Capture()).Export(adapter.Capture()), null, 0L);
+            Check(openProject.HeadId == head && TrackingStorage.HashFile(openProject.SessionPath) == sessionHash &&
+                !File.Exists(Path.Combine(active + ".scribe", "journal.jsonl")),
+                "Markdown export with tracking open neither records nor compiles history");
         }
+    }
+
+    private static void CheckReviewedMarkdownWindow(FcsAdapter adapter, Form editor, string directory, ScribeWindow window)
+    {
+        object nav = FcsAdapter.Field(editor, "nav");
+        IDictionary records = (IDictionary)FcsAdapter.Field(FcsAdapter.Field(FcsAdapter.Field(nav, "ou"), "gameData"), "items");
+        object item = records.Values.Cast<object>().First();
+        string name = (string)FcsAdapter.Property(item, "Name");
+        bool dirty = (bool)FcsAdapter.Property(nav, "HasChanges");
+        Snapshot before = adapter.Capture();
+        string modHash = TrackingStorage.HashFile(adapter.ActiveModDirectory() + "\\scribe-test.mod");
+        try
+        {
+            Set(item, "Name", name + " Markdown fixture");
+            Snapshot current = adapter.Capture();
+            Packet packet = new Tracker(before).Export(current);
+            NoteDraft notes = Json.Read<NoteDraft>(Json.Write(packet.ResponseTemplate));
+            foreach (NoteEntry entry in notes.Entries) entry.Text = "Reviewed Markdown fixture.";
+            string text = Json.Pretty(Json.Write(notes));
+            FcsAdapter.Call(window, "AdoptWorkspace", packet, text, null, null);
+            string workspace = Path.Combine(directory, "reviewed-workspace.json");
+            RunWindow(window, "SaveWorkspacePath", workspace);
+            string workspaceHash = TrackingStorage.HashFile(workspace), fingerprint = adapter.Capture().Fingerprint();
+            string nativeNotes = adapter.Notes(notes.Entries[0].TargetRecordId);
+            bool exportDirty = (bool)FcsAdapter.Property(nav, "HasChanges");
+            long revision = (long)FcsAdapter.Field(window, "draftRevision");
+            string destination = Path.Combine(directory, "reviewed.md");
+            RunWindow(window, "SaveMarkdownPath", destination, packet, notes, revision);
+            Check(File.ReadAllText(destination).Contains("Reviewed Markdown fixture") &&
+                File.ReadAllText(destination).Contains("](#evidence-000001)") && FcsAdapter.Field(window, "project") == null,
+                "reviewed Markdown exports a validated draft without an open tracking project");
+            Check(((TextBox)FcsAdapter.Field(window, "draft")).Text == text &&
+                Object.ReferenceEquals(FcsAdapter.Field(window, "exported"), packet) &&
+                !(bool)FcsAdapter.Property(window, "DraftNeedsSave") &&
+                TrackingStorage.HashFile(workspace) == workspaceHash,
+                "reviewed Markdown retains exact draft text, original packet and saved workspace association");
+            using (var restored = new ScribeWindow(adapter, editor, Path.Combine(directory, "restored-markdown-settings.json")))
+            {
+                RunWindow(restored, "OpenWorkspacePath", workspace);
+                Packet restoredPacket = (Packet)FcsAdapter.Field(restored, "exported");
+                NoteDraft restoredDraft = Json.Read<NoteDraft>(((TextBox)FcsAdapter.Field(restored, "draft")).Text);
+                string restoredPath = Path.Combine(directory, "restored.md");
+                RunWindow(restored, "SaveMarkdownPath", restoredPath, restoredPacket, restoredDraft,
+                    (long)FcsAdapter.Field(restored, "draftRevision"));
+                Check(File.ReadAllText(restoredPath) == File.ReadAllText(destination) &&
+                    FcsAdapter.Field(restored, "project") == null && TrackingStorage.HashFile(workspace) == workspaceHash,
+                    "a fresh window exports identical reviewed Markdown from a restored workspace without tracking or rewriting the bundle");
+            }
+            Check(adapter.Capture().Fingerprint() == fingerprint && adapter.Notes(notes.Entries[0].TargetRecordId) == nativeNotes &&
+                (bool)FcsAdapter.Property(nav, "HasChanges") == exportDirty &&
+                TrackingStorage.HashFile(adapter.ActiveModDirectory() + "\\scribe-test.mod") == modHash,
+                "reviewed Markdown never mutates native gameplay, annotations, dirty state or saved mod bytes");
+            ((TextBox)FcsAdapter.Field(window, "draft")).Text += " ";
+            string late = Path.Combine(directory, "late.md");
+            bool rejected = false;
+            try { RunWindow(window, "SaveMarkdownPath", late, packet, notes, revision); }
+            catch (InvalidOperationException) { rejected = true; }
+            Check(rejected && !File.Exists(late), "draft edits during destination selection block stale reviewed exports");
+            NoteDraft incomplete = Json.Read<NoteDraft>(Json.Write(notes));
+            incomplete.Entries[0].ChangeIds.RemoveAt(0);
+            string invalid = Path.Combine(directory, "incomplete.md");
+            rejected = false;
+            try { RunWindow(window, "SaveMarkdownPath", invalid, packet, incomplete, (long)FcsAdapter.Field(window, "draftRevision")); }
+            catch (InvalidDataException) { rejected = true; }
+            Check(rejected && !File.Exists(invalid), "actual reviewed Markdown path rejects missing citations before writing");
+            Set(item, "Name", name);
+            string stale = Path.Combine(directory, "stale.md");
+            rejected = false;
+            try { RunWindow(window, "SaveMarkdownPath", stale, packet, notes, (long)FcsAdapter.Field(window, "draftRevision")); }
+            catch (InvalidOperationException) { rejected = true; }
+            Check(rejected && !File.Exists(stale), "actual reviewed Markdown path rejects stale editor state");
+        }
+        finally { Set(item, "Name", name); Set(nav, "HasChanges", dirty); }
     }
 
     private static void CallWindowAction(ScribeWindow window, string method, params object[] args)

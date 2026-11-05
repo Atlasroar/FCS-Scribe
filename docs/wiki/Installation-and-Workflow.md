@@ -81,6 +81,36 @@ Existing active and inherited notes are preserved. An existing TODO stays a
 TODO rather than being silently reclassified. Applying notes marks the editor
 dirty but does not save or advance the tracking baseline.
 
+### Export a Markdown changelog
+
+For captured facts without an AI draft, select **Core > Export Markdown**,
+choose an inclusive recording range, inspect the existing evidence preview
+and save a separate `.md` file. The document retains each recording, including
+context-only and explicitly unrecorded entries in the chosen range; stored
+and effective rows are not counted as separate gameplay edits.
+
+For a prose changelog, review the complete associated draft and select
+**Draft > Export reviewed Markdown**. This uses its original packet rather than
+selecting a different range. It works after **Workspace > Open workspace**
+without starting tracking, but unfinished/missing-evidence/stale drafts are
+rejected before writing. Captured facts and user-selected prose stay separate,
+with evidence links. Exporting prose is not native approval or application.
+
+Both actions leave the draft, original packet, saved workspace and tracking
+history in place. They never save the `.mod` or native annotations; enabled
+Scribe notes/tasks still save through the ordinary Scribe action wrapper.
+Finish editor controls normally and export again if data changes during
+selection/rendering. Late draft edits block reviewed export without losing text.
+
+Markdown defaults to the same project/export folder settings as JSON. An
+intact generated document can be replaced atomically, without rotating a
+`.bak`. The first-line marker includes a SHA-256 of its exact UTF-8 body; manual
+edits invalidate replacement recognition. Preserve edited documents and choose
+a new filename instead. This consistency check is not authorship/signing.
+Reserved tracking storage and non-`.md` targets remain protected.
+Review private mod/prose content before sharing; Markdown is not a replacement
+for the original AI packet, draft workspace or complete tracking backup.
+
 <a id="finish-edits-and-understand-sampling-beta-13"></a>
 
 ### Finish edits and understand sampling
@@ -129,7 +159,7 @@ Hidden/minimized/busy windows, open menus and modal dialogs defer work without
 acknowledging the deadline. After successful compilation there is no empty
 timer: the next first pending recording starts a fresh age window.
 
-New JSON destinations default to the **Scribe project folder**:
+New JSON and Markdown export destinations default to the **Scribe project folder**:
 the active mod's actual directory unless an external project folder is enabled.
 The independent custom export-directory setting still overrides dialog defaults;
 dialogs allow individual locations. Changing defaults does not move existing

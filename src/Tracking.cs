@@ -214,6 +214,19 @@ namespace FcsScribe
             bool preserveBackup = true, bool pretty = false)
         {
             RequireJson(path);
+            return WriteAtomicContent(path, output => {
+                if (pretty)
+                {
+                    byte[] bytes = Encoding.UTF8.GetBytes(Json.Pretty(Json.Write(value)));
+                    output.Write(bytes, 0, bytes.Length);
+                }
+                else Json.WriteStream(output, value);
+            }, expectedHash, checkpoint, preserveBackup);
+        }
+
+        internal static string WriteAtomicContent(string path, Action<Stream> write, string expectedHash,
+            Action<string> checkpoint, bool preserveBackup)
+        {
             CheckUnchanged(path, expectedHash);
             string temporary = Path.GetFullPath(path) + "." + Guid.NewGuid().ToString("N") + ".tmp";
             try
@@ -221,12 +234,7 @@ namespace FcsScribe
                 using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                 {
                     if (checkpoint != null) checkpoint("write");
-                    if (pretty)
-                    {
-                        byte[] bytes = Encoding.UTF8.GetBytes(Json.Pretty(Json.Write(value)));
-                        output.Write(bytes, 0, bytes.Length);
-                    }
-                    else Json.WriteStream(output, value);
+                    write(output);
                     if (checkpoint != null) checkpoint("flush");
                     output.Flush(true);
                 }
@@ -245,10 +253,10 @@ namespace FcsScribe
         {
             if (expectedHash == null)
             {
-                if (File.Exists(path)) throw new IOException("This JSON already exists. Resume it or choose a new filename.");
+                if (File.Exists(path)) throw new IOException("This file already exists. Reload it or choose a new filename.");
             }
             else if (!File.Exists(path) || HashFile(path) != expectedHash)
-                throw new IOException("The JSON changed or disappeared outside Scribe. Automatic review is paused; reload it before saving.");
+                throw new IOException("The file changed or disappeared outside Scribe. Reload it or choose a new filename before saving.");
         }
 
         public static void RequireJson(string path)

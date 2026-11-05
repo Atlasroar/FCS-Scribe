@@ -9,6 +9,8 @@ namespace FcsScribe
 {
     public static class ExportStorage
     {
+        private const string MarkdownPrefix = "<!-- FCS-Scribe Markdown export v1: ";
+        private const string MarkdownSuffix = " -->\n";
         private const string ProtectedMessage =
             "Exports and draft workspaces cannot replace tracking anchors, backups or reserved .json.scribe storage. " +
             "Choose a separate export filename outside the project's storage folder.";
@@ -141,6 +143,73 @@ namespace FcsScribe
                 if (checkpoint != null) checkpoint(step);
                 if (step == "commit") ObserveTarget(path, activeAnchor);
             }, preserveBackup: false, pretty: true);
+        }
+
+        internal static string MarkdownDocument(string body)
+        {
+            new UTF8Encoding(false, true).GetByteCount(body);
+            return MarkdownPrefix + Json.Hash(body) + MarkdownSuffix + body;
+        }
+
+        public static string ObserveMarkdownTarget(string path, string activeAnchor)
+        {
+            RequireLocation(path, activeAnchor);
+            if (!String.Equals(Path.GetExtension(path), ".md", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Markdown export requires a .md filename; mod/game files are never export targets.");
+            FileStream stream;
+            try { stream = File.OpenRead(path); }
+            catch (FileNotFoundException) { return null; }
+            using (stream)
+            using (var sha = SHA256.Create())
+            {
+                string hash = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+                stream.Position = 0;
+                ValidateMarkdown(stream);
+                return hash;
+            }
+        }
+
+        private static void ValidateMarkdown(Stream stream)
+        {
+            byte[] header = new byte[MarkdownPrefix.Length + 64 + MarkdownSuffix.Length];
+            for (int i = 0; i < header.Length; i++)
+            {
+                int next = stream.ReadByte();
+                if (next < 0) throw InvalidMarkdown();
+                header[i] = (byte)next;
+            }
+            string text = Encoding.ASCII.GetString(header);
+            if (!text.StartsWith(MarkdownPrefix, StringComparison.Ordinal) ||
+                !text.EndsWith(MarkdownSuffix, StringComparison.Ordinal)) throw InvalidMarkdown();
+            using (var sha = SHA256.Create())
+                if (text.Substring(MarkdownPrefix.Length, 64) !=
+                    BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant())
+                    throw InvalidMarkdown();
+        }
+
+        private static InvalidDataException InvalidMarkdown()
+        {
+            return new InvalidDataException("The destination is not an intact Scribe-generated Markdown export. " +
+                "Edited, unrelated or damaged files are not overwritten; choose a new filename.");
+        }
+
+        public static void WriteMarkdown(string path, string text, string activeAnchor)
+        {
+            WriteMarkdown(path, text, activeAnchor, ObserveMarkdownTarget(path, activeAnchor), null);
+        }
+
+        internal static void WriteMarkdown(string path, string text, string activeAnchor, string expectedHash,
+            Action<string> checkpoint)
+        {
+            if (ObserveMarkdownTarget(path, activeAnchor) != expectedHash)
+                throw new IOException("The Markdown destination changed outside Scribe. Choose a new filename or review and export again.");
+            byte[] bytes = new UTF8Encoding(false, true).GetBytes(text);
+            using (var stream = new MemoryStream(bytes)) ValidateMarkdown(stream);
+            TrackingStorage.WriteAtomicContent(path, stream => stream.Write(bytes, 0, bytes.Length),
+                expectedHash, step => {
+                    if (checkpoint != null) checkpoint(step);
+                    if (step == "commit") ObserveMarkdownTarget(path, activeAnchor);
+                }, false);
         }
     }
 }

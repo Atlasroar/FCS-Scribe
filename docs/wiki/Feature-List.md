@@ -15,6 +15,8 @@ they do, where to find them and their important boundaries. Follow
 | Save Scribe changes | Core > Save Changes | Enabled notes/tasks and durable tracking evidence; not native mod Save |
 | Journal consolidation | Core > Compile journal | Idempotent compilation without deleting session originals |
 | Manual AI handoff | Core > Export AI packet | Selected recording-range evidence, not the full loaded database |
+| Markdown changelog | Core > Export Markdown | Readable recording-range facts; no AI required |
+| Reviewed Markdown | Draft > Export reviewed Markdown | Complete validated draft prose, separate from its original captured facts |
 | Editable AI response | Draft > Import draft / Paste draft | Reviewable JSON; import/paste does not apply it |
 | Portable draft workspace | Workspace > Save workspace / Open workspace | Exact unfinished text with its original packet |
 | Approved native annotations | Apply approved notes | Validated FCS Notes/TODO appends; marks FCS dirty without saving |
@@ -97,6 +99,29 @@ Every exported change must be cited **exactly once** across the full draft.
 Each target must survive and appear once; combine entries sharing a target,
 including documentation for deleted records. Validation cannot prove that
 the prose is correct. See the [draft contract](Data-and-AI-Contracts#draft-shape).
+
+## Markdown changelog exports
+
+**Core > Export Markdown** uses the same inclusive recording-range selector
+and catalogue as AI export. It needs tracking, but no AI response. Records and
+field/reference paths group the evidence views; typed before/after values,
+source/layer labels, unresolved references and original recording identities
+remain visible. Reversals are not collapsed into a net diff.
+
+**Draft > Export reviewed Markdown** includes the associated original catalogue
+and complete draft prose in separate sections, with citations linking to
+evidence rows. Review the prose first. Batch identity, current state, surviving
+targets and exactly-once coverage must pass; native annotations are not queried
+or applied. A valid restored workspace needs no open tracking project.
+
+Both actions preserve the editable draft and its packet/workspace association.
+They do not record, compile, save the mod or approve native notes. Partial and
+historical warnings remain in the document, and untrusted content is escaped
+as literal text rather than active Markdown/HTML or external links.
+Choose `.md`; an intact Scribe-generated export can be replaced, but edited,
+unrelated, damaged and tracking/storage destinations are refused.
+See [exporting Markdown](Installation-and-Workflow#export-a-markdown-changelog)
+and the [Markdown contract](Data-and-AI-Contracts#markdown-export-contract).
 
 <a id="portable-draft-workspaces-beta-7"></a>
 
@@ -186,7 +211,7 @@ mod, apply notes or recover lost gameplay.
 
 ## Planned features: not implemented
 
-Broader history controls, Markdown changelogs, wiki-ready exports and direct
+Broader history controls, wiki-ready exports and direct
 AI connections are not shipped. The [OCS proposal](OpenConstructionSet-Integration)
 is also unimplemented. Scope/checklists belong in the
 [working plan](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/plan.md),

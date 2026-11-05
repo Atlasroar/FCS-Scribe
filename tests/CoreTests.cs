@@ -514,6 +514,7 @@ internal static class CoreTests
             passed += TrackingTests.Run();
             passed += JournalTests.Run();
             passed += ModWorkTests.Run();
+            passed += MarkdownTests.Run();
             Console.WriteLine("PASS: " + passed + " core checks");
             return 0;
         }
