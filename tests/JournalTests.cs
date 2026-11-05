@@ -76,6 +76,8 @@ internal static class JournalTests
             string original = File.ReadAllText(first);
             File.WriteAllText(first, original.Replace("\"11\"", "\"19\""));
             Reject<IOException>(() => project.Compile(), "hash checks reject edited fully compiled sessions before skipping parsing");
+            Reject<IOException>(() => project.ExportRecordings(project.State),
+                "history catalogue also hash-checks fully compiled session bytes before reading");
             Check(File.ReadAllText(first) != original, "compiled-session rejection never rewrites the external edit");
             File.WriteAllText(first, original);
         }
@@ -101,6 +103,8 @@ internal static class JournalTests
         {
             File.Delete(first);
             Reject<IOException>(() => project.Compile(), "compiled sessions removed during an open project still fail explicitly");
+            Reject<IOException>(() => project.ExportRecordings(project.State),
+                "history catalogue rejects disappeared observed sources without silently dropping their entries");
         }
         using (var project = JournalProject.Open(path))
             Check(project.EntryCount == 3 && project.Compile() == 0 && File.Exists(second) && File.Exists(empty) &&
@@ -861,6 +865,20 @@ internal static class JournalTests
                 .Where(x => Path.GetFileName(x) != "writer.lock").Concat(new[] { path }).ToArray();
             var hashes = files.ToDictionary(x => x, TrackingStorage.HashFile);
             head = project.HeadId; int count = project.PendingCount;
+            var reread = project.ExportRecordings(latest);
+            Check(reread.Select(x => x.EntryId).SequenceEqual(choices.Select(x => x.EntryId)) &&
+                reread.Select(x => Json.Write(x.Packet)).SequenceEqual(choices.Select(x => Json.Write(x.Packet))),
+                "repeated read-only history catalogues preserve original order, identities and packets");
+            reread[0].Packet.Changes[0].After.Text = "edited detached UI data";
+            Check(Json.Write(project.ExportRecordings(latest)[0].Packet) == originalPacket,
+                "detached browser data cannot mutate the project's retained original evidence");
+            string markerPath = Path.Combine(path + ".scribe", "project.json");
+            byte[] markerBytes = File.ReadAllBytes(markerPath);
+            File.AppendAllText(markerPath, " ");
+            Reject<IOException>(() => project.ExportRecordings(latest), "history source reads reject changed marker bytes");
+            File.WriteAllBytes(markerPath, markerBytes);
+            Check(hashes.All(x => TrackingStorage.HashFile(x.Key) == x.Value) && project.HeadId == head &&
+                project.PendingCount == count, "read-only history reads and a restored injected source failure preserve storage and compilation debt");
             fullRange = RangeExport.Create(project.ProjectId, choices, 0, 4, latest);
             Check(fullRange.Recordings.Count == 5 && fullRange.Changes.Count == 4 &&
                 fullRange.Changes.Select(x => x.Id).Distinct().Count() == 4,

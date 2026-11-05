@@ -14,6 +14,7 @@ they do, where to find them and their important boundaries. Follow
 | Explicit, resumable tracking | Core > Start tracking | Current-editor baseline and timestamped session evidence, not a vanilla comparison |
 | Save Scribe changes | Core > Save Changes | Enabled notes/tasks and durable tracking evidence; not native mod Save |
 | Journal consolidation | Core > Compile journal | Idempotent compilation without deleting session originals |
+| Recording-history browser | Core > Browse history | Read-only session/search filters and original evidence; complete range preview before export |
 | Manual AI handoff | Core > Export AI packet | Selected recording-range evidence, not the full loaded database |
 | Markdown changelog | Core > Export Markdown | Readable recording-range facts; no AI required |
 | Reviewed Markdown | Draft > Export reviewed Markdown | Complete validated draft prose, separate from its original captured facts |
@@ -88,6 +89,33 @@ ranges can document the same evidence again; inspect citations and existing
 notes. The plugin sends nothing online. Review private content before sharing.
 
 See the [recording-range contract](Data-and-AI-Contracts#recording-range-packets-beta-5).
+
+## Browse recording history
+
+**Core > Browse history** reads the same validated catalogue used by range
+exports. Filter by session or search names, stable IDs, fields, typed values,
+source labels and context/Workshop warnings. Ctrl/Shift selects several
+entries. Original timestamps, batch/baseline/fingerprint identities, qualified
+citations, exact changes and historical context remain visible.
+
+Compiled and uncompiled recordings appear once in their verified order.
+Legacy checkpoints/imports and current **UNRECORDED** edits have explicit
+groups; sessions without evidence contain no invented recordings. The browser
+is a detached snapshot: close/reopen to refresh. It is not a saved-mod view,
+event log, history editor or list of already applied notes.
+
+**Export AI range...** and **Export Markdown range...** open the existing
+inclusive first/last selector, seeded from the selected global entries.
+Its preview includes every intervening entry, even hidden/unselected ones.
+Filters never silently drop evidence or collapse reversals. AI export retains
+the normal draft save/discard guard; Markdown facts do not replace the draft.
+Context-only selections are browseable but need record-change evidence to export.
+
+Opening, filtering and closing this browser save nothing, including enabled
+unsaved Scribe notes/tasks. Explicit exports retain ordinary Scribe text saves
+and existing destination/current-state guards. Nothing records, compiles,
+prunes, restores gameplay or applies native notes. See the
+[history workflow](Installation-and-Workflow#browse-and-export-recording-history).
 
 ## 5. Import draft and Paste draft: review before applying
 
@@ -211,7 +239,7 @@ mod, apply notes or recover lost gameplay.
 
 ## Planned features: not implemented
 
-Broader history controls, wiki-ready exports and direct
+History retention/editing controls, wiki-ready exports and direct
 AI connections are not shipped. The [OCS proposal](OpenConstructionSet-Integration)
 is also unimplemented. Scope/checklists belong in the
 [working plan](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/plan.md),

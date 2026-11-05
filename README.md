@@ -11,6 +11,7 @@ remain editable drafts and require human review and approval.
 
 - [Embedded FCS window and contextual button help](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#1-embedded-window-and-contextual-help).
 - [Resumable tracking with timestamped session logs](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#2-start-tracking-establish-an-explicit-baseline).
+- [Read-only recording-history browser](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#browse-recording-history): filter sessions/search evidence, then preview a complete AI or Markdown export range.
 - [Typed before/after record, field, reference and instance evidence](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#3-save-changes-inspect-and-preserve-scribe-work).
 - [Manual AI-packet export](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#4-export-ai-packet-hand-evidence-to-an-external-assistant), [editable imported/pasted drafts](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#5-import-draft-and-paste-draft-review-before-applying) and [approved FCS Notes/TODO appends](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#6-apply-approved-notes-append-through-fcs).
 - [Markdown changelog exports](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#markdown-changelog-exports): captured facts or validated reviewed prose, with exact values and linked evidence.
@@ -33,6 +34,7 @@ remain editable drafts and require human review and approval.
 - [Coding decisions](https://github.com/Atlasroar/FCS-Scribe/wiki/Coding-Decisions): integration choices and safety boundaries.
 - [Data and AI contracts](https://github.com/Atlasroar/FCS-Scribe/wiki/Data-and-AI-Contracts): snapshots, schemas, evidence, fingerprints and draft validation.
 - [Validation and limitations](https://github.com/Atlasroar/FCS-Scribe/wiki/Validation-and-Limitations): current supported scope, remaining acceptance and known risks.
+- [Testing checklist](https://github.com/Atlasroar/FCS-Scribe/wiki/Testing-Checklist): self-guided history/Markdown acceptance and related regression checks.
 - [Release history](https://github.com/Atlasroar/FCS-Scribe/wiki/Release-History): version index, original release notes and upgrade differences.
 - [Validation history](https://github.com/Atlasroar/FCS-Scribe/wiki/Validation-History): historical test results, performance measurements and dated acceptance evidence.
 - [OpenConstructionSet integration](https://github.com/Atlasroar/FCS-Scribe/wiki/OpenConstructionSet-Integration): planned read-only saved-data analysis and its boundaries; not implemented.

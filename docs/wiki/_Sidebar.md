@@ -5,6 +5,7 @@
 - [Feature list and behavior](Feature-List)
 - [Troubleshooting](Troubleshooting)
 - [Supported scope and limitations](Validation-and-Limitations)
+- [Testing checklist](Testing-Checklist)
 
 ## Technical reference
 

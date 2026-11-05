@@ -37,6 +37,7 @@ hash identifies a test dependency, not an additional runtime whitelist.
 | Performance profiles and soak | Measured workloads and one accepted bounded actual-editor soak | Universal record-count, memory, latency or leak-free guarantees |
 | CodeQL | Static analysis within its available context | A Windows plugin build, native acceptance or proof of no vulnerabilities |
 | Markdown exports | Deterministic typed/evidence-linked output, synthetic GFM rendering and guarded copied-native export paths | A new physical beta 22 acceptance pass, complete gameplay interpretation, vanilla comparisons or a tracking/workspace backup |
+| Recording-history browser | Detached original catalogue, session/search filters, complete inclusive range preview and non-writing browser behavior | A physical beta 23 acceptance pass, saved/applied state, an event log or retention/deletion guarantees |
 
 The current notes/task feature has copied-native evidence on official-data and
 representative fixtures. Its detailed scope is recorded under
@@ -67,6 +68,12 @@ Facts and reviewed prose remain separate, with exact values and evidence links.
 The owner's beta 21 checklist does not establish physical acceptance of these
 new actions or resolve the earlier saved-mod discrepancy.
 
+The [beta 23 history browser evidence](Validation-History#recording-history-browser-beta-23)
+covers read-only filtering, original context/identity, pending/legacy/empty
+states and reuse of existing export guards on a small copied fixture. It is
+not new physical FCS Extended acceptance. Retention/pruning, full metadata
+history and prior-note application status remain outside this feature.
+
 ## Capture and provenance limits
 
 Capture is a partial observation of supported committed in-memory state, not
@@ -96,8 +103,8 @@ See the [supported/omitted-state contract](Data-and-AI-Contracts#supported-and-o
   contract. Inspect partial results and retain the original complete draft
   for a guarded retry. Matching evidence IDs do not prove prose correctness.
 - Explicit workspace Save/Open preserves draft text and its packet; it is
-  not autosave or forced-termination recovery. Range selection is not a
-  general history editor or a list of already documented evidence.
+  not autosave or forced-termination recovery. History browsing/range selection
+  is not a history editor or a list of already documented evidence.
 - Hashes/leases detect self-consistency and observed conflicts, not authorship,
   universal aliases, all uncooperating-writer races or physical failures.
   Tracking histories are linear and must not be merged as text.
@@ -123,6 +130,10 @@ belong in [Building and releases](Building-and-Releases#reproduce-performance-me
 
 ## Remaining interactive acceptance
 
+Use the [self-guided testing checklist](Testing-Checklist) for current
+history/Markdown actions and related regressions. Its items start Not run;
+publishing the checklist is not a new physical acceptance pass.
+
 The owner accepted beta 21's feature checklist for the tested configuration
 and explicitly directed feature work to continue. Remaining S09 support/test
 boundaries are not silently marked passed: broader workflow/control coverage,
@@ -141,7 +152,7 @@ independent verification; untested configurations are not passed.
 
 ## Not implemented
 
-OCS saved-data integration, wiki-ready gameplay
+History retention/editing controls, OCS saved-data integration, wiki-ready gameplay
 exports, direct AI-provider connections, native notes-button redirection and
 plain-text vanilla comparisons are not current features.
 

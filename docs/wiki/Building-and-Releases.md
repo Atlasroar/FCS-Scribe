@@ -251,7 +251,8 @@ keep the source and published pages in sync.
 
 The [working feature plan](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/plan.md)
 tracks implemented work, acceptance checklists, OCS integration and future
-documentation features. The
+documentation features. The [self-guided testing checklist](Testing-Checklist)
+lists current-release user checks without claiming they have passed. The
 [feasibility report](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/feasibility.md)
 records integration findings and compatibility evidence. Version-specific
 release notes live under
@@ -266,6 +267,7 @@ release notes live under
 | Installation and workflow | Setup, use, saving, backup and recovery procedures | Historical results and schema field reference |
 | Troubleshooting | Symptoms, quoted messages and safe remedies | Changelog narration and acceptance claims |
 | Validation and limitations | Current support boundary and remaining gates | Historical measurements/test logs |
+| Testing checklist | Self-guided current-release checks and expected behavior | Historical results or unobserved Pass claims |
 | Release history | Version index, original notes and upgrade differences | Current feature instructions |
 | Validation history | Release/fixture-scoped results and dated observations | Blanket current-release acceptance |
 | Architecture / Coding decisions | Components/data flow / design rationale | Changelogs |

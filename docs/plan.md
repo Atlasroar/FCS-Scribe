@@ -618,7 +618,8 @@ coverage includes it. These results do not replace interactive acceptance.
 - [ ] Manually exercise new/resume/conversion/settings dialogs, long-running validation/close, all intervals and restart recovery in FCS Extended.
 - [x] Select combined chronological recording ranges for AI exports (beta 5).
 - [x] Save/Open portable draft/export associations independently of tracking (beta 7).
-- [ ] Add broader history-management UI beyond the recording-range selector.
+- [x] Add read-only session/search history browsing beyond the recording-range selector.
+- [ ] Scope retention/editing controls independently; never silently prune history.
 
 ## 6. OpenConstructionSet integration
 
@@ -677,7 +678,10 @@ output formats remain unimplemented and need individually agreed scope.
 - [x] Persist the baseline, identities/timestamps, dependency context and evidence across editor restarts using an anchor plus durable session/main journals.
 - [x] Restore history only after verifying active mod/context identity; report restored checkpoints/pending changes and reject incompatible sessions.
 - [ ] Preserve duplicate detection and draft-to-export associations across restarts without resetting the baseline on save/apply.
-- [ ] Add broader history browsing and retention controls beyond beta 5's inclusive AI-export range selector.
+- [x] Add read-only session/search browsing, original-context/evidence previews and explicit complete AI/Markdown range selection.
+- [x] Keep filtered/hidden intervening recordings in the inclusive export preview; preserve identities, reversals and original packets.
+- [x] Opening/filtering/closing history saves nothing, including enabled Scribe text; explicit exports keep normal text saves and draft/destination/state guards.
+- [ ] Add retention/editing controls separately; no silent deletion/pruning.
 - [x] Define versioned storage/legacy conversion, explicit corruption failures, rotating small-marker backup, permanent legacy/recovery backups and unpruned session/main history.
 - [ ] Test restart recovery, stale drafts, changed mods/dependencies, and notes-only changes.
 
@@ -744,7 +748,7 @@ next feature independently.
 
 | Feature | Existing foundation | Remaining feature boundary |
 |---|---|---|
-| Broader session-history UI | Durable journals, Resume, range selection and portable draft workspaces already exist. | Add browsing/retention controls beyond range selection while preserving identities, duplicate protection and explicit draft associations; no silent history pruning. |
+| Session-history UI (beta 23) | Read-only session/search browser and explicit inclusive AI/Markdown selection are implemented on the verified catalogue. | Retention/editing remains unimplemented; no silent pruning, saved/applied-state certification or new physical acceptance. |
 | Markdown changelogs (beta 22) | Implemented using the typed catalogue and reviewed draft prose. | Core facts / Draft reviewed Markdown, deterministic escaping, exact values/layers, evidence links and guarded writes; no OCS or second diff engine. Physical current-release acceptance remains separate. |
 | Optional OCS saved-data backend | Repository assessment exists, but no runtime/package integration has shipped. | Pin/validate a version, choose the runtime/process boundary and protocol, then implement read-only saved-data loading and FCS cross-validation. Keep live unsaved tracking usable without OCS. |
 | Wiki-ready mod documentation | Proposed records/relationships/provenance exports only. | Wait for verified dependency interpretation/provenance, then produce auditable linked pages with explicit unresolved data. Flattened load order is not field ownership. |
@@ -780,8 +784,21 @@ native writes or draft/history replacement. The feature and scoped automated/
 copied-native evidence are recorded in the wiki; beta 21's checklist report
 does not become a physical Pass for these new actions.
 
+**User-directed beta 23 feature:** the owner selected the read-only session-history
+browser. Reuse validated detached original evidence, session/search filters and
+the shared complete inclusive range preview before existing AI/Markdown exports.
+No retention/deletion, native mutation, new schema, OCS or runtime is authorized.
+Copied-host UI checks initialize/show the MDI owner before modal actions; the
+earlier model-only owner-handle failure was a test setup failure, not a claimed
+physical acceptance result. See [history evidence](wiki/Validation-History.md#recording-history-browser-beta-23).
+
+**User-directed beta 23 publication:** merge the focused history PR, publish
+the next release and provide a [self-guided checklist](wiki/Testing-Checklist.md).
+Its fifteen items start Not run; do not transfer beta 21's Pass statuses or
+restart popup-driven UI tests. Release publication does not install the plugin.
+
 1. Preserve S09 observations and remaining exceptions; owner-reported acceptance and independently verified results remain distinct.
 2. S10/S11 are addressed in betas 12/13; S12's tested scope is explicitly accepted after betas 14/15 and the actual-editor soak. S13-S16's bounded work is covered in betas 16-19. Keep unverified custom-stack/headroom, cross-machine and physical-failure boundaries and the saved-mod discrepancy visible.
 3. Proceed with individually scoped feature work under the owner's accepted configuration. Keep focused changes, regression evidence and the established PR/merge/beta-release cycle for runtime changes; evidence-only documentation does not replace binaries.
-4. Markdown is implemented for beta 22. Scope broader session history or OCS design independently next; neither history nor Markdown inherently requires an OCS runtime.
+4. Markdown (beta 22) and read-only history browsing (beta 23) are implemented. Scope retention controls or OCS design independently next; neither history nor Markdown inherently requires an OCS runtime.
 5. Validate dependency provenance before wiki-ready exports. Direct AI remains optional and requires an explicit provider/credential/consent decision.

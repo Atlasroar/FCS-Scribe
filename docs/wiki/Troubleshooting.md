@@ -236,7 +236,7 @@ edits only; it does not repair or recover missing earlier evidence.
 
 | Message / identifying prefix | Cause and solution |
 |---|---|
-| `Select Start tracking first.` | Review/Compile/AI export has no active project. Use Start tracking > New or Resume. Closing/reopening Scribe alone does not resume a project. Workshop export is separate and needs no baseline. |
+| `Select Start tracking first.` | Review/Compile/history/AI export has no active project. Use Start tracking > New or Resume. Closing/reopening Scribe alone does not resume a project. Workshop export is separate and needs no baseline. |
 | `Begin a session before recording.` | Internal project lifecycle was not initialized. Reopen/Resume through the UI; report if a normal action reaches this error. |
 | `The active mod or dependency/load-order context changed. Start tracking again.` | Current mod/path, load order or locked context differs. The message also explains: `Restore the original mod path and loaded/locked context, or choose New tracking JSON with a new filename. Existing history is not relocated or merged.` Restore the original context to Resume, or follow the [fresh-baseline workflow](Installation-and-Workflow#fresh-baseline-after-moving-a-mod-or-changing-machines). The tracking JSON path alone is not the active-mod identity. |
 | `Record type changed for stable ID <id>. Start tracking again.` | A supposedly stable ID now has another type. Verify loaded data/context; preserve the evidence and use a separate baseline only after understanding the mismatch. |
@@ -304,6 +304,13 @@ edits only; it does not repair or recover missing earlier evidence.
 | `The legacy export changed while it was being preserved.` | Concurrent mutation invalidated conversion's original-byte preservation. Stop competing edits, preserve versions and retry from a verified separate copy. |
 
 ## AI packet and recording-range errors
+
+History browsing uses these same validated sources and range guards.
+**No recordings yet** is an explicit empty baseline/session, not an all-clear
+about gameplay. **No entries selected or matching these filters** means clear
+the search or change session; it does not remove stored evidence.
+Filtered multi-selection still previews a complete inclusive range. Reopen
+the browser to refresh current state; it does not poll while open.
 
 Do not repair evidence by editing batch IDs, fingerprints, original packets or
 change IDs. Re-export from a validated project or restore the original packet.
