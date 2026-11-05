@@ -11,7 +11,7 @@ remain editable drafts and require human review and approval.
 
 - [Embedded FCS window and contextual button help](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#1-embedded-window-and-contextual-help).
 - [Resumable tracking with timestamped session logs](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#2-start-tracking-establish-an-explicit-baseline).
-- [Typed before/after record, field, reference and instance evidence](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#3-review-changes-inspect-the-evidence).
+- [Typed before/after record, field, reference and instance evidence](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#3-save-changes-inspect-and-preserve-scribe-work).
 - [Manual AI-packet export](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#4-export-ai-packet-hand-evidence-to-an-external-assistant), [editable imported/pasted drafts](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#5-import-draft-and-paste-draft-review-before-applying) and [approved FCS Notes/TODO appends](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#6-apply-approved-notes-append-through-fcs).
 - [Portable draft workspaces](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#portable-draft-workspaces-beta-7): save/open unfinished text with its original AI packet, plus save/discard protection.
 - [Mod-local plain notes and record-linked tasks](https://github.com/Atlasroar/FCS-Scribe/wiki/Installation-and-Workflow#scribe-notes-and-mod-to-do-beta-20): separate text files, an opt-in **Add Mod To Do** context action and optional external project storage.
@@ -31,7 +31,9 @@ remain editable drafts and require human review and approval.
 - [Architecture](https://github.com/Atlasroar/FCS-Scribe/wiki/Architecture): core, FCS adapter, UI and session journals.
 - [Coding decisions](https://github.com/Atlasroar/FCS-Scribe/wiki/Coding-Decisions): integration choices and safety boundaries.
 - [Data and AI contracts](https://github.com/Atlasroar/FCS-Scribe/wiki/Data-and-AI-Contracts): snapshots, schemas, evidence, fingerprints and draft validation.
-- [Validation and limitations](https://github.com/Atlasroar/FCS-Scribe/wiki/Validation-and-Limitations): supported build, recorded checks, remaining acceptance and known risks.
+- [Validation and limitations](https://github.com/Atlasroar/FCS-Scribe/wiki/Validation-and-Limitations): current supported scope, remaining acceptance and known risks.
+- [Release history](https://github.com/Atlasroar/FCS-Scribe/wiki/Release-History): version index, original release notes and upgrade differences.
+- [Validation history](https://github.com/Atlasroar/FCS-Scribe/wiki/Validation-History): historical test results, performance measurements and dated acceptance evidence.
 - [OpenConstructionSet integration](https://github.com/Atlasroar/FCS-Scribe/wiki/OpenConstructionSet-Integration): planned read-only saved-data analysis and its boundaries; not implemented.
 - [References and knowledge credits](https://github.com/Atlasroar/FCS-Scribe/wiki/References-and-Knowledge-Credits): authoritative sources, supplementary research, AI assistance and licensing.
 

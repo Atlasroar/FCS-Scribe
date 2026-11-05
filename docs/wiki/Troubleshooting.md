@@ -40,26 +40,25 @@ Use `Get-FileHash -Algorithm SHA256 -LiteralPath '<actual FCS executable>'`
 in PowerShell to check the file you launch. See
 [Installation and workflow](Installation-and-Workflow) for the full setup.
 
-## Large stacks and profiling (partial S12, betas 14-15)
+<a id="large-stacks-and-profiling-partial-s12-betas-14-15"></a>
+
+## Large stacks and profiling
 
 Faster compilation does not make capture memory-safe for every 32-bit session.
 If Review pauses for seconds or memory approaches the process limit, use Manual,
 save the mod and notes normally, preserve the complete tracking set and reopen
 when safe. Do not delete uncompiled logs or bypass hash checks. See
-[measured workloads, profiling and unresolved memory limits](Validation-and-Limitations#s12-performance-measurements-partial-beta-14).
+[current memory and latency limits](Validation-and-Limitations#performance-and-long-sessions).
 
-Beta 15 shares immutable strings within individual captures/loaded baselines.
-The copied official-data 30-cycle profile peaked at 896.7 MiB rather than
-beta 14's 1,662.8 MiB, but Review still pauses for seconds. This is not a safe
-memory threshold or leak-free guarantee. A later
-[two-hour actual-editor soak](Validation-and-Limitations#beta-15-two-hour-actual-editor-soak)
-passed one test-mod configuration without reported errors or sustained
-unresponsiveness; additional dependency/extension stacks remain unverified.
+String sharing and faster history validation do not establish a safe memory
+threshold or leak-free guarantee. Measurements and the bounded actual-editor
+soak belong in [Validation history](Validation-History#s12-performance-measurements-partial-beta-14).
+Additional dependency/extension stacks remain unverified.
 
 Profiling-only errors: `Entries must divide evenly across Sessions.` requires
 positive evenly divisible dimensions. `VanillaStack requires PerformanceOnly or
 CompatibilityOnly.` requires one of those mutually exclusive selectors alongside
-`-VanillaStack`; older releases restricted it to profiling. `Performance host compilation
+`-VanillaStack`. `Performance host compilation
 failed.`, `Performance run failed; fixture retained at ...` and `Native performance
 run failed; fixture retained at ...` are failed measurements, not passing
 budgets: inspect the reported compiler/exception output, retain the fixture
@@ -123,10 +122,10 @@ Most cannot be "cleared" without changing the supported extraction model.
 
 | Message or flag | Meaning and solution |
 |---|---|
-| `PRIVATE TRACKING SET:` | Beta 16's persistent main-window/chooser notice. Keep the baseline and complete matching `.json.scribe` storage/backups together, with writers closed before copying or archiving. Baselines include full loaded/dependency data: never send them to AI. Keep tracking, backups and draft workspaces out of Workshop content. Scribe does not inspect or block native uploads. Follow the [complete-set failure matrix](Installation-and-Workflow#complete-tracking-sets-and-restore-failures), [compiled-session archival](Installation-and-Workflow#safely-archiving-compiled-session-originals) and [pre-upload safeguards](Installation-and-Workflow#before-a-workshop-upload). |
+| `PRIVATE TRACKING SET:` | Persistent main-window/chooser notice. Keep the baseline and complete matching `.json.scribe` storage/backups together, with writers closed before copying or archiving. Baselines include full loaded/dependency data: never send them to AI. Keep tracking, backups and draft workspaces out of Workshop content. Scribe does not inspect or block native uploads. Follow the [complete-set failure matrix](Installation-and-Workflow#complete-tracking-sets-and-restore-failures), [compiled-session archival](Installation-and-Workflow#safely-archiving-compiled-session-originals) and [pre-upload safeguards](Installation-and-Workflow#before-a-workshop-upload). |
 | `PARTIAL EXTRACTION - review all warnings.` | The catalogue is intentionally incomplete. Inspect every warning and before/after value; do not describe it as a complete record of editor activity. |
 | `PARTIAL EXTRACTION - inspect names, values and all warnings before sharing.` | Recording-range preview uses the same partial model. Check selected recordings before sending a compact packet to an external assistant. |
-| `PARTIAL EXTRACTION - baseline captured; review all warnings.` (beta 13) / `PARTIAL EXTRACTION - baseline captured with Workshop availability warnings.` (earlier) | Baseline creation succeeded, not complete extraction. Beta 13 always displays capture warnings, even without optional Workshop failures. Inspect any component issues and repair only the affected local metadata/image source. |
+| `PARTIAL EXTRACTION - baseline captured; review all warnings.` / `PARTIAL EXTRACTION - baseline captured with Workshop availability warnings.` (legacy wording) | Baseline creation succeeded, not complete extraction. Capture warnings are displayed even without optional Workshop failures. Inspect any component issues and repair only the affected local metadata/image source. |
 | `PARTIAL CAPTURE - recordings sample committed model state, not editor events.` | The accompanying notice explains A-to-B-to-A omissions, zero evidence and pending/omitted data. Finish edits normally, inspect evidence and record intermediate states explicitly when needed; no recording interval guarantees a complete event log. See the [capture matrix](Data-and-AI-Contracts#supported-and-omitted-state-beta-13). |
 | `Experimental in-memory extraction, not a complete catalogue of all FCS editor state.` | Only the inspected in-memory model is captured. Retain the caveat in documentation; external assets and separate editing buffers require independent review. |
 | `Scope: "In-memory, partial extraction"` | Machine-readable scope label for the same limitation. It does not claim full saved-file or editor-buffer coverage. |
@@ -181,7 +180,7 @@ availability can change the fingerprint and make an older AI draft stale.
 
 | Message or flag | Meaning and solution |
 |---|---|
-| `SETTINGS RECOVERY - automatic recording disabled.` | Invalid/unreadable settings triggered safe Manual mode and active-mod export defaults. Follow [Settings errors](#settings-errors); merely opening Scribe does not overwrite the original. Manual project/draft/Workshop work remains available. |
+| `SETTINGS RECOVERY - automatic recording disabled.` | Invalid/unreadable settings triggered safe Manual mode and project-folder export defaults. Follow [Settings errors](#settings-errors); merely opening Scribe does not overwrite the original. Manual project/draft/Workshop work remains available. |
 | `Settings could not be loaded. Original file retained; safe manual recovery mode remains active.` | Reload still failed. Restore access or choose valid settings and explicitly repair only when original bytes can be preserved. |
 | `Action failed; automatic review paused. The baseline advances only after a successful checkpoint save.` | Read the associated error before resuming automation. For journal faults, close/reopen and validate the project first; do not simply re-enable the timer. |
 | `Automatic review paused after an error; resume or save settings to re-enable.` | Resolve the underlying cause first. Valid settings Save/Reload or successful Resume can re-enable eligible automatic work; these do not repair damaged history. |
@@ -194,7 +193,7 @@ availability can change the fingerprint and make an older AI draft stale.
 | `Automatic compilation waits for the next eligible visible, unblocked tick.` | Restore Scribe and leave menus/modal dialogs closed. Automatic work also waits for busy actions, a minimized FCS parent, valid settings and an open project. |
 | `Timestamp ahead of local UTC: treated as due now.` | A recording timestamp is ahead of the current clock. Debt becomes due rather than waiting indefinitely. Check system time; do not edit recorded timestamps. |
 | `Local UTC moved behind the recording; the existing countdown is retained.` | The wall clock moved backward after scheduling. The existing monotonic countdown is retained; check the clock without rewriting history. |
-| `Tracking is NOT a saved-mod backup.` (beta 11 and earlier) / `Tracking records captured editor state, including UNSAVED edits.` (beta 12) | Journals catalogue captured state, not recoverable `.mod`/asset backups. Beta 12 keeps the boundary notice visible even when operation/help text changes. Back up the actual mod and separate notes files. |
+| `Tracking is NOT a saved-mod backup.` (legacy wording) / `Tracking records captured editor state, including UNSAVED edits.` | Journals catalogue captured state, not recoverable `.mod`/asset backups. The boundary notice remains visible even when operation/help text changes. Back up the actual mod and separate notes files. |
 | `Last recorded UTC: <UTC>. Mod/notes save state is NOT verified.` | This is the last observed tracking state, not proof of normal FCS Save. A recording can be ahead of or behind the actual saved mod. Verify/save through FCS explicitly if intended. |
 | `Confirm resumed state` / `The editor differs from the last recorded state (<count> evidence entries; context-only differences can have zero).` | Resume validated history but the editor fingerprint differs. **No** declines this session; **Yes** keeps current editor state and lets the next manual or eligible automatic Review record differences, including reversals of discarded edits. Neither choice restores or saves mod/notes. Older versions use the shorter count-only message. |
 | `This repairs tracking history only; it cannot recover unsaved mod/notes edits or save those files.` | The interrupted-tail prompt is about tracking storage only. Preserve/repair the tracking log as instructed; recover actual mod/notes files only from an independent matching backup. |
@@ -239,7 +238,7 @@ edits only; it does not repair or recover missing earlier evidence.
 |---|---|
 | `Select Start tracking first.` | Review/Compile/AI export has no active project. Use Start tracking > New or Resume. Closing/reopening Scribe alone does not resume a project. Workshop export is separate and needs no baseline. |
 | `Begin a session before recording.` | Internal project lifecycle was not initialized. Reopen/Resume through the UI; report if a normal action reaches this error. |
-| `The active mod or dependency/load-order context changed. Start tracking again.` | Current mod/path, load order or locked context differs. Beta 17 adds: `Restore the original mod path and loaded/locked context, or choose New tracking JSON with a new filename. Existing history is not relocated or merged.` Restore the original context to Resume, or follow the [fresh-baseline workflow](Installation-and-Workflow#fresh-baseline-after-moving-a-mod-or-changing-machines). The tracking JSON path alone is not the active-mod identity. |
+| `The active mod or dependency/load-order context changed. Start tracking again.` | Current mod/path, load order or locked context differs. The message also explains: `Restore the original mod path and loaded/locked context, or choose New tracking JSON with a new filename. Existing history is not relocated or merged.` Restore the original context to Resume, or follow the [fresh-baseline workflow](Installation-and-Workflow#fresh-baseline-after-moving-a-mod-or-changing-machines). The tracking JSON path alone is not the active-mod identity. |
 | `Record type changed for stable ID <id>. Start tracking again.` | A supposedly stable ID now has another type. Verify loaded data/context; preserve the evidence and use a separate baseline only after understanding the mismatch. |
 | `Inherited/locked data changed for <id>` | Changes cannot safely be attributed to active-mod edits. Check dependency/load-order changes and use a matching context or a deliberately new baseline; do not relabel inherited evidence as active. |
 | `The JSON belongs to a different active mod or project path. Nothing was overwritten.` | Active-mod identity includes its path, not just its display name. Load the original mod at its matching location or start a separate project. Moving tracking files does not authorize changing mod identity. |
@@ -268,7 +267,7 @@ edits only; it does not repair or recover missing earlier evidence.
 | `A session changed outside Scribe; reopen and validate the project.` | Compilation detected external session edits. Stop competing writers/sync tools, preserve both versions and reopen for validation before continuing. |
 | `The JSON changed or disappeared outside Scribe. Automatic review is paused; reload it before saving.` | An observed storage/workspace/settings file changed externally. Preserve competing versions and reload the appropriate surface. For projects, close/reopen and validate the whole set. |
 | `Duplicate or conflicting journal entry.` | Duplicate compiled IDs or conflicting copies were detected. Restore one coherent history; do not concatenate independently modified journals. |
-| `The project contains divergent or reordered history.` | Previous-entry/fingerprint ordering does not match. Beta 17 adds: `Restore one coherent branch; automatic journal merging is not supported.` Preserve both complete branches; do not union session folders or concatenate intact journal suffixes, even if Git reports no text conflict. Follow [divergent-branch recovery](Installation-and-Workflow#divergent-branches-and-version-control); use a separate new baseline if the gameplay state was independently reconciled. |
+| `The project contains divergent or reordered history.` | Previous-entry/fingerprint ordering does not match. `Restore one coherent branch; automatic journal merging is not supported.` Preserve both complete branches; do not union session folders or concatenate intact journal suffixes, even if Git reports no text conflict. Follow [divergent-branch recovery](Installation-and-Workflow#divergent-branches-and-version-control); use a separate new baseline if the gameplay state was independently reconciled. |
 | `The replayed delta does not match its saved checkpoint.` | Replayed state/context differs from recorded evidence. Treat as corruption or inconsistent files; restore a verified matching backup. |
 | `Invalid or incompatible session header.` | Session format, identity, parent or timestamp is invalid. Restore the matching original session. |
 | `Unsupported journal entry.` | A complete line is not a supported journal-entry object. Scribe rejects it; incomplete-tail recovery must not be used to skip complete corruption. |
@@ -342,7 +341,7 @@ Only the **outer** schema-3 response template is the response contract.
 | `The batch marker on <id> does not identify one matching completed note.` | Existing marker/text/citations are modified, ambiguous or duplicated. Inspect FCS Notes against the **original complete draft** before any retry; do not delete markers just to force another append. |
 | `FCS has not initialized the active notes file. Open FCS Notes, then try again.` | Native notes storage is not ready. Open FCS's Notes facility, then retry validation/approval. |
 | `Record no longer exists: <id>` | A target disappeared. Review current state and choose a surviving target through a fresh valid draft. |
-| `Notes application stopped after <count> newly completed record(s).` | Beta 18 names the last target/stage and shows a per-record report with newly confirmed, previously completed/skipped and unconfirmed IDs. Unconfirmed writes may have changed memory, even with zero confirmed records; the editor is conservatively marked dirty before an attempt. Inspect actual Notes and retain the original **complete** draft/packet. No rollback or Save occurs. Follow the [safe retry procedure](Installation-and-Workflow#per-record-notes-outcomes-and-safe-retries-beta-18); native Save/reload may make old evidence stale. |
+| `Notes application stopped after <count> newly completed record(s).` | The report names the last target/stage and newly confirmed, previously completed/skipped and unconfirmed IDs. Unconfirmed writes may have changed memory, even with zero confirmed records; the editor is conservatively marked dirty before an attempt. Inspect actual Notes and retain the original **complete** draft/packet. No rollback or Save occurs. Follow the [safe retry procedure](Installation-and-Workflow#per-record-notes-outcomes-and-safe-retries-beta-18); native Save/reload may make old evidence stale. |
 | `FCS did not return a matching completed note block.` | Native append returned but its target did not read back as one exact completed block. The target remains unconfirmed and may already contain partial text. Inspect it and the original cause/report; do not force a second append or edit markers/IDs to bypass validation. |
 | `The active notes file changed during approval. Review the destination and approve again.` | The native notes destination no longer matches the path shown in approval. No append was attempted. Inspect the intended author/sidecar location and approve again only after confirming it. |
 | `Newly confirmed: <count>; previously completed/skipped: <count>; unconfirmed: <count>.` | Application outcome counts, not a save confirmation. Inspect the read-only review area's per-record IDs and active notes file. A refresh-stage failure with zero unconfirmed targets can still need UI inspection, not another batch write. |
@@ -370,9 +369,10 @@ otherwise-valid JSON.
 
 ## Settings errors
 
-Since beta 20, settings live at `<project folder>\FCS-Scribe.settings.json`,
+Settings live at `<project folder>\FCS-Scribe.settings.json`,
 mod-local by default or located through the mod's `FCS-Scribe.location.json`.
-Earlier `%LOCALAPPDATA%\FCS-Scribe\settings.json` is retained, not imported.
+The legacy `%LOCALAPPDATA%\FCS-Scribe\settings.json` is retained, not imported;
+see [upgrade notes](Release-History#upgrade-notes).
 A genuinely absent local settings file uses Manual defaults with Scribe
 notes/TODO disabled. An existing invalid/unreadable file enters explicit
 recovery; these are different cases.
@@ -389,12 +389,12 @@ Reload discards only unsaved settings-dialog choices, not the project/draft.
 | `Unsupported settings schema. Expected schema 1; reload or explicitly save repaired settings.` | Settings version/required data is not supported. Use a matching supported configuration or explicit repair; do not silently relabel a future schema. |
 | `Choose Manual, 30 seconds, 1 minute, 5 minutes or 10 minutes.` | Serialized interval is unsupported. Choose one supported interval in Settings. |
 | `Choose a review interval.` | The dialog has no selection. Select a supported interval before Save. |
-| `The custom export directory must be an absolute path.` | A relative or drive-relative path was supplied. Choose an existing absolute folder such as `C:\Exports`, or active-mod defaults. |
+| `The custom export directory must be an absolute path.` | A relative or drive-relative path was supplied. Choose an existing absolute folder such as `C:\Exports`, or project-folder defaults. |
 | `The custom export directory is invalid.` | Path syntax contains invalid characters/components. Use the actual existing directory path. |
 | `The custom export directory is unsupported.` | Windows/.NET cannot interpret the path form. Use a standard absolute filesystem folder. |
 | `The custom export directory is too long.` | Framework/Windows path limit exceeded. Use a shorter local folder; do not change global policies as a first remedy. |
-| `The custom export directory is missing or unavailable: <path>` | Saved/custom directory no longer exists or is inaccessible. Reconnect/restore access, Reload, or explicitly repair to an existing folder/active-mod defaults. |
-| `Choose an existing custom export directory.` | Empty or nonexistent custom-folder selection. Select an existing folder or re-enable active-mod defaults. |
+| `The custom export directory is missing or unavailable: <path>` | Saved/custom directory no longer exists or is inaccessible. Reconnect/restore access, Reload, or explicitly repair to an existing folder/project-folder defaults. |
+| `Choose an existing custom export directory.` | Empty or nonexistent custom-folder selection. Select an existing folder or re-enable project-folder defaults. |
 | `The export directory does not exist: <path>` | A dialog's configured folder disappeared since validation. Restore it or choose valid settings before retrying. |
 | `The original settings could not be read safely. Restore access and Reload from disk before saving a repair.` | No observed source bytes/hash are available, so safe preservation is impossible. Restore access, Reload and only then Save repaired settings. |
 | `Settings could not be locked for saving. Another instance may be saving; reload and retry after it finishes.` | Shared settings lease is held. Let the other save finish/close its owner normally, then Reload before retrying. Do not delete `.lock` to force a write. |
@@ -405,7 +405,9 @@ Settings can also report the generic external-change, JSON-reader, access,
 sharing and disk errors elsewhere on this page. A valid Save/Reload does not
 move existing tracking files or repair a faulted journal.
 
-### Scribe notes, TODOs and external storage (beta 20)
+<a id="scribe-notes-todos-and-external-storage-beta-20"></a>
+
+### Scribe notes, TODOs and external storage
 
 These are Scribe-owned `notes.txt` and `todo.txt`, not native FCS sidecars.
 Save Changes never saves `.mod`, native annotations or the AI draft workspace.
@@ -564,7 +566,8 @@ explicitly rather than attributing every changed note/file to the plugin.
 
 This catalogue covers the explicit runtime errors, warning strings, structured
 Workshop issue codes, recovery/approval notices and script failure messages in
-**v0.1.0-beta.11**. It is a troubleshooting reference, **not a claim that every
+the current implementation. Legacy wording is retained where it identifies an
+older diagnostic. This is a troubleshooting reference, **not a claim that every
 failure path has passed physical acceptance**. A bounded real-editor pass is
 documented, but the full S09 acceptance gate remains open; see
 [Validation and limitations](Validation-and-Limitations).
@@ -573,7 +576,8 @@ Message definitions and guards are maintained in
 [`src`](https://github.com/Atlasroar/FCS-Scribe/tree/main/src):
 `Plugin.cs`, `FcsAdapter.cs`, `Core.cs`, `Tracking.cs`, `Journal.cs`,
 `RangeExport.cs`, `DraftWorkspace.cs`, `SettingsStorage.cs`,
-`SettingsDialog.cs`, `ExportStorage.cs` and `WorkshopArchive.cs`.
+`SettingsDialog.cs`, `ExportStorage.cs`, `WorkshopArchive.cs`, `ModWork.cs`
+and `ModWorkView.cs`.
 Contributor commands live in
 [`scripts`](https://github.com/Atlasroar/FCS-Scribe/tree/main/scripts).
 Update this page when adding/changing a message, flag or recovery policy;

@@ -47,7 +47,7 @@ the original bytes and SHA-256. Respect FCS's 1 MB bound in the 32-bit process.
 Use a new destination outside the installation, never a mod or existing archive.
 This is not a Steam image downloader or a generic external-file tracker.
 
-Beta 6 isolates known optional file/parse/decode failures at the cache/preview
+Known optional file/parse/decode failures are isolated at the cache/preview
 boundaries. It reports structured partial-capture issues and retains readable
 components rather than aborting gameplay capture or using stale cached values
 as substitutes. Busy dialog capture skips unstable staged fields/preview while
@@ -60,7 +60,7 @@ model and fatal resource failures remain errors rather than silent fallbacks.
 
 Comparison means "changed since Start tracking," not "different from vanilla."
 The baseline is copied so later caller/editor mutation cannot rewrite history.
-Starting a new tracking file establishes it; beta 2 checkpoint review
+Starting a new tracking file establishes it; checkpoint recording
 advances it only after the reviewed state is saved successfully. Applying notes
 or ordinary FCS saving does not. Earlier edits are explicitly out of scope.
 
@@ -77,8 +77,9 @@ context instead of repeatedly rewriting that baseline/history. Flush success
 and a small atomic head marker precede baseline adoption. The journal tracker
 shares ownership of detached snapshots rather than duplicating them.
 
-Compilation is distinct from recording: automatic mode consolidates every
-30 minutes on a separate monotonic deadline; manual mode uses an explicit
+Compilation is distinct from recording: automatic mode becomes eligible
+30 minutes after the oldest pending recording, using a separate monotonic
+deadline; manual mode uses an explicit
 action. Stable IDs/hashes make retrying compilation idempotent. Complete
 session originals remain under user control. An incomplete final line requires
 approval and a preserved recovery copy; complete corruption is never skipped.
@@ -116,7 +117,7 @@ baseline or make identical documentation look like a different change batch.
 
 ## Export selected history without changing it
 
-Beta 5 exposes an inclusive range of existing observations instead of only the
+Range selection exposes an inclusive range of existing observations instead of only the
 latest compatible batch. Original schema-1/2 packets remain intact in schema-3
 range exports. Qualifying copied change IDs with stable entry identities avoids
 collisions between per-batch `change-000001` IDs, while preserving the original
@@ -146,13 +147,15 @@ categories are preserved rather than repurposed.
 There is no custom binary writer, silent save, or attempt to embed the sidecar
 format into a `.mod`. The notes interface has no verified transaction contract;
 multi-target errors report possible partial in-memory application.
-Beta 4 validates full, exactly-once evidence coverage before mutation. Safe
+Full, exactly-once evidence coverage is validated before mutation. Safe
 retry does not mean rollback: keep the complete original draft, skip only
 targets with one matching completed block, and append the remaining targets.
 The existing append format is shared between writing and retry comparison;
 conflicting blocks fail explicitly rather than being treated as completed.
 
-## Keep draft workspaces independent of tracking (beta 7)
+<a id="keep-draft-workspaces-independent-of-tracking-beta-7"></a>
+
+## Keep draft workspaces independent of tracking
 
 The user selected explicit Save/Open of draft text plus its original packet,
 with save/discard protection rather than window-local associations alone.
@@ -169,7 +172,9 @@ permanent clean flag. Failed or cancelled operations retain existing work.
 Restoring is not approval: current-state, evidence and existing-notes validation
 still gate every application. Explicit saving is not autosave or crash recovery.
 
-## Make baseline initialization recoverable (beta 8)
+<a id="make-baseline-initialization-recoverable-beta-8"></a>
+
+## Make baseline initialization recoverable
 
 The baseline JSON and adjacent marker cannot be committed together by one
 ordinary file replacement. A pending marker records the intended baseline hash
@@ -186,12 +191,14 @@ ownership and remain fail-closed rather than being guessed safe to delete.
 Scoped internal write/flush/commit checkpoints allow deterministic fault tests;
 production callers use the same atomic writes without injected faults.
 
-## Keep settings failure explicit and recoverable (beta 9)
+<a id="keep-settings-failure-explicit-and-recoverable-beta-9"></a>
 
-Shared configuration must not prevent the documentation window from opening.
+## Keep settings failure explicit and recoverable
+
+Invalid project settings must not prevent the documentation window from opening.
 Known read/parse/schema/interval/path failures produce an explicit error state,
 not successful default settings. The window deliberately enters labelled manual
-mode with active-mod export defaults and persistent recovery instructions;
+mode with project-folder export defaults and persistent recovery instructions;
 automatic work is independently gated until a valid reload or explicit repair.
 
 Load hashes and deserializes the same read stream. Only missing-file/directory
@@ -204,10 +211,12 @@ backup and atomic flushed replacement. Repair first preserves the readable
 original in a unique, verified, nonrotating backup. Unknown original hashes
 cannot authorize replacement. Cancel and failed reload never write settings;
 reload also resolves a stale instance without reopening Scribe. These operations
-retain the current project, packet and exact editable draft. Existing schedule
-reset semantics were left for S07; beta 10 addresses them below.
+retain the current project, packet and exact editable draft. Compilation debt
+is derived independently as described below.
 
-## Derive compilation debt from durable evidence (beta 10)
+<a id="derive-compilation-debt-from-durable-evidence-beta-10"></a>
+
+## Derive compilation debt from durable evidence
 
 A reset-on-configuration timer can be postponed forever by folder edits or
 short sessions. The selected policy instead uses the oldest durable uncompiled
@@ -230,7 +239,9 @@ UTC clocks are not trusted evidence: a future timestamp on Resume/new debt is
 treated as due now, not a potentially unbounded delay. Already-running
 countdowns are not re-anchored by wall-clock adjustments.
 
-## Identify export destinations independently of the open project (beta 11)
+<a id="identify-export-destinations-independently-of-the-open-project-beta-11"></a>
+
+## Identify export destinations independently of the open project
 
 An in-memory active-path check cannot protect a closed project's baseline or
 Workshop export with no project open. The shared guard instead reserves
@@ -251,10 +262,23 @@ checks, additionally protecting its rotation target. New preview images guard
 reserved locations without weakening create-new semantics. This is local
 best-effort consistency, not authentication or a universal alias/race lock.
 
+## Keep Scribe writing separate from native annotations
+
+Native FCS merges shared annotations and controls its own active sidecar.
+Redirecting only a button would not provide mod isolation. Scribe therefore
+owns separate opt-in plain notes and record-linked tasks, leaving native
+Add Todo Item and approved AI annotation behavior unchanged.
+
+Mod-local project defaults make writing discoverable with the mod; an explicit
+external root is found through a small local locator. Existing files are not
+migrated, old user-wide settings are not silently imported, and foreign settings
+cannot be adopted during a root switch. Text files and settings/locator commits
+are independent: failures retain intent rather than claiming a transaction.
+
 ## Separate future saved-data analysis
 
 OCS is useful complementary research, not a substitute for live-model access.
 Its current .NET 9 target does not directly fit this Framework 4.8 plugin.
 An optional process boundary is the proposed direction, pending the
 [design checklist](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/plan.md).
-No OCS dependency or writer ships in the initial plugin.
+No OCS dependency or writer ships in the current plugin.

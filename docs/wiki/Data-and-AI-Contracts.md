@@ -1,6 +1,6 @@
 # Data and AI contracts
 
-Beta 5 AI range exports use `SchemaVersion = 3`. Original recorded packets
+AI range exports use `SchemaVersion = 3`. Original recorded packets
 remain schema 2, which added `Context.Workshop` to the initial schema-1
 contract. Schema-1 packets remain readable without that optional context;
 no old fingerprint is reinterpreted as covering Workshop data.
@@ -29,7 +29,7 @@ Change entries identify the record, operation, path/layer, exact before/after
 values, available source labels, referenced ID, and resolved reference name.
 An unresolved target remains unresolved; a display name is not an identifier.
 
-The [beta 19 configuration matrix](Validation-and-Limitations#s16-compatibility-and-provenance-matrix-beta-19)
+The [verified configuration matrix](Validation-History#s16-compatibility-and-provenance-matrix-beta-19)
 does not expand field ownership. `base:unresolved` and `locked:unresolved`
 remain literal source labels, including on effective fields/references selected
 from those layers. An active cell may name the writable mod; a dependency's
@@ -43,7 +43,9 @@ The packet also includes baseline identity/capture time, export time, source
 fingerprint, instructions, and `ResponseTemplate`. Its context intentionally
 does not include every loaded record.
 
-## Supported and omitted state (beta 13)
+<a id="supported-and-omitted-state-beta-13"></a>
+
+## Supported and omitted state
 
 "Committed" below means a control has updated FCS's in-memory model, **not**
 that FCS has saved the mod. This matrix describes the guarded executable,
@@ -60,12 +62,12 @@ not every editor build, record subsystem or control.
 | Pending property controls | Not captured until their normal editor workflow commits to the model. Review does not force a commit, press Enter, move focus or save. Opening/clicking another window can itself change focus before Review runs. |
 | Dialogue and separate editor buffers | Uncommitted dialogue/text/dialog buffers are omitted. Supported values already stored in the captured record model may be included; this is not complete dialogue-editor extraction. |
 | External files, assets and layouts | No general content catalogue or validation. A captured path string is not a hash of the referenced file; preview-image metadata is the specifically documented exception. |
-| Native Notes/TODO and tracking metadata | Excluded from gameplay evidence. Notes sidecars/workspaces/journals have separate persistence and backup contracts. |
+| Native/Scribe notes, TODOs and tracking metadata | Excluded from gameplay evidence. Text files, native sidecars, workspaces and journals have separate persistence and backup contracts. |
 | Saved mod state and editor events | No saved-state verification, binary backup/restoration, keystroke log, undo history, complete metadata history or observations of intermediate states between samples. |
 
 ### Sampling and zero evidence
 
-Manual Review and eligible automatic reviews compare supported captured state
+Manual Save Changes and eligible automatic recordings compare supported captured state
 with the **last durable recording**, not with every user action. A-to-B-to-A
 edits between observations can produce no change IDs and no new session entry.
 Recording B and then recording the reversal to A retains both observations;
@@ -79,11 +81,11 @@ Finish edits normally and verify the resulting before/after evidence; do not
 treat a zero count as an all-clear or shorten the interval as a completeness
 guarantee. Scheduling can defer observations while hidden, busy or modal.
 
-Beta 13 adds sampling guidance to new packet instructions and UI presentation,
+Sampling guidance appears in new packet instructions and UI presentation,
 including new baselines, zero-evidence reviews, range previews and restored
 packet display. Snapshot warnings/scope and fingerprint formats are unchanged;
-old recorded/nested packets are not rewritten to add the new wording.
-See [scoped native-control evidence](Validation-and-Limitations#s11-partial-capture-and-sampling-beta-13).
+old recorded/nested packets are not rewritten to add wording.
+See [scoped native-control evidence](Validation-History#s11-partial-capture-and-sampling-beta-13).
 
 ## Workshop context
 
@@ -101,13 +103,12 @@ preserves FCS's round-trip timestamp and timezone kind, not file write time.
 The current change-notes control is an upload draft, not published history;
 it is unknown if the matching dialog has not been opened.
 
-`Preview` reports `Status` (`available`, `missing` or, since beta 6,
-`unavailable`), `SourceFileName`,
+`Preview` reports `Status` (`available`, `missing` or `unavailable`), `SourceFileName`,
 `Format`, nullable `ByteLength`, and `Sha256`. It contains no local absolute
 path or embedded image bytes. Archive the image separately; compare its hash
 to the JSON to associate the two artifacts.
 
-Beta 6 adds optional `CaptureStatus = "partial"` and `Issues` when a known
+Optional `CaptureStatus = "partial"` and `Issues` are present when a known
 optional component fails or the matching Workshop dialog is busy. Each issue
 has `Component` (`cache`, `preview` or `dialog`), `Code` and a human-readable
 `Message`. Codes distinguish invalid data, unsupported encoding/size, access
@@ -166,11 +167,13 @@ An assistant returns the packet's response template filled with prose:
 The placeholders above are illustrative, not valid evidence for a real batch.
 Each target must appear only once. If documentation is about a deleted record,
 the user must choose a surviving target instead of inventing a global note.
-In beta 4, `ChangeIds` across all entries must cover every exported change
+`ChangeIds` across all entries must cover every exported change
 exactly once. Combining several records' evidence on one surviving target is
 allowed; omitting or duplicating evidence is not.
 
-## Recording-range packets (beta 5)
+<a id="recording-range-packets-beta-5"></a>
+
+## Recording-range packets
 
 Schema 3 adds `ProjectId` and ordered `Recordings` alongside the existing
 packet fields. Each recording has `EntryId`, nullable `SessionId`, UTC
@@ -223,10 +226,9 @@ is skipped only when its existing notes contain one matching completed block
 for this batch, including the original text and ordered change IDs. Line
 endings are normalized for comparison; conflicting/incomplete blocks and
 multiple same-batch markers are rejected. Only remaining targets are appended.
-An entirely applied draft is still rejected as a duplicate. The append format
-was unchanged by beta 4; older drafts must also meet the complete-coverage rule.
-Beta 5 adds range packet schema 3 without changing the draft/notes format.
-Beta 7 adds explicit workspace persistence without changing this notes contract.
+An entirely applied draft is still rejected as a duplicate. Older drafts must
+also meet the complete-coverage rule. Range packet schema 3 and workspace
+persistence do not create an alternate draft/native-note format.
 
 These checks do **not** establish that the assistant interpreted evidence
 correctly. The user must verify names, quantities, conditions, and wording
@@ -236,7 +238,9 @@ as a fact.
 The plugin appends a visible batch marker and evidence IDs with the approved
 text, marks FCS dirty, and leaves saving to the normal editor workflow.
 
-## Portable draft workspace contract (beta 7)
+<a id="portable-draft-workspace-contract-beta-7"></a>
+
+## Portable draft workspace contract
 
 A separate JSON uses `Format: "FCS-Scribe draft workspace"` and
 `SchemaVersion: 1`. It embeds `Packet`, `PacketHash` (the stream SHA-256 of
@@ -258,14 +262,16 @@ checks; saved validation results never confer later permission.
 Saves reuse flushed atomic JSON replacement and an observed-file hash; the
 previous workspace is retained at `.bak`. Replacing a different existing
 destination requires it to be a valid workspace, not a tracking root or packet.
-Save/Open dialogs default to the active-mod/settings folder. Tracking storage
+Save/Open dialogs follow the project/export-directory defaults. Tracking storage
 does not include these documents, and opening one does not resume a journal.
 Unchanged saved text/association is clean; new exports and subsequent edits
 are unsaved. Revision guards prevent asynchronous replacement from erasing
 late edits; a saved snapshot excludes later edits, which remain dirty.
 This is explicit Save/Open, not autosave, an event log, or mod recovery.
 
-## Note application outcomes (beta 18)
+<a id="note-application-outcomes-beta-18"></a>
+
+## Note application outcomes
 
 The on-disk packet/draft/workspace schemas and note block format are unchanged.
 Complete nonduplicate coverage and current-state validation run before writes.
@@ -289,7 +295,9 @@ and exact unique completed blocks, not byte-identical native aggregate formattin
 The [safe retry procedure](Installation-and-Workflow#per-record-notes-outcomes-and-safe-retries-beta-18)
 keeps shared Notes/TODO sidecars separate from mod/tracking backup and distribution.
 
-## Resumable tracking contract (beta 2)
+<a id="resumable-tracking-contract-beta-2"></a>
+
+## Resumable tracking contract
 
 A tracking file is distinct from an AI packet: `Format` is
 `FCS-Scribe tracking project` and its own `SchemaVersion` is 1. It stores
@@ -324,8 +332,8 @@ by identity and hash. Compiled session files are redundant; uncompiled files
 remain required. Sessions are not automatically deleted.
 
 Same-state reviews do not append duplicate history. Tracking storage does not
-contain drafts/export associations; beta 7 stores those in separate workspaces.
-Beta 5 exposes recorded history through inclusive range selection. Compiled
+contain drafts/export associations; those use separate workspaces.
+Recorded history is exposed through inclusive range selection. Compiled
 session duplicates appear once; archived compiled sessions remain available
 from the main journal. Earlier gameplay evidence remains selectable after
 context-only updates. No history is advanced merely by exporting.
@@ -337,7 +345,9 @@ anchors without `JournalVersion` cannot themselves detect missing sidecars.
 An exclusive project writer lease coordinates Scribe instances, not arbitrary
 external editors. Timestamps are not entry identities or proof of authenticity.
 
-### Complete-set copying and archival (beta 16)
+<a id="complete-set-copying-and-archival-beta-16"></a>
+
+### Complete-set copying and archival
 
 The private unit of backup is the baseline plus its entire matching `.scribe`
 folder and associated baseline backups, copied with all writers closed.
@@ -361,7 +371,9 @@ retain those limits. Baselines include full loaded/dependency data; storage,
 backups and draft workspaces must stay outside public upload content. The
 persistent warning does not inspect or block native Workshop uploads.
 
-### Path identity and linear branches (beta 17)
+<a id="path-identity-and-linear-branches-beta-17"></a>
+
+### Path identity and linear branches
 
 The native adapter derives `ModId` from the uppercase full active-mod path,
 not the tracking JSON path or a mod-content hash. `ModName` is compared exactly.
@@ -384,7 +396,9 @@ added. [Portability procedures](Installation-and-Workflow#portability-and-linear
 separate tracking-only moves, fresh baselines and divergent-history recovery.
 Existing draft associations are not rebound or approved by these actions.
 
-### Compilation debt (beta 10)
+<a id="compilation-debt-beta-10"></a>
+
+### Compilation debt
 
 No new field or schema is written. Each validated session/journal entry already
 has `RecordedUtc`. Replay tracks the earliest timestamp among uncompiled
@@ -405,7 +419,9 @@ An already-running countdown is retained through UTC clock changes. These are
 best-effort local scheduling rules, not authenticated timestamps or a trusted
 cross-restart clock.
 
-### Pending initialization (beta 8)
+<a id="pending-initialization-beta-8"></a>
+
+### Pending initialization
 
 During New/legacy conversion, marker schema 1 may contain optional
 `Initialization: { BaselineHash, SourceHash }`. `BaselineHash` is the stream
@@ -440,15 +456,17 @@ silently converting the selected history into a new tracking project.
 the full captured loaded model, not just relevant edits. Use the compact
 AI-packet export instead.
 
-## Shared settings and recovery (beta 9)
+<a id="shared-settings-and-recovery-beta-9"></a>
 
-Beta 20 stores settings at `<project folder>\FCS-Scribe.settings.json`;
-betas 2-19 used `%LOCALAPPDATA%\FCS-Scribe\settings.json`. That older file is
-preserved, not imported implicitly. Schema 1 retains required `SchemaVersion`
-and `ReviewSeconds`, plus optional `ExportDirectory`. Beta 20 adds optional
+## Project settings and recovery
+
+Settings use `<project folder>\FCS-Scribe.settings.json`. The legacy user-wide
+`%LOCALAPPDATA%\FCS-Scribe\settings.json` is preserved, not imported implicitly;
+see [upgrade notes](Release-History#upgrade-notes). Schema 1 has required `SchemaVersion`
+and `ReviewSeconds`, plus optional `ExportDirectory`,
 `ModNotesEnabled`, `ModTodoEnabled`, `ProjectDirectory` and `ProjectModId`.
-Older files omit these fields: text features default off and the project
-directory defaults mod-local. New settings bind to the path-derived active
+Settings lacking notes/task/project fields default to disabled text features
+and a mod-local project directory. New settings bind to the path-derived active
 mod ID; another mod's settings require explicit repair or a separate folder.
 Supported intervals remain 0/30/60/300/600 seconds. A custom directory must be
 absolute, syntactically valid and currently available. Missing source files
@@ -466,16 +484,20 @@ rotated away by later saves. Failed replacement can leave its completed
 recovery copy while retaining the original. Unknown hashes, changed/deleted
 sources and active cooperating leases reject replacement.
 
-Startup, cancellation and reload do not repair or rewrite files. An unreadable
-original must become readable and be reloaded before repair is allowed. Valid
+Opening/cancelling does not repair the settings source. Reload revalidates it
+without repairing malformed/unreadable originals; valid local Scribe work is
+saved before reload. An unreadable original must become readable and be
+reloaded before repair is allowed. Valid
 reload/Save exits recovery; invalid reload intentionally returns to labelled
-manual/active-mod defaults. Project/draft/packet state is not replaced.
+Manual/project-folder defaults. Project/draft/packet state is not replaced.
 These hashes and leases are consistency guards, not authentication or protection
 against all uncooperating external writers or physical filesystem failures.
 Settings and backups can reveal local paths: keep them private and outside
 AI packets and Workshop uploads.
 
-## Scribe text files and project locator (beta 20)
+<a id="scribe-text-files-and-project-locator-beta-20"></a>
+
+## Scribe text files and project locator
 
 `notes.txt` is literal UTF-8 writing, with no JSON/header/markup. `todo.txt` is
 separate UTF-8 plain text with this format (columns are actual tab characters):
