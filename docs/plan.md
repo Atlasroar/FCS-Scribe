@@ -25,18 +25,18 @@ reusable for saved-data analysis and eventual wiki generation.
 
 | Priority | Feature | Current status and remaining gate |
 | --- | --- | --- |
-| First | Integration feasibility check | Report complete for one guarded Steam FCS build; interactive acceptance and broader stack coverage remain |
-| MVP | Explicit tracking baseline | Implemented and core/runtime checked; verify actual editor focus behavior |
+| First | Integration feasibility check | Report complete for one guarded Steam FCS build; owner accepts the current feature checklist for the tested configuration, not broader stack coverage |
+| MVP | Explicit tracking baseline | Implemented and core/runtime checked, with a real Manual baseline/recording follow-up; broader control coverage remains bounded |
 | MVP | Structured change catalogue | Implemented for the documented captured model; partial coverage remains explicit |
 | MVP | Human-readable references | IDs/names and unresolved warnings implemented; field-level dependency provenance remains unresolved |
-| MVP | AI handoff | Versioned JSON and instructions implemented; real manual handoff acceptance remains |
-| MVP | Documentation preview/import | Editable JSON draft, file import, and paste implemented; interactive acceptance remains |
-| MVP | Safe notes insertion | Copy-based runtime checks pass; real FCS Extended approval/save workflow remains |
-| Requested follow-up | Workshop metadata and preview archive | Implemented and copy-tested; cached/local provenance explicit; interactive acceptance remains |
-| Requested follow-up | Embedded window and contextual help | Native MDI child and per-button bottom help implemented; construction/event checks pass; interactive acceptance remains |
+| MVP | AI handoff | Versioned JSON and instructions implemented; real schema-3 range/response validation and approval cancellation observed; owner checklist reports Pass |
+| MVP | Documentation preview/import | Editable JSON draft, file import, and paste implemented; guided incomplete/stale/workspace checks pass and owner checklist reports Pass |
+| MVP | Safe notes insertion | Copy-based runtime checks pass; owner checklist reports native application/retry Pass, without a new independently captured append/save trace |
+| Requested follow-up | Workshop metadata and preview archive | Implemented and copy-tested; cached/local provenance explicit; owner checklist reports Pass |
+| Requested follow-up | Embedded window and contextual help | Native MDI child and bounded bottom warnings/help implemented; guided footer/menu checks and owner checklist report Pass |
 | Beta 2 | Resumable tracking and session journals | Full initial baseline, timestamped delta logs and durable replay implemented; beta 5 adds range selection, beta 7 adds independent draft workspaces, and broader history management remains planned |
 | Beta 2 | Recording, compilation and export settings | Manual/30/60/300/600-second recording, explicit/30-minute compilation and active-mod defaults implemented |
-| Beta 3 stabilization | Grouped window menus | Core, Workshop and Draft dropdowns with standalone approval/settings implemented and disposable-copy checked; real FCS Extended UI acceptance remains |
+| Beta 3 stabilization | Grouped window menus | Core, Workshop, Draft and Workspace dropdowns with standalone approval/settings implemented; guided beta 21 UI checks and owner checklist report Pass |
 | Next | Markdown export | Planned; use the existing verified catalogue rather than a second diff engine |
 | Next, staged | OCS integration | Repository assessment complete; optional read-only saved-data backend planned, not installed or implemented |
 | Later | Wiki-ready export | Planned after dependency/provenance validation |
@@ -44,11 +44,15 @@ reusable for saved-data analysis and eventual wiki generation.
 
 ## Stabilization gate: before further feature work
 
-The current user-directed UI cleanup is the first work item. After that, address
-S01-S16 **one issue at a time**, in the order below, before starting new feature
-expansion. In particular, OCS implementation, Markdown/wiki exports and direct
-AI connections stay on hold. Existing checkmarks elsewhere describe their
-original scope; they do not close these newly identified gaps.
+The grouped-menu cleanup and S01-S16 implementation/support work below retain
+their recorded release scopes. On November 5, 2026, the owner marked the current
+fourteen-feature checklist Pass and explicitly directed feature work to
+continue. This accepts the listed feature areas for the tested setup, not every
+older S09 stress/configuration check or a production-readiness claim.
+The unexplained saved-test-mod byte change remains an open finding.
+Scope each next feature independently; wiki-ready exports still require
+verified provenance and direct AI still requires an explicit provider/consent
+decision.
 
 Each issue needs a focused change or an explicitly accepted support boundary,
 regression evidence, accurate user-facing guidance and a recorded outcome before
@@ -247,6 +251,7 @@ universal alias/race/power-loss guarantee; S09 interactive acceptance is next.
 - [ ] Exercise startup/discovery, focus commits, dialogs, scheduling, resize/minimize/close/restart, other extensions and visible failure paths.
 - [x] Record actual results and remaining exceptions; standalone form/method checks do not close this gate.
 - [x] Record the bounded beta 21 real-editor footer/menu/tab and Scribe text/settings restart follow-up without closing the overall gate.
+- [x] Record the later tracking/AI/workspace observations, all fourteen owner-reported checklist Pass statuses and explicit permission to continue feature work, retaining the saved-mod discrepancy and older unverified boundaries.
 
 A bounded real FCS Extended beta 11 pass on November 3-4, 2026 is recorded in
 [Validation history](wiki/Validation-History.md#real-fcs-extended-acceptance-beta-11).
@@ -265,7 +270,19 @@ test `.mod` bytes. Native shared sidecars were not independently compared;
 this did not replay the full tracking/AI/native-annotation workflow or override
 the earlier decision not to rerun final original-block retention.
 
-**S09 remains open.** Broader stacks/independent extensions, merge/translation
+The later [tracking/AI/workspace follow-up](wiki/Validation-History.md#tracking-ai-handoff-and-workspace-follow-up-november-5-2026)
+verified the original recording/range/workspace contracts and user-observed
+missing-evidence/stale rejection and approval cancellation. Seven Scribe files
+remained byte-identical across the later restart, but the saved test `.mod`
+changed despite the user's reported discard. Cause is unresolved; no repair or
+native-sidecar integrity check was performed. The guided new Resume/reversal/
+compile round trip was not completed.
+
+The [owner checklist decision](wiki/Validation-History.md#owner-checklist-decision-november-5-2026)
+marks all fourteen feature areas Pass and explicitly authorizes feature work.
+These are owner-reported acceptance statuses, not independent execution traces.
+
+**Remaining S09 boundaries stay explicit.** Broader stacks/independent extensions, merge/translation
 and unsupported builds, physically contested project writers, deliberate notes
 save/partial-application failures and the other listed boundaries remain
 untested/incomplete. Native read-only rejection passed but blocked the
@@ -273,7 +290,8 @@ two-writer attempt. Final notes inspection found acknowledged manual
 replacement text, not the original KEEP/generated block; the user chose not
 to restore/rerun that final block-retention check. Earlier independently
 verified note-preservation checkpoints remain historical evidence only.
-These results do not trigger a new beta or close the remaining support work.
+The owner's accepted checklist permits feature expansion within that scope;
+it does not resolve these findings, broaden support or trigger a new beta.
 
 ### S10. Support boundary: tracking is not mod recovery
 
@@ -518,7 +536,7 @@ Evidence: `src\Core.cs`, `src\FcsAdapter.cs`, `tests\CoreTests.cs`, and
 - [x] Provide a fully manual export/import workflow with no network calls by the plugin.
 - [x] Warn users to inspect potentially private mod content before sharing it externally.
 - [x] Inspect the user's first real schema-1 export for its catalogue/template shape without committing private mod content.
-- [ ] Exercise a real exported packet through an external assistant and verify the returned draft against its evidence.
+- [x] Exercise a real exported packet through an external assistant and verify the returned draft against its evidence; the beta 21 follow-up used the actual schema-3 outer template and both qualified citations before live approval cancellation.
 - [ ] Review the usability/readability of the packet and editable JSON draft with realistic documentation batches.
 
 ## 4. Draft review and approved notes application
@@ -540,6 +558,9 @@ Evidence: `src\Core.cs`, `src\FcsAdapter.cs`, `tests\CoreTests.cs`, and
 
 The experimental implementation is not declared release-ready until this gate
 is complete. Use disposable mods and notes files for manual checks.
+The November 5 owner checklist decision authorizes further feature work for the
+accepted setup without claiming every detailed item below is complete or that
+the experimental plugin is production-ready.
 
 - [x] Run deterministic core checks for additions, modifications, deletions, renames, references, unchanged/inherited data, typed values, draft validation, and serialization.
 - [x] Exercise real unsaved edits and normal FCS save/reopen methods on copied vanilla data and a representative mod.
@@ -547,6 +568,7 @@ is complete. Use disposable mods and notes files for manual checks.
 - [x] Verify active/inherited notes, TODO category, dirty state, duplicate blocking, and no save during apply.
 - [x] Verify the saved/reopened captured gameplay records match the expected edited state.
 - [x] Provide build/install/workflow instructions and a verified/uncertain/unsupported feasibility report.
+- [x] Record the owner's current fourteen-feature Pass checklist and direction to resume feature work, distinguishing reported results from independently observed evidence and unresolved findings.
 - [ ] Follow the README installation steps in a disposable FCS Extended environment; confirm extension discovery and toolbar placement.
 - [ ] Complete the interactive checks in sections 1-4 and record the results and any remaining exceptions.
 - [ ] Test unsupported-build, read-only, merge/translation-mode, malformed-draft, and notes-save failure behavior visibly.
@@ -645,10 +667,10 @@ Implementation follows the design decision and MVP acceptance gate.
 
 ## 7. Next features
 
-Remaining feature expansion follows the stabilization gate and MVP acceptance.
+The owner authorized further feature work after accepting the current checklist.
 The beta 2 checkpoint foundation is already implemented. History/export changes
 that resolved S02 are stabilization work; broader history UI, OCS and new
-output formats remain deferred.
+output formats remain unimplemented and need individually agreed scope.
 
 ### Session history
 
@@ -696,16 +718,16 @@ stabilization work is distinct from new feature expansion:
 
 | Item | Remaining deliverable |
 |---|---|
-| S09: acceptance | Retain the completed evidence and explicit untested exceptions; resolve or explicitly agree the remaining support scope before closing the gate. |
+| S09: acceptance | Owner accepts all fourteen current checklist areas and directs feature work. Retain the unexplained saved-mod byte change and older untested/configuration exceptions; do not convert this decision into independent verification or broader support. |
 | S12: performance (accepted tested scope) | The owner accepted the bounded history/memory/actual-editor evidence. Custom stacks and broader practical headroom/latency remain explicitly unverified, not blocking S13 under this decision. |
 | S13: storage/distribution (beta 16) | Bounded closed tracking-copy/restore/compiled-archival cases and private pre-upload guidance are complete. No automated backups, pruning, native upload protection or physical storage-failure guarantee. |
 | S14: portability (beta 17) | Tracking-only moves, explicit fresh-baseline workflow and divergent-history failures verified on disposable same-host native fixtures. No automatic relocation/merging, cross-machine installation or path-alias/network guarantee. |
 | S15: notes safety (beta 18) | Per-record readback/outcomes, sidecar approval boundary and native partial/retry/Save/cold-test-process cases complete for bounded fixtures. No rollback/auto-save or physical mid-write guarantee. |
 | S16: compatibility/provenance (beta 19) | Exact-build/configuration matrix, available copied dependency stack/controlled locked overlay, source-label guards and independent Workshop provenance/isolation cases verified. Other builds/custom stacks/extensions and full interactive acceptance remain unverified; no inferred ownership or published Steam truth. |
 
-After stabilization and explicit acceptance, five expansion areas remain in
-scope. They are not shipped or approved for implementation merely by appearing
-in this table.
+After the owner's scoped checklist acceptance, five expansion areas remain.
+They are not shipped merely by appearing in this table; select and scope the
+next feature independently.
 
 | Feature | Existing foundation | Remaining feature boundary |
 |---|---|---|
@@ -730,11 +752,17 @@ Core/storage and targeted copied-native evidence are recorded in
 **User-directed beta 21 cleanup:** shared bottom warnings/temporary menu help
 and separate operation status are shipped. The scoped real-editor follow-up
 above covers the new layout, tab messaging and Scribe text/settings restart
-persistence only. S09 and explicit MVP support-scope acceptance remain open;
-this is not authorization for deferred feature expansion.
+persistence only. The later owner decision below supersedes the prior hold on
+feature expansion, not the earlier evidence boundaries.
 
-1. Keep S09 results and remaining exceptions explicit; untested is not passed, and the gate remains open until its support scope is explicitly accepted.
-2. S10/S11 are addressed in betas 12/13; S12's tested scope is explicitly accepted after betas 14/15 and the actual-editor soak. S13-S16's bounded storage/portability/notes/compatibility work is covered in betas 16-19. Next finish S09's remaining interactive checks and explicitly review the MVP support scope, retaining unverified custom-stack/headroom, cross-machine and physical-failure boundaries. Keep independently scoped changes, regression evidence and the requested PR/merge/beta-release cycle; publishing partial progress does not close unrelated acceptance gates.
-3. Close the stabilization/MVP acceptance gate and any exposed issues before implementing new feature expansion.
-4. Then scope OCS design, broader session history and Markdown independently. Markdown/history do not inherently require OCS; do not couple them to a new runtime without a concrete requirement.
+**Owner decision: November 5, 2026:** mark all fourteen current checklist areas
+Pass and continue on features. Document those as owner-reported results, retain
+the guided observations and unresolved saved-mod discrepancy, and stop the
+step-by-step physical test prompts. This is explicit scoped authorization to
+advance the backlog, not blanket support or independent native-save evidence.
+
+1. Preserve S09 observations and remaining exceptions; owner-reported acceptance and independently verified results remain distinct.
+2. S10/S11 are addressed in betas 12/13; S12's tested scope is explicitly accepted after betas 14/15 and the actual-editor soak. S13-S16's bounded work is covered in betas 16-19. Keep unverified custom-stack/headroom, cross-machine and physical-failure boundaries and the saved-mod discrepancy visible.
+3. Proceed with individually scoped feature work under the owner's accepted configuration. Keep focused changes, regression evidence and the established PR/merge/beta-release cycle for runtime changes; evidence-only documentation does not replace binaries.
+4. Scope Markdown, broader session history or OCS design independently. Markdown/history do not inherently require OCS; do not couple them to a new runtime without a concrete requirement.
 5. Validate dependency provenance before wiki-ready exports. Direct AI remains optional and requires an explicit provider/credential/consent decision.

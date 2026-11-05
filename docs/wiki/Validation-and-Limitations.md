@@ -13,7 +13,7 @@ work. Detailed test counts, measurements and dated observations belong in
 | Editing mode | A writable active `.mod` in normal editing mode; read-only, merge and translation sessions are rejected |
 | Dependencies and extensions | Specific copied official-data/representative configurations have evidence; arbitrary custom stacks and other extensions are not broadly accepted |
 | GOG and other builds | Not verified/supported by the current executable adapter |
-| FCS Extended startup and physical UI | Scoped beta 21 startup/footer/text-persistence observations exist for one test setup; complete current-release interactive acceptance remains open |
+| FCS Extended startup and physical UI | Scoped beta 21 guided observations and an owner-reported passing feature checklist exist for one test setup; broader configurations and detailed failure cases remain unverified |
 
 Supported executable SHA-256:
 
@@ -49,6 +49,17 @@ through a full FCS restart. Installed DLL bytes matched the release archive;
 test notes/tasks/settings and `.mod` bytes were independently unchanged across
 that restart. It does not establish complete native-annotation or tracking/AI
 workflow acceptance.
+
+The later [tracking/AI/workspace follow-up](Validation-History#tracking-ai-handoff-and-workspace-follow-up-november-5-2026)
+adds independently checked recording/range/workspace contracts and user-observed
+missing-evidence, stale-state and approval-cancellation behavior.
+The [owner checklist decision](Validation-History#owner-checklist-decision-november-5-2026)
+marks all fourteen feature areas Pass and authorizes further feature work.
+Those statuses are owner-reported, not independently observed executions.
+A saved test `.mod` byte change across the later restart remains unexplained
+despite the reported native discard; the seven checked Scribe files remained
+unchanged. The earlier byte-identical restart and this later discrepancy are
+separate observations.
 
 ## Capture and provenance limits
 
@@ -106,17 +117,21 @@ belong in [Building and releases](Building-and-Releases#reproduce-performance-me
 
 ## Remaining interactive acceptance
 
-The S09 gate remains open. Historical acceptance does not implicitly approve
-the current release. Remaining boundaries include complete workflow/control
-coverage beyond the scoped beta 21 follow-up, final original annotation-block retention,
-additional dependency/extension configurations, competing project writers,
-physical save/access failures and real asynchronous Steam behavior.
+The owner accepted the current feature checklist for the tested configuration
+and explicitly directed feature work to continue. Remaining S09 support/test
+boundaries are not silently marked passed: broader workflow/control coverage,
+final original annotation-block retention, additional dependency/extension
+configurations, competing project writers, physical save/access failures and
+real asynchronous Steam behavior remain outside the established evidence.
+The later saved-mod byte discrepancy also remains unresolved; the owner's
+checklist decision does not turn it into an independently passed no-save check.
 
 The archived [remaining physical acceptance table](Validation-History#remaining-acceptance-gate)
 preserves exactly what was left untested and why, including the
 [final notes checkpoint correction](Validation-History#final-notes-checkpoint-correction).
 The [working plan](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/plan.md)
-tracks scope and decisions. Untested is not passed.
+tracks scope and decisions. Owner-reported acceptance is distinguished from
+independent verification; untested configurations are not passed.
 
 ## Not implemented
 
