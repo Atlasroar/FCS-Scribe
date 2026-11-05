@@ -63,4 +63,4 @@ FCS-Scribe is distributed under [GPL-3.0](https://github.com/Atlasroar/FCS-Scrib
 FCS Extended's inspected repository declares GPL-3.0; OCS declares MIT.
 These are separate upstream projects with their own notices and dependencies.
 OCS integration must review the selected package's applicable notices before
-distribution. No upstream/game binaries are bundled in the initial release.
+distribution. No upstream/game binaries are bundled in FCS-Scribe releases.

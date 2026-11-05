@@ -3,8 +3,9 @@
 For missing extensions, startup failures, warning flags and recovery remedies,
 see [Troubleshooting](Troubleshooting).
 
-Resumable tracking, automatic checkpoint reviews and Plugin settings below
-are included in **v0.1.0-beta.2**. The earlier beta 1 uses session-only baselines.
+This is the current-release user guide. For older behavior and upgrade
+differences, see [Release history](Release-History). For supported use and open
+acceptance gates, see [Validation and limitations](Validation-and-Limitations).
 
 ## Prerequisites
 
@@ -18,7 +19,7 @@ exact SHA-256, not just its display version:
 
 Unknown builds are rejected. Do not remove the guard to try another build:
 inspect and validate its integration first. GOG compatibility is not claimed.
-The [verified configuration matrix](Validation-and-Limitations#s16-compatibility-and-provenance-matrix-beta-19)
+The [verified configuration matrix](Validation-History#s16-compatibility-and-provenance-matrix-beta-19)
 separates disposable native-host evidence from full FCS Extended acceptance.
 
 ## Install a release
@@ -31,10 +32,10 @@ the extension selector, and open a writable `.mod` in normal editing mode.
 The plugin adds an FCS-Scribe toolbar button and opens as an embedded MDI child.
 Hover over action buttons, or focus them with Tab, to see descriptions at the
 bottom; operation status stays visible separately.
-In **v0.1.0-beta.3**, actions are grouped into **Core**, **Workshop**
-and **Draft** menus, with separate **Apply approved notes** and **Settings**
-entries. See the [feature list](Feature-List#1-embedded-window-and-contextual-help)
-for the menu layout and keyboard help; the published beta 2 keeps its button row.
+Actions are grouped into **Core**, **Workshop**, **Draft** and **Workspace**
+menus, with separate **Apply approved notes** and **Settings** entries.
+See the [feature list](Feature-List#1-embedded-window-and-contextual-help)
+for the menu layout and keyboard help.
 
 Install FCS Extended from its upstream distribution; this project's archive
 does not include or replace upstream binaries. Start with disposable mods and
@@ -52,12 +53,12 @@ anything or modify your game. Do not replace FCS Extended's own contract DLL.
 1. Finish any active field edit and select **Start tracking**. Create a tracking
    JSON or resume an existing one after background validation. Earlier edits
    are deliberately outside a new file's captured baseline.
-2. Edit normally and select **Core > Save Changes** (**Review changes** before
-   beta 20). Read the warnings as well as the exact before/after evidence.
+2. Edit normally and select **Core > Save Changes**.
+   Read the warnings as well as the exact before/after evidence.
    This saves enabled Scribe notes/TODOs and flushes changed records/context to
    the current timestamped session log, then advances its baseline.
    It does **not** save the `.mod`, native FCS annotations or AI draft workspace.
-3. **Export AI packet**: in beta 5, select an inclusive first/last recording
+3. **Export AI packet**: select an inclusive first/last recording
    range and inspect its preview before choosing the JSON destination.
    Earlier sessions remain selectable after resume. Current unrecorded edits
    are explicitly labelled; including them does not create a recording.
@@ -66,7 +67,7 @@ anything or modify your game. Do not replace FCS Extended's own contract DLL.
 4. Ask the assistant to follow the packet instructions and return the response
    **outer** template as JSON, using its qualified change IDs rather than
    nested archival templates. Import or paste it into the editable draft.
-5. Verify target record IDs, quantities, conditions, and prose. In beta 4,
+5. Verify target record IDs, quantities, conditions, and prose;
    cover every exported change ID exactly once across the complete draft.
    Select **Apply approved notes** and explicitly approve.
 6. Inspect FCS Notes, then use FCS's ordinary **Save** action when ready.
@@ -75,7 +76,9 @@ Existing active and inherited notes are preserved. An existing TODO stays a
 TODO rather than being silently reclassified. Applying notes marks the editor
 dirty but does not save or advance the tracking baseline.
 
-### Finish edits and understand sampling (beta 13)
+<a id="finish-edits-and-understand-sampling-beta-13"></a>
+
+### Finish edits and understand sampling
 
 Finish the field using its normal editor workflow before Start/Review/export,
 then inspect the evidence rather than relying only on the count. The guarded
@@ -90,29 +93,24 @@ again at A to retain both observations. Zero evidence is not proof of no
 editor changes: pending controls, omitted buffers and external file changes
 can remain invisible. Automatic intervals can also be deferred.
 
-Beta 13 displays this caveat with partial-extraction warnings on new baselines,
+This caveat appears with partial-extraction warnings on new baselines,
 reviews, recording-range previews and restored evidence, and in new packet
 instructions. Existing history is not rewritten. Consult the
 [supported/omitted-state matrix](Data-and-AI-Contracts#supported-and-omitted-state-beta-13).
 
 ## Checkpoint scheduling and storage
 
-For large stacks, start with **Manual**. Beta 15's snapshot-local string sharing
-reduced the same copied-data 30-cycle x86 process peak from beta 14's
-1,662.8 MiB to 896.7 MiB, but native capture still takes several seconds.
-This is not a universal memory fix; a longer interval reduces frequency,
-not each pause/peak. See
-[performance limits](Validation-and-Limitations#beta-15-snapshot-local-string-sharing).
-One [two-hour Manual-mode actual-editor soak](Validation-and-Limitations#beta-15-two-hour-actual-editor-soak)
-passed its observed test-mod configuration, including cold Resume. No extra
-dependencies/extensions were reported. This establishes no universal
-record-count/memory ceiling or unbounded-session safety; normal mod/notes
-saving and separate backups remain essential.
+For large stacks, start with **Manual**. Native capture runs on the editor
+thread and can take seconds. A longer interval reduces frequency, not each
+pause/peak. Normal mod/notes saving and separate backups remain essential;
+there is no universal safe record-count or memory ceiling. See
+[current performance limits](Validation-and-Limitations#performance-and-long-sessions)
+and [historical measurements](Validation-History#s12-performance-measurements-partial-beta-14).
 
 **Plugin settings** offers Manual (default), 30 seconds, 1 minute, 5 minutes
 and 10 minutes. Automatic reviews durably append session deltas while the window
 is visible, not minimized/busy or blocked by visible modal forms; they never
-save the mod or apply AI notes. In beta 10, compilation becomes due when the
+save the mod or apply AI notes. Compilation becomes due when the
 oldest durable uncompiled recording is 30 minutes old, including time closed or
 manual. It runs on the next eligible automatic tick, not inside settings Save
 or Resume. Manual mode uses **Compile journal** explicitly.
@@ -126,7 +124,7 @@ Hidden/minimized/busy windows, open menus and modal dialogs defer work without
 acknowledging the deadline. After successful compilation there is no empty
 timer: the next first pending recording starts a fresh age window.
 
-Since beta 20, new JSON destinations default to the **Scribe project folder**:
+New JSON destinations default to the **Scribe project folder**:
 the active mod's actual directory unless an external project folder is enabled.
 The independent custom export-directory setting still overrides dialog defaults;
 dialogs allow individual locations. Changing defaults does not move existing
@@ -138,7 +136,9 @@ untouched and is **not silently imported**: a missing local file starts with
 Manual and both text features disabled. A notice explains this when old
 user-wide settings exist. Configure each mod explicitly.
 
-### Scribe notes and Mod To Do (beta 20)
+<a id="scribe-notes-and-mod-to-do-beta-20"></a>
+
+### Scribe notes and Mod To Do
 
 In **Settings**, independently enable **Scribe free-form notes** and/or **Mod
 To Do**. Both default off. The **Notes** tab is a basic plain-text editor:
@@ -190,11 +190,13 @@ Workshop uploads. Neither Scribe text file is FCS's shared
 `data\__TODO__<user>.txt`, `.mod` data or Workshop change notes. See the
 [text contract](Data-and-AI-Contracts#scribe-text-files-and-project-locator-beta-20).
 
-### Settings recovery (beta 9)
+<a id="settings-recovery-beta-9"></a>
+
+### Settings recovery
 
 If settings are invalid, unsupported, unreadable or reference an unavailable
 custom directory, Scribe opens with a persistent **SETTINGS RECOVERY** banner.
-It names the file and reason. Safe manual mode uses active-mod export defaults;
+It names the file and reason. Safe Manual mode uses project-folder export defaults;
 automatic recording and compilation are disabled. Start/resume, manual Review
 and Compile, Workshop actions and draft work remain available. No original
 settings are rewritten just by opening Scribe.
@@ -212,7 +214,7 @@ Reload obtains its bytes. If another instance changes or locks shared settings,
 Save fails explicitly; reload after it finishes before choosing and saving
 values again. Valid reload/Save exits recovery and adopts its selected interval.
 The current tracking project, original AI packet and exact draft text remain
-in place. Beta 10 preserves compilation debt through these settings actions;
+in place. Compilation debt is preserved through these settings actions;
 recovery never enables automatic work until a valid reload or explicit repair.
 
 ### Project storage
@@ -259,7 +261,7 @@ Loading a legacy AI packet requires conversion approval: retain original bytes a
 current-editor baseline** in that same JSON. Old packets cannot reconstruct
 their missing baseline. Detected external edits, corruption and incompatible
 mod context fail explicitly rather than being overwritten or truncated.
-Only original schema-1/2 AI packets support this conversion. A beta 5 schema-3
+Only original schema-1/2 AI packets support this conversion. A schema-3
 recording-range handoff is not a baseline; resume the original tracking JSON
 with its `.scribe` folder instead.
 
@@ -273,7 +275,9 @@ not advance tracking or compile history. Ranges preserve repeated edits and
 reversals rather than calculating a net diff. Overlapping ranges may document
 the same observations again; check existing notes and citations before approval.
 
-## Recorded state, saved mods and backups (beta 12)
+<a id="recorded-state-saved-mods-and-backups-beta-12"></a>
+
+## Recorded state, saved mods and backups
 
 **A successful recording is not a successful FCS Save.** The persistent Scribe
 notice and Start/Resume chooser distinguish captured editor state, including
@@ -283,7 +287,7 @@ verified** by tracking.
 
 | Action/data | What it preserves or changes | What it does not do |
 |---|---|---|
-| New tracking baseline / Review / automatic recording | Observed supported editor state and durable evidence | Save or restore the `.mod`, assets or notes sidecars |
+| New tracking baseline / Save Changes / automatic recording | Observed supported editor state and durable evidence; enabled Scribe work is saved on actions | Save or restore the `.mod`, assets or native notes sidecars |
 | Resume | Validate/replay tracking history and compare it with the current editor | Put recorded values back into FCS or roll back the saved mod |
 | Compile journal / interrupted-tail recovery | Consolidate or explicitly repair tracking storage | Recover lost unsaved gameplay/notes or perform FCS Save |
 | Apply approved notes | Append reviewed notes in memory and mark FCS dirty | Persist them to disk or create a complete mod backup |
@@ -321,7 +325,7 @@ Neither Yes nor No saves the mod/notes.
    | FCS Notes/TODO | The relevant complete `data\__TODO__<user>.txt` sidecars, including contributing authors' files when needed; these can contain unrelated mods' annotations |
    | Tracking, wherever selected | The baseline JSON and entire matching `.json.scribe` folder, including marker, journal, retained sessions and recovery originals; retain associated `.bak`/`.legacy.bak` files when present |
    | Drafts | Explicitly saved workspace JSONs and desired previous-file backups; they may be outside the mod folder |
-   | Settings and Scribe work, if wanted | `<project folder>\FCS-Scribe.settings.json`, enabled `notes.txt`/`todo.txt`, any repair originals and mod-local `FCS-Scribe.location.json` when external storage is used; beta 19 and earlier used `%LOCALAPPDATA%\FCS-Scribe\settings.json` |
+   | Settings and Scribe work, if wanted | `<project folder>\FCS-Scribe.settings.json`, enabled `notes.txt`/`todo.txt`, any repair originals and mod-local `FCS-Scribe.location.json` when external storage is used |
 
 4. Record original locations, the plugin/editor versions and backup time.
    Check file counts/sizes and preferably SHA-256 hashes against the closed
@@ -338,12 +342,12 @@ This is a manual backup workflow, not a new restoration tool, relocation
 guarantee or power-loss-safe snapshot service. The tracking catalogue cannot
 reconstruct excluded assets/buffers. Do not distribute private backups or an
 entire shared notes file with a mod. The storage procedures below do not grant
-redistribution permission or establish S14's mod-relocation support.
+redistribution permission or establish transparent mod-relocation support.
 
 ### Complete tracking sets and restore failures
 
-Beta 16 adds the same **PRIVATE TRACKING SET** notice to the main window and
-Start/Resume chooser. The default remains the active mod folder; the warning
+The **PRIVATE TRACKING SET** notice appears in the main window and Start/Resume
+chooser. Default destinations follow the project/export folder; the warning
 does not move files, create backups or protect a native Workshop upload.
 
 Keep the baseline JSON and **entire matching `.json.scribe` folder** together,
@@ -425,7 +429,9 @@ Do not distribute shared Notes/TODO sidecars wholesale: they can include other
 mods' annotations. These manual safeguards are not an upload scrubber, a
 backup wizard, proof of redistribution rights or a mod-relocation guarantee.
 
-## Portability and linear history (beta 17)
+<a id="portability-and-linear-history-beta-17"></a>
+
+## Portability and linear history
 
 **Moving tracking storage is not moving the active mod.** Scribe's native
 `ModId` hashes `Path.GetFullPath(activeFile).ToUpperInvariant()`; `ModName`
@@ -478,7 +484,7 @@ filename alone fits. This is not new long-path, alias or network-sync support.
    Resume for the old mod identity, overwrite the old anchor, transplant its
    `.scribe` contents, edit hashes, or convert an old packet to bypass the
    mismatch. If an old export folder no longer exists, choose a valid private
-   folder through Settings/the picker; the active-mod-folder default is unchanged.
+   folder through Settings/the picker; existing project defaults do not migrate files.
 4. Inspect the new baseline's current state and perform an unchanged Review.
    The new project begins with no historical recordings; future reviews
    document observations **after this baseline**, not a recovered relocation
@@ -531,7 +537,7 @@ overwritten. The preview hash in JSON associates it with the copied image.
 Missing images and unsupported/oversized encodings fail explicitly. Local
 metadata is not proof of the current published Steam listing or its changelog.
 
-In beta 6, known optional Workshop failures no longer stop Start tracking,
+Known optional Workshop failures do not stop Start tracking,
 Save Changes, automatic recording or AI range export. The Workshop tab/JSON
 reports `CaptureStatus: "partial"` with component-specific `Issues`; tracking
 warnings and bottom status repeat the notice. Header fields and any readable
@@ -551,7 +557,9 @@ Workshop-only export/archive action errors are reported without pausing
 gameplay recording; they do not re-enable already-paused automation. Ordinary
 tracking/model/journal failures still pause it.
 
-## Export destination protection (beta 11)
+<a id="export-destination-protection-beta-11"></a>
+
+## Export destination protection
 
 Choose a separate filename for exports, not a tracking baseline or any file in
 `<baseline>.json.scribe`. These folders are reserved even when empty or left by
@@ -581,12 +589,14 @@ destination. They retain formatted UTF-8 output and do not rotate a neighboring
 success is reported. Checks are not a universal lock or protection against
 every filesystem alias, hostile last-instant replacement or power loss.
 Keep backups; S09 full interactive acceptance remains open. Follow the
-[S13 storage/privacy procedures](#complete-tracking-sets-and-restore-failures)
+[storage/privacy procedures](#complete-tracking-sets-and-restore-failures)
 before copying, archiving or preparing an upload.
 
 ## Recovery and lifecycle
 
-### Failed project initialization (beta 8)
+<a id="failed-project-initialization-beta-8"></a>
+
+### Failed project initialization
 
 New projects and approved legacy conversions use a pending initialization marker
 before committing the baseline. Ordinary errors retain recognizable pending
@@ -610,7 +620,7 @@ Initialization never claims preexisting session/journal/recovery data, a foreign
 marker, unrelated baseline/marker backups or a changed legacy source. Missing
 or changed required data fails explicitly. Restore the matching files from
 backup or choose a separate filename; preserve unrelated files before doing
-manual moves. Earlier beta markers without pending metadata cannot establish
+manual moves. Older markers without pending metadata cannot establish
 ownership, so they are not automatically deleted or repaired. A missing marker
 with only a backup also requires restoration, not automatic claiming.
 
@@ -627,7 +637,7 @@ A deleted record cannot receive a new note: explicitly choose a surviving
 record to hold its documentation. Combine entries if they share a target.
 Stale drafts and repeat application of a batch to the same record are rejected.
 
-**Workspace > Save workspace** (under Draft in betas 7-19) preserves exact unfinished text with its
+**Workspace > Save workspace** preserves exact unfinished text with its
 original packet. **Open workspace** restores it after restart, independently
 of tracking; it reports stale/invalid responses and never applies them.
 Unsaved work is protected before close, Start/resume, Export, Import, Paste and
@@ -655,14 +665,16 @@ Multi-record application is not transactional. If an error reports partial
 notes, inspect them before retrying or saving. Do not infer safety from a zero
 completed-entry count: an interrupted FCS operation may have made partial
 in-memory changes.
-Beta 4 retries require the original complete draft and unchanged captured
+Retries require the original complete draft and unchanged captured
 state. Matching completed notes are skipped; only pending targets are appended.
 Conflicting text/evidence, partial blocks or multiple same-batch markers stop
 the operation for inspection. Do not delete completed entries from the draft.
-In beta 7, reopen the saved workspace containing the original complete draft
+Reopen the saved workspace containing the original complete draft
 and packet for a retry; fresh current-state/existing-notes checks still apply.
 
-### Per-record notes outcomes and safe retries (beta 18)
+<a id="per-record-notes-outcomes-and-safe-retries-beta-18"></a>
+
+### Per-record notes outcomes and safe retries
 
 Approval names the **actual active Notes/TODO file** and warns that these
 shared annotations are not embedded in the `.mod`. With all FCS instances

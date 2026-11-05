@@ -121,7 +121,9 @@ do not combine its provenance count with a claim of full-stack Workshop testing.
 Expected injected cache/preview failures log their causes; the host must still
 finish with PASS and a successful exit. No Steam Refresh/Upload is invoked.
 
-## Reproduce performance measurements (partial S12)
+<a id="reproduce-performance-measurements-partial-s12"></a>
+
+## Reproduce performance measurements
 
 Run synthetic histories in a fresh x86 host without a game installation:
 
@@ -172,7 +174,8 @@ times, managed/private-memory endpoints and cumulative process peak working
 set. No forced GC is performed. Console min/median/max summaries are descriptive;
 profiling failures exit nonzero, but local timing budgets are not universal
 CI/runtime assertions. See the exact
-[measured envelopes and remaining limits](Validation-and-Limitations#s12-performance-measurements-partial-beta-14).
+[measured envelopes](Validation-History#s12-performance-measurements-partial-beta-14)
+and [current performance limits](Validation-and-Limitations#performance-and-long-sessions).
 
 **Do not publish the fixture directories:** copied native files and full
 tracking snapshots can contain private/dependency data and upstream binaries.
@@ -189,7 +192,7 @@ space. A timer completing establishes duration, not successful interactions.
 Keep Scribe in Manual for this bounded procedure and derive edit/restore
 counts from durable recording times/values, not a retrospective estimate.
 Record human error/usability/compilation/Resume observations separately.
-See the [beta 15 two-hour actual-editor evidence](Validation-and-Limitations#beta-15-two-hour-actual-editor-soak).
+See the [archived two-hour actual-editor evidence](Validation-History#beta-15-two-hour-actual-editor-soak).
 Keep full baselines, native files and private fixture contents out of public
 reports; publish only reviewed aggregate results.
 
@@ -253,3 +256,22 @@ documentation features. The
 records integration findings and compatibility evidence. Version-specific
 release notes live under
 [`docs/releases`](https://github.com/Atlasroar/FCS-Scribe/tree/main/docs/releases).
+
+### Keep each page focused
+
+| Page | Owns | Keep elsewhere |
+|---|---|---|
+| Home | Orientation, navigation and brief current status | Release chronology and detailed test reports |
+| Feature list | Implemented capabilities, controls and essential boundaries | Release history and full operational/recovery procedures |
+| Installation and workflow | Setup, use, saving, backup and recovery procedures | Historical results and schema field reference |
+| Troubleshooting | Symptoms, quoted messages and safe remedies | Changelog narration and acceptance claims |
+| Validation and limitations | Current support boundary and remaining gates | Historical measurements/test logs |
+| Release history | Version index, original notes and upgrade differences | Current feature instructions |
+| Validation history | Release/fixture-scoped results and dated observations | Blanket current-release acceptance |
+| Architecture / Coding decisions | Components/data flow / design rationale | Changelogs |
+| Data and AI contracts | Formats, invariants and required compatibility details | A release-by-release feature timeline |
+| OCS integration / References | Explicitly unshipped proposal / sources and credits | Implemented-feature claims for planned work |
+
+Keep old published anchors working when moving sections, update navigation,
+and publish reviewed source changes to the separate wiki. Documentation-only
+cleanup does not require a plugin version bump or replacing a released ZIP.
