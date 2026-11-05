@@ -28,12 +28,17 @@ they do, where to find them and their important boundaries. Follow
 
 The toolbar opens or activates Scribe inside FCS. Its top-level entries are
 **Core**, **Workshop**, **Draft**, **Workspace**, **Apply approved notes** and
-**Settings**. Hover or keyboard-select an action for help; operation status
-remains separate. Narrow windows use menu overflow. Busy actions disable
+**Settings**. A shared, scrollable bottom information box normally shows tracking,
+privacy, settings-recovery and pending-compilation guidance. Hover or
+keyboard-select an action to temporarily replace that information with help;
+leaving the action/menu restores current warnings. Activity, results and errors
+remain in a separate status area. Narrow windows use menu overflow. Busy actions disable
 menus and notes/task editing; automatic work waits for open menus/modals.
 
 Tabs separate changes/warnings, editable AI draft JSON, Workshop information,
-plain Notes and Mod To Do. The adapter requires the
+plain Notes and Mod To Do. Notes/task settings and file messages stay inside
+their own tabs, without duplicate enable/disable warnings in the bottom box.
+The adapter requires the
 [supported executable and editing mode](Validation-and-Limitations#supported-environment).
 
 ## 2. Start tracking: establish an explicit baseline
@@ -175,7 +180,7 @@ duplicates or deleting originals. Automatic compilation becomes due when the
 oldest pending recording reaches 30 minutes, including time closed or Manual.
 It waits for an eligible tick; Manual requires explicit Compile.
 
-The persistent pending notice shows count, age and any hold. Settings changes
+The default bottom pending notice shows count, age and any hold. Settings changes
 and short sessions do not restart that debt. Compilation does not Save the
 mod, apply notes or recover lost gameplay.
 

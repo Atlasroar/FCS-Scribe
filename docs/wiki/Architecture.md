@@ -30,11 +30,14 @@ for WinForms `Application.Idle` to find the actual `baseForm` and attach UI.
 No Harmony or native hook is added. RE_Kenshi/KenshiLib's native game-runtime
 interfaces are not assumed to be managed editor APIs.
 The Scribe form uses the actual `baseForm` as its standard WinForms `MdiParent`,
-like native FCS windows. A separate bottom help label describes each action on
-mouse hover or keyboard focus without replacing the persistent operation status.
+like native FCS windows. One scrollable, read-only bottom information box shows
+the current tracking/privacy, settings and compilation notices by default.
+Menu hover or keyboard selection temporarily replaces them with action help;
+leaving the action/menu restores current information. Activity/results/errors
+retain their own status area. Notes/task settings messages remain in their tabs.
 
 Known settings read/parse/validation failures stay outside window
-construction failure: a persistent recovery banner identifies the path/reason.
+construction failure: default bottom recovery information identifies the path/reason.
 Temporary Manual/project-folder values are explicitly labelled, with separate
 guards disabling automatic recording and compilation. Settings can reload or
 save a validated repair without replacing the current project or draft.
@@ -65,8 +68,9 @@ entries. Replay restores the earliest uncompiled timestamp,
 excluding compiled duplicates. A monotonic countdown runs within the window;
 Resume restores elapsed age from UTC, including time closed/manual.
 Configuration changes cannot re-anchor that countdown, and only successful
-compilation can clear debt. A persistent notice is independent of operation
-status and explains deferral/hold rather than silently compiling in manual mode.
+compilation can clear debt. The default bottom information includes a pending
+notice independent of operation status and explains deferral/hold rather than
+silently compiling in manual mode; hover help temporarily replaces that notice.
 
 ## Evidence flow
 

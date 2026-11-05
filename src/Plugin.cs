@@ -96,18 +96,14 @@ namespace FcsScribe
         private readonly TextBox review = TextArea(true);
         private readonly TextBox draft = TextArea(false);
         private readonly TextBox workshop = TextArea(true);
-        private readonly Label status = new Label { Dock = DockStyle.Bottom, Height = 48 };
-        private readonly Label settingsNotice = new Label { Dock = DockStyle.Top, AutoSize = true,
-            BorderStyle = BorderStyle.FixedSingle, MaximumSize = new System.Drawing.Size(1040, 0) };
-        private readonly Label trackingNotice = new Label { Dock = DockStyle.Top, AutoSize = true,
-            BorderStyle = BorderStyle.FixedSingle, Text = TrackingChoiceDialog.BoundaryText };
-        private readonly Label storageNotice = new Label { Dock = DockStyle.Top, AutoSize = true,
-            BorderStyle = BorderStyle.FixedSingle, Text = TrackingChoiceDialog.StorageText };
-        private readonly Label compilationNotice = new Label { Dock = DockStyle.Bottom, AutoSize = true,
-            Visible = false, BorderStyle = BorderStyle.FixedSingle };
-        private const string HelpHint = "Hover over a menu action, or select it with the keyboard, to see what it does.";
-        private readonly Label help = new Label { Dock = DockStyle.Bottom, Height = 48, Text = HelpHint,
-            BorderStyle = BorderStyle.FixedSingle };
+        private readonly Label status = new Label { Dock = DockStyle.Bottom, Height = 48,
+            AccessibleName = "Plugin activity and results" };
+        private string settingsNotice, compilationNotice;
+        private ToolStripItem hoveredAction;
+        private bool menuHelpActive;
+        private readonly TextBox help = new TextBox { Dock = DockStyle.Bottom, Height = 100,
+            Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical,
+            AccessibleName = "Warnings, information and contextual help" };
 
         public ScribeWindow(FcsAdapter adapter, Form editor)
             : this(adapter, editor, ProjectLocation.Open(adapter.ActiveModDirectory(), adapter.ActiveModId())) { }
@@ -116,11 +112,11 @@ namespace FcsScribe
             : this(adapter, editor, projectLocation.SettingsPath)
         {
             location = projectLocation;
-            if (!File.Exists(settingsPath) && File.Exists(PluginSettings.DefaultPath))
+            if (settingsError == null && !File.Exists(settingsPath) && File.Exists(PluginSettings.DefaultPath))
             {
-                settingsNotice.Visible = true;
-                settingsNotice.Text = "MOD-LOCAL SETTINGS: this mod starts with Manual/disabled notes/TODO defaults. " +
-                    "Earlier user-wide settings are retained, not silently imported. Configure this mod in Settings.";
+                settingsNotice = "MOD-LOCAL SETTINGS: earlier user-wide settings are retained, not silently imported. " +
+                    "Configure this mod in Settings.";
+                UpdateHelp();
             }
         }
 
@@ -162,11 +158,15 @@ namespace FcsScribe
             AddAsyncAction(actions.Items, "&Settings", "Choose mod notes/TODOs, project storage and recording/export defaults, reload changed settings or explicitly repair settings. Existing tracking files stay at their chosen location.", Settings, true, false);
             MainMenuStrip = actions;
             actions.OverflowButton.AccessibleDescription = "Show menu actions that do not fit in the window.";
-            actions.OverflowButton.MouseEnter += delegate { help.Text = actions.OverflowButton.AccessibleDescription; };
-            actions.OverflowButton.MouseLeave += delegate { UpdateHelp(); };
+            actions.OverflowButton.MouseEnter += delegate { hoveredAction = actions.OverflowButton; UpdateHelp(); };
+            actions.OverflowButton.MouseLeave += delegate { hoveredAction = null; UpdateHelp(); };
             actions.OverflowButton.Paint += delegate { if (actions.OverflowButton.Selected) UpdateHelp(); };
-            actions.MenuDeactivate += delegate { help.Text = HelpHint; };
-            actions.Leave += delegate { help.Text = HelpHint; };
+            actions.OverflowButton.DropDown.Opened += delegate { menuHelpActive = true; UpdateHelp(); };
+            actions.OverflowButton.DropDown.Closed += delegate { ResetHelp(); };
+            actions.MenuActivate += delegate { menuHelpActive = true; UpdateHelp(); };
+            actions.KeyDown += delegate { menuHelpActive = true; UpdateHelp(); };
+            actions.MenuDeactivate += delegate { ResetHelp(); };
+            actions.Leave += delegate { ResetHelp(); };
             tabs = new TabControl { Dock = DockStyle.Fill };
             modWork = new ModWorkView(LocalAction, ReloadModWork);
             var changesTab = new TabPage("Changes and warnings");
@@ -181,6 +181,7 @@ namespace FcsScribe
             tabs.TabPages.Add(modWork.NotesTab); tabs.TabPages.Add(modWork.TodoTab);
             modWork.Load(ProjectDirectory(), modName, settings);
             tabs.SelectedIndexChanged += delegate {
+                ResetHelp();
                 if (tabs.SelectedTab != workshopTab || busy) return;
                 try
                 {
@@ -192,23 +193,10 @@ namespace FcsScribe
                 catch (Exception error) { workshop.Clear(); Plugin.ShowError(error); }
             };
             Controls.Add(tabs);
-            Controls.Add(settingsNotice);
-            Controls.Add(storageNotice);
-            Controls.Add(trackingNotice);
             Controls.Add(actions);
-            Controls.Add(compilationNotice);
             Controls.Add(help);
             Controls.Add(status);
-            ClientSizeChanged += delegate {
-                settingsNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
-                trackingNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
-                storageNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
-                compilationNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
-            };
-            settingsNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
-            trackingNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
-            storageNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
-            compilationNotice.MaximumSize = new System.Drawing.Size(Math.Max(1, ClientSize.Width), 0);
+            UpdateHelp();
             status.Text = "No tracking project open. Start/Resume manages recorded evidence, not saved mod/notes files.";
             timer.Tick += async delegate {
                 if (busy || closing) return;
@@ -797,12 +785,12 @@ namespace FcsScribe
             settingsError = loaded.Error; settingsHash = loaded.FileHash;
             settings = settingsError == null ? loaded.Value : new PluginSettings();
             schedule.Configure(clock.ElapsedMilliseconds, settings.ReviewSeconds);
-            settingsNotice.Visible = settingsError != null;
-            settingsNotice.Text = settingsError == null ? "" :
+            settingsNotice = settingsError == null ? "" :
                 "SETTINGS RECOVERY - automatic recording disabled. Safe manual mode uses the Scribe project export folder. " +
                 "Open Settings to reload or explicitly save a repair. No settings file was changed.\r\n" +
                 settingsPath + "\r\n" + settingsError.Message;
             if (settingsError != null) Console.Error.WriteLine("FCS-Scribe settings recovery: " + settingsError);
+            RefreshCompilationNotice();
         }
 
         private async Task ReloadSettings()
@@ -868,18 +856,18 @@ namespace FcsScribe
         private void RefreshCompilationNotice()
         {
             DateTime? oldest = schedule.OldestPendingUtc;
-            compilationNotice.Visible = project != null && oldest.HasValue;
-            if (project == null || !oldest.HasValue) { compilationNotice.Text = ""; return; }
+            if (project == null || !oldest.HasValue) { compilationNotice = ""; UpdateHelp(); return; }
             long remaining = Math.Max(0, schedule.NextCompilation - clock.ElapsedMilliseconds);
             string due = remaining == 0 ? "due now/overdue" : "due " + DateTime.UtcNow.AddMilliseconds(remaining).ToString("u");
             string hold = settingsError != null ? "Settings recovery: automatic compilation held; use Compile journal." :
                 settings.ReviewSeconds == 0 ? "Manual mode: use Compile journal; debt is retained." :
                 automaticPaused ? "Automatic work paused; debt is retained. Compile manually or resolve the error." :
                 "Automatic compilation waits for the next eligible visible, unblocked tick.";
-            compilationNotice.Text = "Pending compilation: " + project.PendingCount + " recordings; oldest " +
+            compilationNotice = "Pending compilation: " + project.PendingCount + " recordings; oldest " +
                 oldest.Value.ToString("u") + "; " + due + ". " +
                 (oldest.Value > DateTime.UtcNow ? (remaining == 0 ? "Timestamp ahead of local UTC: treated as due now. " :
                 "Local UTC moved behind the recording; the existing countdown is retained. ") : "") + hold;
+            UpdateHelp();
         }
 
         private void ConfigureTimer()
@@ -897,6 +885,7 @@ namespace FcsScribe
         {
             if (busy || closing) return;
             busy = true; actions.Enabled = false; timer.Stop();
+            ResetHelp();
             modWork.NotesTab.Enabled = modWork.TodoTab.Enabled = false;
             try
             {
@@ -932,7 +921,8 @@ namespace FcsScribe
         private ToolStripMenuItem AddMenu(string label, string description)
         {
             ToolStripMenuItem item = CreateMenuItem(label, description);
-            item.DropDownClosed += delegate { UpdateHelp(); };
+            item.DropDownOpened += delegate { menuHelpActive = true; UpdateHelp(); };
+            item.DropDownClosed += delegate { ResetHelp(); };
             actions.Items.Add(item);
             return item;
         }
@@ -943,8 +933,8 @@ namespace FcsScribe
                 AccessibleName = label.Replace("&", ""), AccessibleDescription = description,
                 Overflow = ToolStripItemOverflow.AsNeeded
             };
-            item.MouseEnter += delegate { help.Text = description; };
-            item.MouseLeave += delegate { UpdateHelp(); };
+            item.MouseEnter += delegate { hoveredAction = item; UpdateHelp(); };
+            item.MouseLeave += delegate { hoveredAction = null; UpdateHelp(); };
             // ToolStrip items have no focus event; keyboard selection repaints the selected item.
             item.Paint += delegate { if (item.Selected) UpdateHelp(); };
             return item;
@@ -953,9 +943,10 @@ namespace FcsScribe
         private void UpdateHelp()
         {
             var items = actions.Items.Cast<ToolStripItem>();
-            ToolStripItem selected = items.FirstOrDefault(x => x is ToolStripDropDownItem &&
+            ToolStripItem selected = !menuHelpActive ? null : items.FirstOrDefault(x => x is ToolStripDropDownItem &&
                 ((ToolStripDropDownItem)x).DropDown.Visible) ?? items.FirstOrDefault(x => x.Selected) ??
                 (actions.OverflowButton.Selected || actions.OverflowButton.DropDown.Visible ? actions.OverflowButton : null);
+            if (selected == null) selected = hoveredAction;
             var menu = selected as ToolStripDropDownItem;
             while (menu != null && menu.DropDown.Visible)
             {
@@ -964,8 +955,16 @@ namespace FcsScribe
                 selected = child;
                 menu = child as ToolStripDropDownItem;
             }
-            string text = selected == null ? HelpHint : selected.AccessibleDescription;
+            string text = selected == null ? String.Join("\r\n", new[] { settingsNotice, compilationNotice,
+                TrackingChoiceDialog.BoundaryText, TrackingChoiceDialog.StorageText }.Where(x => !String.IsNullOrEmpty(x))) :
+                selected.AccessibleDescription;
             if (help.Text != text) help.Text = text;
+        }
+
+        private void ResetHelp()
+        {
+            hoveredAction = null; menuHelpActive = false;
+            UpdateHelp();
         }
 
         private void AddAction(ToolStripItemCollection parent, string label, string description, Action action, bool pauseAutomation = true)
