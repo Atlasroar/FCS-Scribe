@@ -308,26 +308,30 @@ internal static class IntegrationTests
         {
             Check(window.IsMdiChild && window.MdiParent == editor, "Scribe uses FCS's actual MDI container");
             var actions = window.Controls.OfType<MenuStrip>().Single();
-            var help = (Label)FcsAdapter.Field(window, "help");
+            var help = (TextBox)FcsAdapter.Field(window, "help");
             var status = (Label)FcsAdapter.Field(window, "status");
             string originalStatus = status.Text;
-            var trackingNotice = (Label)FcsAdapter.Field(window, "trackingNotice");
-            Check(trackingNotice.Text == TrackingChoiceDialog.BoundaryText &&
-                trackingNotice.Text.Contains("UNSAVED") && trackingNotice.Text.Contains("NOT verified"),
-                "a persistent notice distinguishes captured editor state from saved mod/notes state");
+            string originalInformation = help.Text;
+            string trackingNotice = TrackingChoiceDialog.BoundaryText;
+            Check(help.Text.Contains(trackingNotice) &&
+                trackingNotice.Contains("UNSAVED") && trackingNotice.Contains("NOT verified"),
+                "default bottom information distinguishes captured editor state from saved mod/notes state");
             using (var choice = new TrackingChoiceDialog())
                 Check(choice.Controls.OfType<FlowLayoutPanel>().Single().Controls.OfType<Label>()
-                    .Any(x => x.Text == trackingNotice.Text), "the Start/Resume chooser shares the persistent boundary guidance");
-            var storageNotice = (Label)FcsAdapter.Field(window, "storageNotice");
-            Check(storageNotice.Text == TrackingChoiceDialog.StorageText &&
-                storageNotice.Text.Contains("project.json") && storageNotice.Text.Contains("journal.jsonl") &&
-                storageNotice.Text.Contains("sessions") && storageNotice.Text.Contains("full loaded/dependency data") &&
-                storageNotice.Text.Contains("does not inspect or block"),
-                "persistent storage guidance names the complete private set without promising native-upload protection");
+                    .Any(x => x.Text == trackingNotice), "the Start/Resume chooser shares the boundary guidance");
+            string storageNotice = TrackingChoiceDialog.StorageText;
+            Check(help.Text.Contains(storageNotice) &&
+                storageNotice.Contains("project.json") && storageNotice.Contains("journal.jsonl") &&
+                storageNotice.Contains("sessions") && storageNotice.Contains("full loaded/dependency data") &&
+                storageNotice.Contains("does not inspect or block"),
+                "default bottom storage guidance retains the complete private-set warning");
+            Check(window.Controls.OfType<Label>().SequenceEqual(new[] { status }) &&
+                help.Multiline && help.ReadOnly && help.WordWrap && help.ScrollBars == ScrollBars.Vertical,
+                "one scrollable read-only information box replaces the separate top warning labels");
             using (var choice = new TrackingChoiceDialog())
             {
                 Check(choice.Controls.OfType<FlowLayoutPanel>().Single().Controls.OfType<Label>()
-                    .Any(x => x.Text == storageNotice.Text), "the chooser shares the same storage/distribution warning");
+                    .Any(x => x.Text == storageNotice), "the chooser shares the same storage/distribution warning");
                 choice.ShowInTaskbar = false; choice.Opacity = 0; choice.Show(); choice.PerformLayout();
                 var layout = choice.Controls.OfType<FlowLayoutPanel>().Single();
                 Check(layout.Controls.OfType<FlowLayoutPanel>().Single().Bottom <= layout.ClientSize.Height - layout.Padding.Bottom,
@@ -357,7 +361,7 @@ internal static class IntegrationTests
                 Check(!String.IsNullOrEmpty(item.AccessibleDescription) && help.Text == item.AccessibleDescription &&
                     status.Text == originalStatus, item.Text + " hover explains action without erasing operation status");
                 typeof(ToolStripItem).GetMethod("HandleMouseLeave", Flags).Invoke(item, new object[] { EventArgs.Empty });
-                Check(help.Text != item.AccessibleDescription, item.Text + " hover help clears on exit");
+                Check(help.Text == originalInformation, item.Text + " hover exit restores all default warnings");
             }
             var completion = new TaskCompletionSource<int>();
             Task operation = (Task)FcsAdapter.Call(window, "RunBusy", new Func<Task>(() => completion.Task));
@@ -371,6 +375,7 @@ internal static class IntegrationTests
                 host.Show(); window.Show();
                 foreach (ToolStripMenuItem menu in menus)
                 {
+                    FcsAdapter.Call(actions, "OnKeyDown", new KeyEventArgs(Keys.Right));
                     menu.Select(); actions.Refresh();
                     Check(help.Text == menu.AccessibleDescription, menu.Text + " keyboard selection explains the menu/action");
                     if (!menu.HasDropDownItems) continue;
@@ -382,14 +387,13 @@ internal static class IntegrationTests
                             item.Text + " keyboard selection explains the action without erasing operation status");
                     }
                     menu.HideDropDown();
+                    Check(help.Text == originalInformation, "closing " + menu.Text + " restores default information");
                 }
+                FcsAdapter.Call(actions, "OnMenuDeactivate", EventArgs.Empty);
                 window.Width = 320; window.PerformLayout(); actions.PerformLayout();
-                Check(trackingNotice.MaximumSize.Width == window.ClientSize.Width &&
-                    trackingNotice.Height >= trackingNotice.GetPreferredSize(trackingNotice.MaximumSize).Height,
-                    "the tracking boundary notice wraps rather than clipping in a narrow window");
-                Check(storageNotice.MaximumSize.Width == window.ClientSize.Width &&
-                    storageNotice.Height >= storageNotice.GetPreferredSize(storageNotice.MaximumSize).Height,
-                    "the complete-set privacy notice wraps rather than clipping in a narrow window");
+                Check(help.Width <= window.ClientSize.Width && help.Text == originalInformation &&
+                    help.Height == 100 && help.ScrollBars == ScrollBars.Vertical,
+                    "narrow windows retain all warnings with scrolling instead of growing the header");
                 Check(actions.OverflowButton.Visible && menus.Last().Placement == ToolStripItemPlacement.Overflow,
                     "narrow windows retain access to actions through the overflow menu");
                 actions.OverflowButton.ShowDropDown();
@@ -397,13 +401,21 @@ internal static class IntegrationTests
                 Check(help.Text == menus.Last().AccessibleDescription,
                     "keyboard selection in the overflow menu retains contextual help");
                 actions.OverflowButton.HideDropDown();
+                actions.Refresh();
+                Check(help.Text == originalInformation, "overflow close and later selected-item paints do not leave stale help");
+                typeof(ToolStripItem).GetMethod("HandleMouseEnter", Flags).Invoke(menus[0], new object[] { EventArgs.Empty });
+                FcsAdapter.Call(actions, "OnMenuDeactivate", EventArgs.Empty);
+                actions.Refresh();
+                Check(help.Text == originalInformation && status.Text == originalStatus,
+                    "menu deactivation restores warnings without erasing operation status");
                 window.Hide(); window.MdiParent = editor;
             }
 
             Check(window.Controls.OfType<TabControl>().Single().TabPages.Cast<TabPage>().Any(x => x.Text == "Workshop info"),
                 "Workshop context has a read-only review tab");
             window.PerformLayout();
-            Check(help.Dock == DockStyle.Bottom && help.Bottom <= status.Top, "hover help is at the window bottom above persistent status");
+            Check(help.Dock == DockStyle.Bottom && help.Bottom <= status.Top,
+                "shared warnings/help remain at the bottom above distinct operation status");
         }
     }
 
@@ -673,13 +685,23 @@ internal static class IntegrationTests
         using (var window = new ScribeWindow(adapter, editor, path))
         {
             window.MdiParent = host; host.Show(); window.Show();
-            var notice = (Label)FcsAdapter.Field(window, "settingsNotice");
+            var notice = (TextBox)FcsAdapter.Field(window, "help");
             var timer = (System.Windows.Forms.Timer)FcsAdapter.Field(window, "timer");
             var draft = (TextBox)FcsAdapter.Field(window, "draft");
-            Check(FcsAdapter.Field(window, "settingsError") != null && notice.Visible &&
+            Check(FcsAdapter.Field(window, "settingsError") != null &&
                 notice.Text.Contains(path) && notice.Text.Contains("SETTINGS RECOVERY") &&
                 notice.Text.Contains("automatic recording disabled") && TrackingStorage.HashFile(path) == original,
-                "corrupt settings open the actual window with a persistent recovery warning and untouched source");
+                "corrupt settings open the actual window with bottom recovery information and untouched source");
+            var settingsAction = (ToolStripMenuItem)window.MainMenuStrip.Items[window.MainMenuStrip.Items.Count - 1];
+            typeof(ToolStripItem).GetMethod("HandleMouseEnter", Flags).Invoke(settingsAction, new object[] { EventArgs.Empty });
+            Check(notice.Text == settingsAction.AccessibleDescription &&
+                ((Label)FcsAdapter.Field(window, "status")).Text.Contains("No tracking project"),
+                "recovery information yields temporarily to hover without changing operation status");
+            FcsAdapter.Call(window, "RefreshCompilationNotice");
+            Check(notice.Text == settingsAction.AccessibleDescription, "notice refresh does not overwrite active hover help");
+            typeof(ToolStripItem).GetMethod("HandleMouseLeave", Flags).Invoke(settingsAction, new object[] { EventArgs.Empty });
+            Check(notice.Text.Contains("SETTINGS RECOVERY") && notice.Text.Contains(path),
+                "hover exit restores current recovery details");
             Check(window.MainMenuStrip.Items.Cast<ToolStripMenuItem>().Last().Enabled &&
                 (string)FcsAdapter.Call(window, "ExportDirectory") == adapter.ActiveModDirectory(),
                 "Settings stays reachable and safe manual mode uses the active mod export folder");
@@ -700,8 +722,8 @@ internal static class IntegrationTests
                 Check(!timer.Enabled && project.EntryCount == 0,
                     "recovery explicitly gates timer dispatch and automatic work even with a nonzero interval");
                 RunWindow(window, "Review");
-                Check(project.EntryCount == 1 && project.PendingCount == 1 && notice.Visible,
-                    "manual gameplay recording works in recovery without clearing its persistent warning");
+                Check(project.EntryCount == 1 && project.PendingCount == 1 && notice.Text.Contains("SETTINGS RECOVERY"),
+                    "manual gameplay recording works in recovery without clearing its default warning");
                 RunWindow(window, "ReloadSettings");
                 Check(FcsAdapter.Field(window, "settingsError") != null && !timer.Enabled &&
                     TrackingStorage.HashFile(path) == original,
@@ -711,17 +733,21 @@ internal static class IntegrationTests
                 bool stale = false;
                 try { RunWindow(window, "SaveSettings", new PluginSettings { ReviewSeconds = 60 }); }
                 catch (IOException) { stale = true; }
-                Check(stale && TrackingStorage.HashFile(path) == external && notice.Visible,
+                Check(stale && TrackingStorage.HashFile(path) == external && notice.Text.Contains("SETTINGS RECOVERY"),
                     "a stale recovery window cannot overwrite another instance's repaired settings");
+                typeof(ToolStripItem).GetMethod("HandleMouseEnter", Flags).Invoke(settingsAction, new object[] { EventArgs.Empty });
                 RunWindow(window, "ReloadSettings");
-                Check(FcsAdapter.Field(window, "settingsError") == null && !notice.Visible && !timer.Enabled,
-                    "explicit validated reload exits recovery without enabling manual-only settings");
+                Check(notice.Text.Contains(TrackingChoiceDialog.BoundaryText) && !notice.Text.Contains("SETTINGS RECOVERY"),
+                    "starting a reload clears transient help and restores updated default information");
+                typeof(ToolStripItem).GetMethod("HandleMouseLeave", Flags).Invoke(settingsAction, new object[] { EventArgs.Empty });
+                Check(FcsAdapter.Field(window, "settingsError") == null && !notice.Text.Contains("SETTINGS RECOVERY") && !timer.Enabled,
+                    "hover exit after validated reload restores current information rather than a stale recovery warning");
                 File.WriteAllText(path, "another malformed original");
                 RunWindow(window, "ReloadSettings");
                 RunWindow(window, "SaveSettings", new PluginSettings { ReviewSeconds = 30 });
                 string backup = Directory.GetFiles(directory, "recovery-settings.json.recovery-*.bak").Single();
                 Check(File.ReadAllText(backup) == "another malformed original" &&
-                    PluginSettings.Load(path).ReviewSeconds == 30 && !notice.Visible && timer.Enabled,
+                    PluginSettings.Load(path).ReviewSeconds == 30 && !notice.Text.Contains("SETTINGS RECOVERY") && timer.Enabled,
                     "explicit repaired Save preserves original bytes and adopts validated recording preferences");
                 string repairedHash = TrackingStorage.HashFile(path);
                 using (var locked = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
@@ -736,7 +762,7 @@ internal static class IntegrationTests
                     bool unreadable = false;
                     try { RunWindow(window, "SaveSettings", new PluginSettings()); }
                     catch (IOException) { unreadable = true; }
-                    Check(unreadable && FcsAdapter.Field(window, "settingsHash") == null && notice.Visible && !timer.Enabled,
+                    Check(unreadable && FcsAdapter.Field(window, "settingsHash") == null && notice.Text.Contains("SETTINGS RECOVERY") && !timer.Enabled,
                         "sharing-denied reload enters recovery and an unknown original hash cannot authorize repair");
                     using (var dialog = new SettingsDialog((PluginSettings)FcsAdapter.Field(window, "settings"), path,
                         (Exception)FcsAdapter.Field(window, "settingsError")))
@@ -753,7 +779,7 @@ internal static class IntegrationTests
                     Directory.GetFiles(directory, "recovery-settings.json.recovery-*.bak").Length == 1,
                     "failed unreadable repair and dialog cancellation leave settings and recovery backups untouched");
                 RunWindow(window, "ReloadSettings");
-                Check(!notice.Visible && timer.Enabled && Object.ReferenceEquals(project, FcsAdapter.Field(window, "project")) &&
+                Check(!notice.Text.Contains("SETTINGS RECOVERY") && timer.Enabled && Object.ReferenceEquals(project, FcsAdapter.Field(window, "project")) &&
                     Object.ReferenceEquals(packet, FcsAdapter.Field(window, "exported")) && draft.Text == "{ unfinished draft retained\r\n",
                     "reload after access recovery retains the current project, original packet and exact unfinished draft");
             }
@@ -780,17 +806,17 @@ internal static class IntegrationTests
                 var schedule = (JournalSchedule)FcsAdapter.Field(window, "schedule");
                 var clock = (System.Diagnostics.Stopwatch)FcsAdapter.Field(window, "clock");
                 var timer = (System.Windows.Forms.Timer)FcsAdapter.Field(window, "timer");
-                var notice = (Label)FcsAdapter.Field(window, "compilationNotice");
+                var notice = (TextBox)FcsAdapter.Field(window, "help");
                 var project = (JournalProject)FcsAdapter.Field(window, "project");
-                Check(schedule.NextCompilation == Int64.MaxValue && !notice.Visible,
+                Check(schedule.NextCompilation == Int64.MaxValue && !notice.Text.Contains("Pending compilation:"),
                     "empty tracking has no phantom compilation deadline or debt notice");
                 Put(header, "Author", "Compilation scheduling fixture");
                 RunWindow(window, "Review");
                 string anchorHash = TrackingStorage.HashFile(path);
                 long deadline = schedule.NextCompilation, review = schedule.NextReview;
-                Check(project.PendingCount == 1 && notice.Visible && notice.Text.Contains("Pending compilation: 1") &&
+                Check(project.PendingCount == 1 && notice.Text.Contains("Pending compilation: 1") &&
                     notice.Text.Contains(project.OldestPendingUtc.Value.ToString("u")),
-                    "actual recording exposes a persistent count, oldest UTC and pending deadline");
+                    "actual recording exposes a default count, oldest UTC and pending deadline in the shared information box");
                 string custom = Path.Combine(directory, "schedule-custom"); Directory.CreateDirectory(custom);
                 for (int i = 0; i < 8; i++)
                 {
@@ -807,8 +833,9 @@ internal static class IntegrationTests
                 Check(!timer.Enabled && schedule.NextCompilation == deadline && notice.Text.Contains("Manual mode"),
                     "manual transition holds debt visibly without automatic work");
                 window.Width = 340; window.PerformLayout();
-                Check(notice.Width <= window.ClientSize.Width && notice.Bottom <= ((Label)FcsAdapter.Field(window, "help")).Top,
-                    "pending debt wraps inside narrow windows above contextual help");
+                Check(notice.Width <= window.ClientSize.Width && notice.ScrollBars == ScrollBars.Vertical &&
+                    notice.Text.Contains("Pending compilation: 1"),
+                    "pending debt remains readable by scrolling within the shared narrow-window information box");
                 window.Width = 1080;
                 File.WriteAllText(settingsPath, "{ invalid settings");
                 RunWindow(window, "ReloadSettings");
@@ -882,8 +909,13 @@ internal static class IntegrationTests
                 timer.Stop();
                 Check(failed && project.PendingCount == 1 && schedule.NextCompilation == overdue,
                     "a failed compilation never clears or moves the pending deadline");
+                typeof(ToolStripItem).GetMethod("HandleMouseEnter", Flags).Invoke(core, new object[] { EventArgs.Empty });
                 FcsAdapter.Call(window, "SetActionFailure", true);
                 FcsAdapter.Call(window, "SetActionFailure", false);
+                Check(notice.Text == core.AccessibleDescription &&
+                    ((Label)FcsAdapter.Field(window, "status")).Text.Contains("Workshop action failed"),
+                    "activity/errors remain distinct while compilation warnings update behind hover help");
+                typeof(ToolStripItem).GetMethod("HandleMouseLeave", Flags).Invoke(core, new object[] { EventArgs.Empty });
                 Check(notice.Text.Contains("Automatic work paused") && !timer.Enabled &&
                     schedule.NextCompilation == overdue, "failure notice preserves paused debt through later Workshop-only errors");
                 File.Delete(project.JournalPath);
@@ -894,7 +926,7 @@ internal static class IntegrationTests
                 timer.Stop();
                 Check(project.PendingCount == 0 && schedule.OldestPendingUtc == null &&
                     schedule.NextCompilation == Int64.MaxValue && schedule.NextReview == review &&
-                    !notice.Visible && TrackingStorage.HashFile(path) == anchorHash &&
+                    !notice.Text.Contains("Pending compilation:") && TrackingStorage.HashFile(path) == anchorHash &&
                     File.Exists(project.SessionPath) && File.ReadAllLines(project.JournalPath).Length == 1,
                     "eligible automatic work compiles retained debt once, clears its notice and preserves originals/review timing");
                 string compiled = TrackingStorage.HashFile(project.JournalPath);
@@ -1277,6 +1309,18 @@ internal static class IntegrationTests
         using (var hook = new ModTodoMenu(assembly, editor, () => window))
         {
             Check(!File.Exists(notes) && !File.Exists(todo), "disabled mod work creates no text files on open");
+            var view = (ModWorkView)FcsAdapter.Field(window, "modWork");
+            var information = (TextBox)FcsAdapter.Field(window, "help");
+            var tabs = window.Controls.OfType<TabControl>().Single();
+            string defaultInformation = information.Text;
+            tabs.SelectedTab = view.NotesTab;
+            Check(((Label)FcsAdapter.Field(view, "notesPath")).Text.Contains("Enable Scribe notes") &&
+                view.Notes.ReadOnly && information.Text == defaultInformation,
+                "disabled notes explain their own setting without changing bottom information");
+            tabs.SelectedTab = view.TodoTab;
+            Check(((Label)FcsAdapter.Field(view, "todoPath")).Text.Contains("Enable Mod To Do") &&
+                !view.Todos.Enabled && information.Text == defaultInformation,
+                "disabled tasks explain their own setting without a duplicate footer warning");
             var menu = FcsAdapter.RecordMenu(editor);
             Check(menu.Items.IndexOf(hook.Item) == menu.Items.IndexOf(FcsAdapter.NativeTodoItem(editor)) + 1 &&
                 hook.Item.Text == "Add Mod To Do", "Scribe task action is directly below the unchanged native Add Todo Item");
@@ -1285,7 +1329,11 @@ internal static class IntegrationTests
             RunWindow(window, "SaveSettings", new PluginSettings { ModNotesEnabled = true, ModTodoEnabled = true });
             Check(File.Exists(notes) && File.Exists(todo) &&
                 File.Exists(Path.Combine(root, "FCS-Scribe.settings.json")), "enabling work persists separate files and mod-local settings");
-            var view = (ModWorkView)FcsAdapter.Field(window, "modWork");
+            Check(((Label)FcsAdapter.Field(view, "notesPath")).Text.Contains(notes) &&
+                ((Label)FcsAdapter.Field(view, "todoPath")).Text.Contains(todo) &&
+                !view.Notes.ReadOnly && view.Todos.Enabled &&
+                !information.Text.Contains("Enable Scribe notes") && !information.Text.Contains("Enable Mod To Do"),
+                "enabled tab messages update immediately without duplicating text-feature instructions in the footer");
             view.Notes.Text = "Free-form author notes.\r\nPlain writing.";
             RunWindow(window, "Review");
             Check(File.ReadAllText(notes) == view.Notes.Text &&

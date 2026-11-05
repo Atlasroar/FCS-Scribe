@@ -26,8 +26,12 @@ introduced as a speculative workaround.
 
 FCS's inspected main form is a standard WinForms MDI container, and its own
 Workshop and notes forms use that parent. Scribe uses the same mechanism
-instead of a second owned top-level window. Button hover and keyboard-focus
-help use a dedicated bottom label so descriptions never erase action results.
+instead of a second owned top-level window. Menu hover and keyboard-selection
+help temporarily use the same bottom box as default warnings/information.
+Restoring current notices on exit avoids stale help; bounded height, wrapping
+and vertical scrolling keep long warnings out of the header. Operation activity,
+results and errors stay separate. Notes/task settings guidance stays in its own
+tabs rather than repeating enable/disable warnings in the footer.
 
 ## Capture Workshop context without invoking publishing behavior
 

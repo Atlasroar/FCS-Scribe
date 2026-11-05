@@ -7,6 +7,28 @@ For current supported use and open gates, see
 [Validation and limitations](Validation-and-Limitations). For what changed
 in each release, see [Release history](Release-History).
 
+## Shared warnings and help (beta 21)
+
+The user-directed footer cleanup passed **694 core checks**, a warnings-as-errors
+plugin build and targeted disposable native-host suites: **104 mod-work/menu**,
+**20 settings recovery** and **25 compilation scheduling** checks.
+Coverage includes restored default warnings after mouse exit, menu/overflow
+close and deactivation; keyboard help; bounded, scrollable narrow-window
+information; settings/compilation refresh behind active help; distinct operation
+errors; and notes/task settings messages remaining local to their tabs.
+
+The information box replaces the separate top warning labels. Tracking,
+privacy, settings recovery and pending compilation remain default information,
+temporarily replaced by action help. This is an intentional visibility change,
+not weaker tracking/storage validation or a different automatic-work policy.
+Original warning text in the Start/Resume chooser is unchanged.
+
+Checks used copied inputs and native forms, not complete physical FCS Extended
+startup or interactive acceptance. No live installation or original game/mod
+data was changed; the existing S09 and support-scope gates remain open.
+
+## Earlier validation reports
+
 The plugin is experimental. The purpose of validation is to establish exact
 behavior within a stated scope, not to turn partial extraction into a claim of
 complete editor compatibility.

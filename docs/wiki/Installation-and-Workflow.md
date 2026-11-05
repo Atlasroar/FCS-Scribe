@@ -30,8 +30,13 @@ Extract `FCS-Scribe-v<version>.zip`, then copy its `FCS-Scribe` folder into
 `<Kenshi>\mods\FCS-Scribe`. Launch FCS Extended normally, enable FCS-Scribe in
 the extension selector, and open a writable `.mod` in normal editing mode.
 The plugin adds an FCS-Scribe toolbar button and opens as an embedded MDI child.
-Hover over action buttons, or focus them with Tab, to see descriptions at the
-bottom; operation status stays visible separately.
+Tracking/privacy and applicable settings/compilation notices normally appear
+in the shared bottom information box. Hover over menu actions, or select them
+with the keyboard, to see descriptions there temporarily. Leaving the action
+or closing/leaving the menu restores current warnings/info. The box wraps and
+scrolls vertically; plugin activity, results and errors stay visible separately.
+Notes and Mod To Do already explain their settings inside their own tabs;
+the bottom box does not duplicate their enable/disable messages.
 Actions are grouped into **Core**, **Workshop**, **Draft** and **Workspace**
 menus, with separate **Apply approved notes** and **Settings** entries.
 See the [feature list](Feature-List#1-embedded-window-and-contextual-help)
@@ -116,7 +121,7 @@ manual. It runs on the next eligible automatic tick, not inside settings Save
 or Resume. Manual mode uses **Compile journal** explicitly.
 Errors pause automation; reopen/validate after a journal write failure.
 
-The persistent **Pending compilation** notice shows the count, oldest UTC,
+The default bottom **Pending compilation** notice shows the count, oldest UTC,
 due/overdue state and any manual/recovery/error hold. Settings saves/reloads and
 short sessions retain this debt. A folder-only edit does not reset recording
 either; an interval change re-arms recording without moving compilation.
@@ -195,7 +200,7 @@ Workshop uploads. Neither Scribe text file is FCS's shared
 ### Settings recovery
 
 If settings are invalid, unsupported, unreadable or reference an unavailable
-custom directory, Scribe opens with a persistent **SETTINGS RECOVERY** banner.
+custom directory, Scribe opens with **SETTINGS RECOVERY** information in the bottom box.
 It names the file and reason. Safe Manual mode uses project-folder export defaults;
 automatic recording and compilation are disabled. Start/resume, manual Review
 and Compile, Workshop actions and draft work remain available. No original
@@ -279,8 +284,8 @@ the same observations again; check existing notes and citations before approval.
 
 ## Recorded state, saved mods and backups
 
-**A successful recording is not a successful FCS Save.** The persistent Scribe
-notice and Start/Resume chooser distinguish captured editor state, including
+**A successful recording is not a successful FCS Save.** The default bottom
+information and Start/Resume chooser distinguish captured editor state, including
 unsaved edits, from saved `.mod` and Notes/TODO files. Project status names the
 last recorded UTC, not the last successful FCS save; the latter is **not
 verified** by tracking.

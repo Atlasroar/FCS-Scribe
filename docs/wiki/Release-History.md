@@ -8,7 +8,7 @@ Historical release notes describe their own version, not current support.
 ## Current release and versioning
 
 The current plugin release is
-[v0.1.0-beta.20](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.20).
+[v0.1.0-beta.21](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.21).
 All releases remain experimental prereleases. A newer beta number does not
 close the [interactive acceptance gate](Validation-and-Limitations#remaining-interactive-acceptance).
 
@@ -27,6 +27,7 @@ reissued historical archive.
 
 | Version and original release notes | Main change |
 |---|---|
+| [v0.1.0-beta.21](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.21) | Shared bottom warnings/temporary menu help, distinct activity status and tab-local notes/task messages |
 | [v0.1.0-beta.20](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.20) | Opt-in Scribe plain notes and record-linked tasks, mod-local/external project storage, Save Changes wording and a Workspace dropdown |
 | [v0.1.0-beta.19](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.19) | Bounded compatibility/provenance matrix and copied dependency/locked-layer tests; no new supported executable |
 | [v0.1.0-beta.18](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.18) | Readback-confirmed per-record note outcomes, explicit uncertain writes and shared-sidecar/retry guidance |
