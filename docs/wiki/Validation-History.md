@@ -27,6 +27,35 @@ Checks used copied inputs and native forms, not complete physical FCS Extended
 startup or interactive acceptance. No live installation or original game/mod
 data was changed; the existing S09 and support-scope gates remain open.
 
+### Real FCS Extended follow-up: November 5, 2026
+
+The user operated the installed beta 21 in a protected disposable test setup.
+Read-only inspection confirmed informational version `0.1.0-beta.21`, file
+version `0.1.0.21`, and installed DLL bytes matching the previously verified
+beta 21 release archive. No plugin installation or live file repair was
+performed during this follow-up.
+
+| Area | Observed result and evidence boundary |
+|---|---|
+| Footer and mouse help | User confirmed the former top warning block is gone; hovering Core > Save Changes shows temporary help, leaving/closing restores warnings/info, and operation status remains separate. |
+| Tab settings transitions | User confirmed disabling/saving and re-enabling/saving Notes and Mod To Do immediately updates each tab's settings message and editing controls, without duplicate footer warnings. |
+| Keyboard help | User confirmed Alt+C/arrow-key selection follows the selected action, and Escape restores default information without changing status. |
+| Narrow-window overflow | User confirmed overflow-action help restores on close, and default warnings remain readable by scrolling without footer growth obscuring the tabs. |
+| Scribe text and task persistence | User added synthetic notes/task text, completed the record-linked task, used Save Changes, and confirmed both survived closing/reopening Scribe through the toolbar without native FCS Save. Independent reads confirmed separate literal notes and a completed, valid record-linked task. Native Add Todo Item remained available. |
+| Full editor restart | User closed FCS normally, relaunched FCS Extended, reopened the same test mod/Scribe, and confirmed text, completion and enabled settings returned. Before/after SHA-256 checks independently confirmed identical `notes.txt`, `todo.txt`, `FCS-Scribe.settings.json` and test `.mod` bytes. |
+
+The notes file initially differed from the requested synthetic marker suffix.
+The user confirmed entering the task-labelled marker into Notes too; the saved
+literal text matched that input. This was not attributed to Scribe changing
+notes, and the initial exact-marker mismatch was not counted as a save defect.
+
+These are current-release observations for this setup, not a full replay of
+the tracking/AI/native-annotation workflow. Native shared annotation sidecar
+bytes were not independently compared in this pass. It does not rerun or
+override the [earlier final notes checkpoint correction](#final-notes-checkpoint-correction),
+establish other stacks/extensions/builds, test physical failures or Steam
+publishing, or close S09/MVP acceptance. Earlier results retain their own scope.
+
 ## Earlier validation reports
 
 The plugin is experimental. The purpose of validation is to establish exact
