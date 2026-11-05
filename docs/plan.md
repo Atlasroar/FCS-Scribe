@@ -792,6 +792,11 @@ Copied-host UI checks initialize/show the MDI owner before modal actions; the
 earlier model-only owner-handle failure was a test setup failure, not a claimed
 physical acceptance result. See [history evidence](wiki/Validation-History.md#recording-history-browser-beta-23).
 
+**User-directed beta 23 publication:** merge the focused history PR, publish
+the next release and provide a [self-guided checklist](wiki/Testing-Checklist.md).
+Its fifteen items start Not run; do not transfer beta 21's Pass statuses or
+restart popup-driven UI tests. Release publication does not install the plugin.
+
 1. Preserve S09 observations and remaining exceptions; owner-reported acceptance and independently verified results remain distinct.
 2. S10/S11 are addressed in betas 12/13; S12's tested scope is explicitly accepted after betas 14/15 and the actual-editor soak. S13-S16's bounded work is covered in betas 16-19. Keep unverified custom-stack/headroom, cross-machine and physical-failure boundaries and the saved-mod discrepancy visible.
 3. Proceed with individually scoped feature work under the owner's accepted configuration. Keep focused changes, regression evidence and the established PR/merge/beta-release cycle for runtime changes; evidence-only documentation does not replace binaries.

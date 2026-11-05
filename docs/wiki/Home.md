@@ -18,6 +18,7 @@ required by the plugin.
 | Install and use the plugin | [Installation and workflow](Installation-and-Workflow) |
 | Diagnose an error or recover safely | [Troubleshooting](Troubleshooting) |
 | Check supported use and open acceptance gates | [Validation and limitations](Validation-and-Limitations) |
+| Run self-guided release acceptance checks | [Testing checklist](Testing-Checklist) |
 
 ## Technical reference
 

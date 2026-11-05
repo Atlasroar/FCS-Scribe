@@ -130,6 +130,10 @@ belong in [Building and releases](Building-and-Releases#reproduce-performance-me
 
 ## Remaining interactive acceptance
 
+Use the [self-guided testing checklist](Testing-Checklist) for current
+history/Markdown actions and related regressions. Its items start Not run;
+publishing the checklist is not a new physical acceptance pass.
+
 The owner accepted beta 21's feature checklist for the tested configuration
 and explicitly directed feature work to continue. Remaining S09 support/test
 boundaries are not silently marked passed: broader workflow/control coverage,
