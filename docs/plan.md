@@ -681,9 +681,76 @@ output formats remain unimplemented and need individually agreed scope.
 - [x] Add read-only session/search browsing, original-context/evidence previews and explicit complete AI/Markdown range selection.
 - [x] Keep filtered/hidden intervening recordings in the inclusive export preview; preserve identities, reversals and original packets.
 - [x] Opening/filtering/closing history saves nothing, including enabled Scribe text; explicit exports keep normal text saves and draft/destination/state guards.
-- [ ] Add retention/editing controls separately; no silent deletion/pruning.
+- [x] Add guided, explicitly confirmed compiled-original archive/restore under Workspace; retain every recording and do not prune history.
+- [ ] Add actual history pruning/editing or automatic retention separately, only if requested.
 - [x] Define versioned storage/legacy conversion, explicit corruption failures, rotating small-marker backup, permanent legacy/recovery backups and unpruned session/main history.
 - [ ] Test restart recovery, stale drafts, changed mods/dependencies, and notes-only changes.
+
+### Guided retention delivery: beta 25
+
+**November 13, 2026:** the owner requested planning/discussion of retention
+controls and optional AI integrations before implementation. Retention now
+implements the selected guided/manual scope in beta 25;
+AI remains a discussion draft and OCS is not required.
+
+Recommended first release: **archive redundant session originals, retain all
+recorded evidence**. This is different from deleting old recordings or making
+history bounded. The main journal still grows, and every retained recording
+remains available to history/range exports. This removes redundant originals
+from the active folder by relocating their copies, not reducing the full
+baseline or the main journal's replay/memory cost. Same-drive archival only
+reorganizes storage and adds manifest overhead; different-drive archival can
+free space on the source drive.
+
+| Stage | Proposed deliverable | Safety/decision boundary |
+|---|---|---|
+| R1: inventory and preview | A Manage history action with active/pending/fully compiled session counts, measured byte sizes, archive candidates and projected savings. | No files change during preview. Age alone never establishes eligibility; preserve the active session and pending/unverified originals. |
+| R2: explicit archive and restore | Select verified fully compiled originals, copy them into a private archive with project/session identities and raw-byte hashes, verify readback, then remove only redundant source copies. Add explicit restore with same-project/hash/conflict checks. | Coordinate with the writer lease and pause recording/compilation. Revalidate sources before committing; preserve baseline, marker, main journal, pending sessions, recovery files and all evidence identities. Use a durable recovery state so interruption retains a verified source or archive copy and never claims an ambiguous success. |
+| R3: later automatic policy | Thresholds/scheduling only if separately requested; current age/count guidance merely changes an explicit selection. | No automatic execution or expiration. Protect the active session and never expire archive copies automatically. |
+| Later: actual pruning | A separately designed bounded active-history/checkpoint scheme, if requested. | Not equivalent to deleting files or filtering the browser. Must account for replay chains, baseline/head identities, original range evidence, drafts/workspaces, restore/compatibility and archived evidence availability. No silent baseline rebinding or recording deletion. |
+
+Archive originals outside upload/export-reserved storage; keep archives private.
+Existing open projects hash-check every observed session, so moving files behind
+the live catalogue is not sufficient. The operation must perform a controlled
+reconciliation and revalidation of observed sources under its lease/lifecycle before
+recording, compilation or export resumes; this must preserve the user's draft
+and never silently start a new baseline.
+Verification must prove unchanged current fingerprint/head, original packets
+and export ordering, no new compilation debt, cold Resume, exact restore,
+rejection of modified/missing/foreign sources and recovery from interruption,
+disk-full/access failures and concurrent writes. Never treat an archive as a
+mod/native-notes backup. Do not scan/delete unrelated files.
+
+**Owner decision, November 13, 2026:** archive fully compiled session originals
+while retaining every recording. R1/R2 is the selected first scope; actual
+pruning, automatic expiration and policy thresholds remain deferred. The
+archive-first release retains everything and does not claim bounded history.
+
+**Owner decision: guided selection with manual confirmation.** The action is
+**Workspace > Manage History**, not permanent toolbar clutter. It opens with
+no checks and optional guides off; last-activity age and keep-newest-eligible
+limits combine only when Select matching sessions is pressed. Manual row
+checks, usage, destination space/same-drive limits, explicit default-No archive
+and restore confirmations, cancellation and copyable recovery paths are in
+that window. Opening/preview/transfer saves no editable Scribe work.
+
+The implementation proves exact compiled parent/entries against the retained
+main journal, copies/flushes/verifies originals, commits a complete hash-checked
+manifest and removes the exact exclusively opened source by handle while its
+archive copy/manifest are protected by read handles. Each successful removal
+or restore updates source observations under the same writer lease, without
+replacing the current project/session, evidence catalogue or draft packet.
+Unknown external changes still fail. Restore rejects foreign/divergent/unsafe
+inputs and conflicts, recognizes exact present copies and never deletes archives.
+Independent file operations can partially finish; completed manifests permit
+explicit recovery, while incomplete copies without a manifest retain originals.
+
+Focused core/non-showing validation and limitations are recorded in
+[Validation history](wiki/Validation-History.md#guided-history-archives-unreleased-source).
+No physical/cross-drive device-loss or power-cut guarantee is claimed.
+The installed plugin, older acceptance history and existing testing checklist
+remain unchanged. The owner requested a new PR, merge and beta 25 prerelease
+with source-matching package/wiki publication; no live installation is requested.
 
 ### Markdown changelogs/documentation
 
@@ -725,6 +792,45 @@ saved-data backend where it has passed cross-validation.
 - [ ] Validate provider responses with the same batch/evidence/staleness checks as manual drafts.
 - [ ] Keep generated notes editable and require explicit approval; never automatically apply or save.
 - [ ] Test cancellation, unavailable providers, malformed responses, stale results, and accidental repeated requests.
+
+### Proposed AI delivery: discussion draft
+
+Recommended first release: a direct **Generate draft** action for one selected
+provider, off by default, keeping offline export/import and native approval
+unchanged. Provider, authentication and deployment choices remain undecided;
+do not assume a plugin subscription includes API access or permits automation
+through a provider's web UI.
+
+| Stage | Proposed deliverable | Safety/decision boundary |
+|---|---|---|
+| A1: provider and private configuration | Select one documented provider/API/model, explicit enabled setting and connection test. Prefer Windows-protected per-user credential storage, separate from portable mod/project files. | A connection test must not submit mod text. Secrets never enter settings/locators, packets, archives, workspaces, release files or logs. Storage scope, endpoint/redirect rules and clear/remove credential actions must be agreed before implementation. |
+| A2: preview and submit | Use the existing inclusive range selector, show the actual outgoing content, destination/model and size, then require explicit Send. Keep one request active and provide Cancel and visible progress. | No automatic sends/scheduling. Review all context, dependency/record text and warnings before sharing. For schema-3 ranges avoid transmitting redundant nested packets when a validated complete outer evidence/template projection suffices; define and test the projection first, with no dropped IDs or hidden extra data. |
+| A3: receive and review | Bind the result to the original packet/project/request and opening draft revision; show a proposed JSON draft and explicit adoption. | Do not replace user edits or adopt a late/cancelled response. Validate exact batch/fingerprint/targets/every-change-once coverage and current state with existing rules. Invalid/incomplete output is labelled and preserved for correction, never approved or applied. |
+| A4: errors and packaging | Report authentication/rate limits, timeout/network failure, malformed/truncated/oversized output and unsupported models. Retain manual fallback. | Bound request/response sizes and duration; no silent truncation or automatic cost-incurring retries. Recheck runtime/API/dependency licensing before packaging. Do not introduce an OCS dependency or modern helper unless the selected provider actually requires it. |
+
+Prompt text and all mod text are untrusted content, not executable instructions
+or permission to alter local files. Generated text remains editable; existing
+native-note approval and current-state/evidence checks stay mandatory. Generation
+never automatically applies notes, saves the mod, records or compiles history.
+Disclose any normal enabled Scribe-text saving caused by an explicit action;
+preview and cancellation before submission should not unexpectedly save work.
+
+Verification must cover secrets absent from every portable surface/log, no
+mod data sent while disabled or during connection tests, exact preview/payload
+agreement, bounded sizes, explicit retry/cost behavior, duplicate-click
+prevention, cancellation/closing, late edits/results, failed/stale/incomplete
+responses and unchanged native/tracking state.
+
+**Open decisions:** hosted BYO-key API versus local service; first provider/model;
+per-user connection scope versus per-project model preferences; confirmation on
+every send; and whether results require explicit adoption or may replace only
+an unchanged draft after prior authorization. Recommend hosted BYO-key or an
+explicit local endpoint as separate choices, per-user secrets, confirmation on
+every send and explicit draft adoption. No provider is selected by this draft.
+
+**Suggested order:** deliver the selected R1/R2 archival scope first, then
+select an AI provider and deliver A1-A4 as a separate focused change. Revisit
+automatic policies or actual pruning only after safe manual archival works.
 
 ## Remaining delivery scope
 

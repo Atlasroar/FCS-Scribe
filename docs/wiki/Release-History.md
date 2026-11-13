@@ -8,7 +8,7 @@ Historical release notes describe their own version, not current support.
 ## Current release and versioning
 
 The current plugin release is
-[v0.1.0-beta.24](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.24).
+[v0.1.0-beta.25](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.25).
 All releases remain experimental prereleases. A newer beta number does not
 close the [interactive acceptance gate](Validation-and-Limitations#remaining-interactive-acceptance).
 
@@ -27,6 +27,7 @@ reissued historical archive.
 
 | Version and original release notes | Main change |
 |---|---|
+| [v0.1.0-beta.25](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.25) | Workspace guided age/count selection, storage/space preview and explicitly confirmed archive/restore of compiled session originals; every recording retained |
 | [v0.1.0-beta.24](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.24) | Opt-in task table with scoped search, completion/type/priority/date filters, stable sorting, editable priority and captured task metadata |
 | [v0.1.0-beta.23](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.23) | Read-only session/search history browsing with original evidence and complete inclusive AI/Markdown range previews |
 | [v0.1.0-beta.22](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.22) | Deterministic Markdown exports of recording facts or validated reviewed prose, with typed values, linked evidence and guarded destinations |

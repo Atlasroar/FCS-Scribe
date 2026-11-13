@@ -160,9 +160,16 @@ independent verification; untested configurations are not passed.
 
 ## Not implemented
 
-History retention/editing controls, OCS saved-data integration, wiki-ready gameplay
+Automatic history retention/expiration, actual pruning/editing, OCS saved-data integration, wiki-ready gameplay
 exports, direct AI-provider connections, native notes-button redirection and
 plain-text vanilla comparisons are not current features.
+
+Guided compiled-original archive/restore is implemented in **beta 25**.
+Its synthetic/core evidence is scoped in
+[Validation history](Validation-History#guided-history-archives-unreleased-source);
+it does not establish physical FCS, cross-drive hardware failure or
+power-loss acceptance. It retains every recording and is not full backup or
+bounded-history support.
 
 ## Historical evidence links
 

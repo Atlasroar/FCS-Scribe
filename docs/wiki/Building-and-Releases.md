@@ -62,6 +62,19 @@ showing forms, launching FCS, loading its executable or displaying modal
 dialogs. It is not native-adapter or physical UI acceptance. Temporary
 synthetic data is removed; the ignored test binary/contract copy remains.
 
+History-management behavior also has non-showing checks:
+
+```powershell
+.\scripts\Test.ps1 -FcsDirectory '<Kenshi>' -HistoryViewOnly
+```
+
+This separately selected 32-bit STA runner uses synthetic tracking sessions,
+hidden form/control handles and injected confirmation decisions. It exercises
+selection, archive/restore, cancellation and layout without showing a form,
+native dialog or FCS executable. It is not physical/native acceptance and
+does not install the built plugin. Temporary synthetic tracking/archives are
+removed. Select either `HistoryViewOnly` or `TodoViewOnly`, not both.
+
 `Integration-Test.ps1` copies the FCS executable, required libraries, definitions
 and specified data into an isolated ignored `build\integration-fixtures`
 directory. A 32-bit test host initializes actual FCS forms under a generic

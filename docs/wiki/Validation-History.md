@@ -7,6 +7,48 @@ For current supported use and open gates, see
 [Validation and limitations](Validation-and-Limitations). For what changed
 in each release, see [Release history](Release-History).
 
+<a id="guided-history-archives-unreleased-source"></a>
+
+## Guided history archives (beta 25)
+
+On November 13, 2026, unreleased beta 25 source passed **892 core checks**,
+a warnings-as-errors plugin build and **20 non-showing history-management
+checks**. The existing **34 non-showing task-view checks** also passed.
+Updated native integration/menu test source compiled without execution.
+No FCS executable, native model, visible form or file-selection/confirmation
+dialog was opened, and no live plugin/mod was installed or changed.
+
+Focused synthetic archive cases cover measured storage/selection bounds,
+closed compiled and empty originals, active/closed pending sources and
+pending-dependent empty-session protection. Exact raw-byte copies, source
+reduction, original catalogue/order/packet/head/debt preservation, continued
+recording/compilation, cold reopen without originals, later-journal restore
+and unchanged already-present originals are checked.
+
+Fault injections cover copy interruption, manifest flush/pre-commit/post-commit,
+verified-archive and individual removal boundaries, partial restore and
+cancellation after a removal. Competing-reader removal failure and late source
+edits preserve originals/external intent. Stale previews/manifests, unsupported
+schemas, multiple JSON objects, foreign baselines, unsafe/duplicate names,
+damaged payloads, self-consistent divergent entries absent from the journal
+and conflicting restore targets fail without overwrites.
+
+The synthetic 32-bit STA UI runner creates hidden handles and injects manual
+confirmation decisions; no native dialogs are shown. It checks initial
+no-selection/off guidance, explicitly applied combined guides, exact checked
+identities after sorting, protected/private destinations, persistent non-writing
+space preview, archive and restore refusal/approval, safe cancellation,
+unchanged packet/session/pending identity and unrelated editable-storage bytes,
+and candidate layout at 1000/800 pixel window widths.
+
+These are bounded software/fixture results, **not physical FCS acceptance**,
+real different-drive/free-space exhaustion, device removal, process-kill or
+power-loss tests. Multi-file transfers can partially complete; archives remain
+private recovery copies, not complete backups or bounded history. The installed
+plugin was unchanged by these checks; beta 25 publication does not install it.
+The owner's existing beta 23
+checklist and older acceptance/discrepancy evidence remain separate.
+
 <a id="task-table-unreleased-beta-24-source"></a>
 
 ## Task table (beta 24)

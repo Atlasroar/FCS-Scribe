@@ -364,6 +364,28 @@ varies. Remove Markdown fences/commentary, use valid JSON escaping/commas and
 the expected object/array shapes. Preserve `BatchId`, `SourceFingerprint`,
 targets and citations from the correct template; review prose independently.
 
+## Managed history archive/restore errors
+
+**Beta 25 and later.** Workspace > Manage History reports
+errors and recovery paths in its copyable outcome box. It saves no editable
+notes, tasks or drafts. Preserve the archive and remaining originals before
+retrying; do not edit hashes or move files behind an open project.
+
+| Message/situation | Safe response |
+|---|---|
+| History/session files changed after preview | Refresh if storage still validates. Otherwise close/reopen the original project and resolve the external change first; no cached eligibility is used to bypass it. |
+| Active, uncompiled or pending-dependent session | Retain it. If appropriate, explicitly Compile in the correct project, then reopen Manage History. Age alone cannot make it eligible. |
+| Archive destination inside Kenshi/reserved storage, or a junction/symbolic link | Choose an ordinary existing private folder outside upload and project storage. Same-drive folders do not free drive space. |
+| Copy/manifest write, access or exclusive-removal failure | Keep the reported unique archive folder and all originals. Before manifest commit, originals are untouched. A valid completed manifest permits explicit restore of any partly removed originals. Close competing readers/writers; do not delete valuable archives to retry. |
+| Cancellation or interrupted restore | Some verified file operations may have completed. Keep the archive; retry explicit Restore to add only missing originals. Existing unchanged files are not overwritten. |
+| Invalid/foreign manifest, divergent entries, unsafe names or payload checksum mismatch | Preserve evidence and select an intact archive from this exact project/baseline. Do not rebind IDs or merge branches. |
+| Existing restore target differs, or the same session has another filename | Preserve the competing file and resolve its identity with writers closed. Restore never overwrites a conflict. |
+| Missing baseline/journal or required pending history | Managed restore needs a validating project and exact compiled proof. Use a complete matching private backup/closed-writer recovery instead; an archive is not a full backup. |
+| Manifest exceeds 8 MiB, or a path is too long for Framework file APIs | Choose a smaller selection or shorter private destination path. No source removal precedes a verified manifest. |
+
+See [guided archive/restore](Installation-and-Workflow#manage-history-guided-archive-and-restore)
+and the separate [complete-set recovery rules](Installation-and-Workflow#complete-tracking-sets-and-restore-failures).
+
 ## Portable workspace errors
 
 | Message | Cause and solution |
