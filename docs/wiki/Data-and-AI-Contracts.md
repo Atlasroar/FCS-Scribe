@@ -559,7 +559,7 @@ filename reject loading rather than dropping content. This is Scribe's format,
 not the native FCS sidecar format. No record or native annotation is written
 when tasks are edited.
 
-The **unreleased beta 24 source** also reads format 1 and writes format 2 after
+Beta 24 also reads format 1 and writes format 2 after
 a real task change or when creating a new file:
 
 ```text

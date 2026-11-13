@@ -7,7 +7,9 @@ For current supported use and open gates, see
 [Validation and limitations](Validation-and-Limitations). For what changed
 in each release, see [Release history](Release-History).
 
-## Task table (unreleased beta 24 source)
+<a id="task-table-unreleased-beta-24-source"></a>
+
+## Task table (beta 24)
 
 The task-table source passed **813 core checks**, a warnings-as-errors plugin
 build and **34 non-showing task-view checks** on November 13, 2026. Core cases
@@ -33,8 +35,9 @@ No visible forms, FCS executable, native model, native TODO window or live mod
 were opened. The existing copied-native test source was updated for table
 completion and captured-type metadata, but its native suite was not rerun.
 These results do not establish actual FCS selection/type integration or
-physical FCS layout acceptance. This is unreleased source, not a beta 24 release
-or installation; beta 23's checklist remains separate and unchanged.
+physical FCS layout acceptance. Publication of beta 24 does not turn these
+checks into physical acceptance or install it; beta 23's checklist remains
+separate and unchanged.
 
 ## Recording-history browser (beta 23)
 

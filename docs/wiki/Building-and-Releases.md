@@ -49,7 +49,7 @@ Run from the repository root, replacing the placeholder paths:
 `Test.ps1` runs dependency-free core checks and optionally compiles the plugin.
 Omit `-FcsDirectory` to run only the core checks.
 
-For the unreleased task-table source, run non-showing WinForms checks with:
+For task-table behavior, run non-showing WinForms checks with:
 
 ```powershell
 .\scripts\Test.ps1 -FcsDirectory '<Kenshi>' -TodoViewOnly

@@ -215,7 +215,7 @@ Both features are independently **off by default**. Notes is a basic plain-text
 editor writing `notes.txt`. Mod To Do uses a separate readable `todo.txt` with
 record IDs/names and task completion state.
 
-The **unreleased beta 24 source** adds a task table within this tab: item name,
+The tab contains a task table: item name,
 String ID, captured item type, editable priority, task-creation date and
 description, retaining Done checkboxes. Search all or one field, filter by
 completion/type/priority/inclusive local date bounds, and sort by clicking

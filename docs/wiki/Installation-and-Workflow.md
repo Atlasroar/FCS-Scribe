@@ -210,8 +210,7 @@ writing only, with no rich formatting. It uses `notes.txt`. The **Mod To Do**
 tab uses a separate `todo.txt`, retaining task text, linked record IDs/names and
 completion checkboxes.
 
-**Unreleased task-table update (beta 24 source):** the Mod To Do tab replaces
-the simple list with **Done, Item name, String ID, Item type, Priority, Created
+The Mod To Do tab shows **Done, Item name, String ID, Item type, Priority, Created
 date and Description** columns. The complete table, search, filters and task
 buttons are hidden when Mod To Do is off; the tab retains its enablement
 explanation. These controls do not modify FCS's native TODO window.
