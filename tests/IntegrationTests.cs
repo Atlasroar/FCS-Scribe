@@ -1676,15 +1676,19 @@ internal static class IntegrationTests
             list.SelectedIndices.Add(0);
             if (records.Count > 1) list.SelectedIndices.Add(1);
             var selected = adapter.SelectedModTodos();
-            Check(selected.Count == records.Count && selected.All(x => !String.IsNullOrWhiteSpace(x.RecordId)),
-                "the adapter resolves actual native multi-selection into stable task targets");
+            Check(selected.Count == records.Count && selected.All(x => !String.IsNullOrWhiteSpace(x.RecordId) &&
+                x.RecordType == FcsAdapter.Property(records.Single(record =>
+                    (string)FcsAdapter.Property(record, "stringID") == x.RecordId), "type").ToString()),
+                "the adapter resolves actual native multi-selection into stable task targets and captured types");
             FcsAdapter.NativeTodoItem(editor).Enabled = true;
             FcsAdapter.Call(hook, "Opening", menu, new System.ComponentModel.CancelEventArgs());
             Check(hook.Item.Available && hook.Item.Enabled, "the native record-menu entry follows the saved opt-in setting and selection");
             window.AddModTodos(selected, "Adjust this record.");
-            Check(view.Work.Todos.Count == selected.Count && File.ReadAllText(todo).Contains(selected[0].RecordId),
-                "record-linked tasks save in todo.txt, separate from free-form notes");
-            view.Todos.SetItemChecked(0, true);
+            Check(view.Work.Todos.Count == selected.Count && File.ReadAllText(todo).Contains(selected[0].RecordId) &&
+                view.Work.Todos.All(task => task.Priority == "Normal" && task.CreatedDateUtc.HasValue &&
+                    task.RecordType == selected.Single(target => target.RecordId == task.RecordId).RecordType),
+                "record-linked tasks save captured type, default priority and approval-time creation dates in todo.txt");
+            view.Todos.Rows[0].Cells["Done"].Value = true;
             Check(new ModWork(root, adapter.ActiveModName(), true, true).Todos[0].Done, "checking a task persists completion");
             view.Notes.Text = "Unsaved local text";
             File.WriteAllText(notes, "External author edit");

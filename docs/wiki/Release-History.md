@@ -8,7 +8,7 @@ Historical release notes describe their own version, not current support.
 ## Current release and versioning
 
 The current plugin release is
-[v0.1.0-beta.23](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.23).
+[v0.1.0-beta.24](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.24).
 All releases remain experimental prereleases. A newer beta number does not
 close the [interactive acceptance gate](Validation-and-Limitations#remaining-interactive-acceptance).
 
@@ -27,6 +27,7 @@ reissued historical archive.
 
 | Version and original release notes | Main change |
 |---|---|
+| [v0.1.0-beta.24](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.24) | Opt-in task table with scoped search, completion/type/priority/date filters, stable sorting, editable priority and captured task metadata |
 | [v0.1.0-beta.23](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.23) | Read-only session/search history browsing with original evidence and complete inclusive AI/Markdown range previews |
 | [v0.1.0-beta.22](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.22) | Deterministic Markdown exports of recording facts or validated reviewed prose, with typed values, linked evidence and guarded destinations |
 | [v0.1.0-beta.21](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.21) | Shared bottom warnings/temporary menu help, distinct activity status and tab-local notes/task messages |
@@ -57,6 +58,11 @@ Original Markdown release notes also live under
 
 ## Upgrade notes
 
+- **Task format (beta 24):** existing format-1 tasks load without rewriting.
+  A real task edit/add/remove writes format 2 with a unique original-byte
+  backup. Older plugins reject format 2; retain current task files and backups
+  before a deliberate downgrade. Unknown legacy type/date/priority is not
+  invented. See [task workflow](Installation-and-Workflow#scribe-notes-and-mod-to-do-beta-20).
 - **Settings location:** releases before beta 20 used
   `%LOCALAPPDATA%\FCS-Scribe\settings.json`. Current settings use
   `<project folder>\FCS-Scribe.settings.json`; the old file is preserved, not

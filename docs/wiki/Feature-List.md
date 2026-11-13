@@ -215,6 +215,14 @@ Both features are independently **off by default**. Notes is a basic plain-text
 editor writing `notes.txt`. Mod To Do uses a separate readable `todo.txt` with
 record IDs/names and task completion state.
 
+The tab contains a task table: item name,
+String ID, captured item type, editable priority, task-creation date and
+description, retaining Done checkboxes. Search all or one field, filter by
+completion/type/priority/inclusive local date bounds, and sort by clicking
+headers. The entire task workspace is hidden when the feature is off. Legacy
+type/date metadata remains Unknown and missing priority Unspecified, rather than
+inventing creation dates. See the [task-table workflow and format upgrade](Installation-and-Workflow#scribe-notes-and-mod-to-do-beta-20).
+
 When enabled, **Add Mod To Do** appears immediately below native **Add Todo
 Item** in the main Game World record-list context menu. Select one or more
 records, enter task text, then manage it in Scribe's Mod To Do tab. Native menu

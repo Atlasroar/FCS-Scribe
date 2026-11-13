@@ -875,8 +875,9 @@ namespace FcsScribe
             if (adapter.ActiveModId() != ModId) throw new InvalidOperationException("The active mod changed. Open Scribe for that mod before adding tasks.");
             if (targets.Count == 0 || String.IsNullOrWhiteSpace(text))
                 throw new InvalidOperationException("Select records and enter task text.");
-            foreach (ModTodo target in targets)
-                modWork.Work.Todos.Add(new ModTodo { RecordId = target.RecordId, RecordName = target.RecordName, Text = text });
+            DateTime createdUtc = DateTime.UtcNow;
+            var tasks = targets.Select(target => ModTodo.Create(target, text, createdUtc)).ToList();
+            modWork.Work.Todos.AddRange(tasks);
             modWork.RefreshTasks(); tabs.SelectedTab = modWork.TodoTab;
             SaveModWork();
             status.Text = targets.Count + " Mod To Do task(s) saved in " + modWork.Work.TodoPath + ". Native annotations unchanged.";

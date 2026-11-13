@@ -311,8 +311,13 @@ namespace FcsScribe
             object list = Field(nav, "listView1");
             object selected = list.GetType().GetProperty("SelectedItems", Flags | BindingFlags.DeclaredOnly).GetValue(list, null);
             return ((IEnumerable)selected).Cast<object>()
-                .Select(x => new ModTodo { RecordId = (string)Property(x, "stringID"),
-                    RecordName = (string)Property(x, "Name"), Text = "Review this record." }).ToList();
+                .Select(x => {
+                    string id = (string)Property(x, "stringID");
+                    if (String.IsNullOrWhiteSpace(id) || !items.Contains(id))
+                        throw new InvalidOperationException("A selected TODO record is no longer in the current editor data.");
+                    return new ModTodo { RecordId = id, RecordName = (string)Property(x, "Name"),
+                        RecordType = Property(items[id], "type").ToString(), Text = "Review this record." };
+                }).ToList();
         }
 
         public PreviewImage ArchivePreview(string destination, string expectedHash)

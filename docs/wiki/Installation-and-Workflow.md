@@ -210,10 +210,39 @@ writing only, with no rich formatting. It uses `notes.txt`. The **Mod To Do**
 tab uses a separate `todo.txt`, retaining task text, linked record IDs/names and
 completion checkboxes.
 
+The Mod To Do tab shows **Done, Item name, String ID, Item type, Priority, Created
+date and Description** columns. The complete table, search, filters and task
+buttons are hidden when Mod To Do is off; the tab retains its enablement
+explanation. These controls do not modify FCS's native TODO window.
+
+Search all fields or select a field; combine **All / Open / Completed**, item
+type and priority filters. Check **From** and/or **To** to enable inclusive
+local-calendar creation-date bounds. Uncheck them to remove those bounds;
+**Clear filters** restores all tasks. A reversed range reports an error in the
+tab. Click a column heading to sort, and again to reverse it. Sorting/filtering
+never changes the stored task order or saves unsaved Scribe work.
+
+Priority is editable in the table (**Low / Normal / High**, with
+**Unspecified** for unknown/cleared priority). New tasks default to Normal and
+capture the record name/type plus a UTC task-creation timestamp when added.
+Names/types are captured labels, not automatically refreshed after record
+renames. Dates display in local time and refer to the task, not the FCS record.
+Legacy tasks show Unknown type/date and Unspecified priority; no historical
+metadata is invented. Date filters exclude tasks with unknown creation dates.
+Descriptions retain their full plain text through the tooltip and **Edit
+selected task...** editor.
+
+Existing format-1 `todo.txt` files load without rewriting, including on unchanged
+Save Changes. A real task edit/add/remove writes format 2, preserving original
+bytes in a unique backup. Older plugin builds cannot read format 2: close Scribe
+and retain the complete current file and backups before downgrading; do not
+silently replace current tasks with an older backup. See the
+[text-file contract](Data-and-AI-Contracts#scribe-text-files-and-project-locator-beta-20).
+
 With Mod To Do enabled, select one or more records in the main FCS Game World
 record list and right-click. **Add Mod To Do** appears immediately below native
 **Add Todo Item** and opens Scribe's task editor. Editing, removing or checking
-a task saves it. The native menu item, its behavior and FCS's own Notes/TODO
+a task (or changing its priority in the newer table) saves it. The native menu item, its behavior and FCS's own Notes/TODO
 window/files remain unchanged. Other native property-window menus are not
 extended.
 

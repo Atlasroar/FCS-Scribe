@@ -38,6 +38,7 @@ hash identifies a test dependency, not an additional runtime whitelist.
 | CodeQL | Static analysis within its available context | A Windows plugin build, native acceptance or proof of no vulnerabilities |
 | Markdown exports | Deterministic typed/evidence-linked output, synthetic GFM rendering and guarded copied-native export paths | A new physical beta 22 acceptance pass, complete gameplay interpretation, vanilla comparisons or a tracking/workspace backup |
 | Recording-history browser | Detached original catalogue, session/search filters, complete inclusive range preview and non-writing browser behavior | A physical beta 23 acceptance pass, saved/applied state, an event log or retention/deletion guarantees |
+| Task table | Strict metadata/legacy storage, non-writing filters/sorting and synthetic non-showing WinForms editing/layout checks | A physical beta 24 acceptance pass or independently rerun native record-selection/type integration |
 
 The current notes/task feature has copied-native evidence on official-data and
 representative fixtures. Its detailed scope is recorded under
@@ -73,6 +74,13 @@ covers read-only filtering, original context/identity, pending/legacy/empty
 states and reuse of existing export guards on a small copied fixture. It is
 not new physical FCS Extended acceptance. Retention/pruning, full metadata
 history and prior-note application status remain outside this feature.
+
+The [beta 24 task-table evidence](Validation-History#task-table-beta-24) covers
+813 core checks/build and 34 synthetic non-showing task-view cases. The updated
+native integration suite compiled but was not executed; no FCS executable or
+visible forms were opened. Captured task names/types are not live record labels,
+and unknown legacy metadata is not inferred. The earlier checklist does not
+certify this new task UI.
 
 ## Capture and provenance limits
 

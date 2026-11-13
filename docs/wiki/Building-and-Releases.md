@@ -49,6 +49,19 @@ Run from the repository root, replacing the placeholder paths:
 `Test.ps1` runs dependency-free core checks and optionally compiles the plugin.
 Omit `-FcsDirectory` to run only the core checks.
 
+For task-table behavior, run non-showing WinForms checks with:
+
+```powershell
+.\scripts\Test.ps1 -FcsDirectory '<Kenshi>' -TodoViewOnly
+```
+
+This selector compiles all plugin source with the installed FCS Extended
+contract and runs synthetic task controls in a 32-bit STA process. It creates
+hidden control handles and drives date toggles/priority dropdowns without
+showing forms, launching FCS, loading its executable or displaying modal
+dialogs. It is not native-adapter or physical UI acceptance. Temporary
+synthetic data is removed; the ignored test binary/contract copy remains.
+
 `Integration-Test.ps1` copies the FCS executable, required libraries, definitions
 and specified data into an isolated ignored `build\integration-fixtures`
 directory. A 32-bit test host initializes actual FCS forms under a generic

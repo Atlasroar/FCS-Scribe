@@ -756,6 +756,21 @@ next feature independently.
 
 ## Working order
 
+**User-directed task-table follow-up (beta 24):** keep all
+new functionality in the existing Mod To Do tab, hidden when its setting is
+off. Add Done plus item name/String ID/captured type/editable priority/task
+creation date/description columns, scoped search, completion/type/priority/date
+filters and stable header sorting. Retain separate notes and native TODO behavior.
+Format 1 remains byte-preserved until a task change writes format 2 with original
+backups; legacy type/date/priority is not invented. 813 core/build and 34
+non-showing synthetic view checks pass; no popup-driven native suite, live
+installation or physical beta 24 acceptance is claimed. The released beta 23
+checklist is unchanged. See [task-table evidence](wiki/Validation-History.md#task-table-beta-24).
+
+**User-directed beta 24 publication:** open a focused PR, verify its exact-head
+checks and merge it, then publish the source-bound prerelease and matching wiki.
+No additional popup-driven tests or live installation are required.
+
 **User-directed beta 20 exception:** implement Scribe-owned plain `notes.txt`,
 separate record-linked `todo.txt`, opt-in **Add Mod To Do** immediately below
 native **Add Todo Item**, mod-local settings/default destinations with an

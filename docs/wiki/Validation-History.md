@@ -7,6 +7,38 @@ For current supported use and open gates, see
 [Validation and limitations](Validation-and-Limitations). For what changed
 in each release, see [Release history](Release-History).
 
+<a id="task-table-unreleased-beta-24-source"></a>
+
+## Task table (beta 24)
+
+The task-table source passed **813 core checks**, a warnings-as-errors plugin
+build and **34 non-showing task-view checks** on November 13, 2026. Core cases
+cover exact legacy-byte preservation on unchanged saves, lazy format-2 upgrades
+with original backups, type/priority/UTC-date round trips, invalid metadata,
+conflicts, scoped search, combined completion/type/priority/local-date filters
+and stable sorting without stored-order mutation.
+
+Synthetic WinForms cases cover tab-local enabled/disabled visibility, original
+row identities after filtering/sorting, actual hidden priority-dropdown edits,
+completion persistence, date-bound toggles and reversed-range messages,
+no-save filtering with unsaved notes, wrapped filter/table layout at 1060/740
+pixel tab widths, clear filters and explicit malformed-file
+recovery. The recovery log is an expected injected case. A date-toggle check
+exposed stale rows when removing bounds; explicit checkbox events corrected
+the behavior and the regression now passes.
+
+Filtered completion/priority edits also verify that a task leaves the visible
+rows only after its edit is committed. The updated copied-native suite compiles
+with warnings as errors, but was not executed.
+
+No visible forms, FCS executable, native model, native TODO window or live mod
+were opened. The existing copied-native test source was updated for table
+completion and captured-type metadata, but its native suite was not rerun.
+These results do not establish actual FCS selection/type integration or
+physical FCS layout acceptance. Publication of beta 24 does not turn these
+checks into physical acceptance or install it; beta 23's checklist remains
+separate and unchanged.
+
 ## Recording-history browser (beta 23)
 
 The owner-selected read-only browser passed **769 core checks**, a

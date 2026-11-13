@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using FcsScribe;
@@ -100,6 +102,136 @@ internal static class ModWorkTests
         new ModWork(external, "example.mod", true, false).Save();
         Check(TrackingStorage.HashFile(ignored.NotesPath) == bomHash, "unchanged BOM and line endings are byte-preserved");
         Check(Directory.GetFiles(root, "*.tmp", SearchOption.AllDirectories).Length == 0, "atomic saves leave no temporary files");
+        CheckTaskMetadata(Path.Combine(root, "metadata"));
+        CheckTaskQueries();
         return passed;
+    }
+
+    private static void CheckTaskMetadata(string root)
+    {
+        Directory.CreateDirectory(root);
+        string id = Guid.NewGuid().ToString("N"), path = Path.Combine(root, "todo.txt");
+        string legacy = "FCS-Scribe Mod To Do 1\r\nMod: example.mod\r\n[x]\t" + id +
+            "\tstable-1\tLegacy\\tname\tKeep\\nall text\r\n";
+        File.WriteAllText(path, legacy, new UTF8Encoding(true));
+        byte[] original = File.ReadAllBytes(path);
+        var work = new ModWork(root, "example.mod", false, true);
+        ModTodo old = work.Todos.Single();
+        Check(old.Id == id && old.Done && old.RecordName == "Legacy\tname" && old.Text == "Keep\nall text",
+            "legacy tasks retain exact identity, completion and escaped text");
+        Check(old.RecordType == null && old.Priority == null && old.CreatedUtc == null && !old.CreatedDateUtc.HasValue,
+            "legacy tasks do not invent type, priority or creation dates");
+        new ModTodoQuery { Search = "legacy", Sort = ModTodoColumn.CreatedDate }.Apply(work.Todos);
+        work.Save();
+        Check(File.ReadAllBytes(path).SequenceEqual(original) && Directory.GetFiles(root, "*.backup-*").Length == 0,
+            "legacy loading, queries and unchanged saves preserve raw BOM/CRLF bytes without migration");
+        old.Priority = "High"; work.Save();
+        Check(File.ReadAllText(path).StartsWith("FCS-Scribe Mod To Do 2\n") &&
+            Directory.GetFiles(root, "todo.txt.backup-*").Any(file => File.ReadAllBytes(file).SequenceEqual(original)),
+            "a real legacy task edit writes format 2 and preserves an exact unique original backup");
+        old = new ModWork(root, "example.mod", false, true).Todos.Single();
+        Check(old.Id == id && old.Done && old.Priority == "High" && old.RecordType == null && old.CreatedUtc == null &&
+            old.Text == "Keep\nall text", "legacy migration preserves unknown metadata and original task content");
+        DateTime created = new DateTime(2026, 11, 5, 12, 34, 56, DateTimeKind.Utc);
+        var target = new ModTodo { RecordId = "stable-2", RecordName = "Name \u03a9", RecordType = "ITEM" };
+        ModTodo task = ModTodo.Create(target, "Description\twith\r\nlines\\", created);
+        Check(task.Id != target.Id && !task.Done && task.Priority == "Normal" && task.RecordType == "ITEM" &&
+            task.CreatedDateUtc == created && task.CreatedUtc == created.ToString("o", CultureInfo.InvariantCulture),
+            "new tasks receive fresh identity, captured type, Normal priority and the exact supplied UTC date");
+        work = new ModWork(root, "example.mod", false, true); work.Todos.Add(task); work.Save();
+        var reopened = new ModWork(root, "example.mod", false, true);
+        ModTodo copy = reopened.Todos.Single(item => item.Id == task.Id);
+        Check(copy.RecordId == task.RecordId && copy.RecordName == task.RecordName && copy.RecordType == task.RecordType &&
+            copy.Text == task.Text && copy.Priority == task.Priority && copy.CreatedUtc == task.CreatedUtc,
+            "format 2 round-trips all metadata and literal description text");
+        string hash = TrackingStorage.HashFile(path); reopened.Save();
+        Check(TrackingStorage.HashFile(path) == hash, "unchanged format 2 saves retain exact bytes");
+        Reject<InvalidDataException>(() => ModTodo.Create(target, "text", DateTime.SpecifyKind(created, DateTimeKind.Local)),
+            "local creation times cannot silently become UTC");
+        Reject<InvalidDataException>(() => ModTodo.Create(new ModTodo { RecordId = "id" }, "text", created),
+            "new tasks require a captured type");
+        string valid = File.ReadAllText(path);
+        foreach (string invalidPriority in new[] { "Urgent", "low", " High " })
+        {
+            File.WriteAllText(path, valid.Replace("\tNormal\t", "\t" + invalidPriority + "\t"));
+            Reject<InvalidDataException>(() => new ModWork(root, "example.mod", false, true),
+                "invalid priority metadata fails closed: " + invalidPriority);
+        }
+        File.WriteAllText(path, valid.Replace(task.CreatedUtc, "2026-11-05"));
+        Reject<InvalidDataException>(() => new ModWork(root, "example.mod", false, true), "non-UTC/non-round-trip dates fail closed");
+        File.WriteAllText(path, valid.Replace(task.CreatedUtc, "2026-11-05T12:34:56.0000000+01:00"));
+        Reject<InvalidDataException>(() => new ModWork(root, "example.mod", false, true), "offset dates are not accepted as recorded UTC");
+        File.WriteAllText(path, valid.Replace("\tITEM\t", "\t \t"));
+        Reject<InvalidDataException>(() => new ModWork(root, "example.mod", false, true), "whitespace record type is not invented or normalized");
+        File.WriteAllText(path, valid.Replace("\tITEM\tNormal\t", "\tITEM\t"));
+        Reject<InvalidDataException>(() => new ModWork(root, "example.mod", false, true), "truncated format 2 metadata fails closed");
+        File.WriteAllText(path, valid);
+        reopened = new ModWork(root, "example.mod", false, true);
+        reopened.Todos[0].Priority = "Low"; File.WriteAllText(path, valid + "\n");
+        Reject<IOException>(() => reopened.Save(), "metadata edits still honor original-file conflict guards");
+        Check(File.ReadAllText(path) == valid + "\n" && reopened.Todos[0].Priority == "Low",
+            "a metadata conflict preserves external bytes and local intent");
+    }
+
+    private static void CheckTaskQueries()
+    {
+        DateTime created = new DateTime(2026, 11, 5, 12, 0, 0, DateTimeKind.Utc);
+        ModTodo a = ModTodo.Create(new ModTodo { RecordId = "string-1", RecordName = "Zulu sword", RecordType = "ITEM" },
+            "Review damage", created);
+        ModTodo b = ModTodo.Create(new ModTodo { RecordId = "string-2", RecordName = "alpha research", RecordType = "RESEARCH" },
+            "Review cost", created.AddMonths(-1));
+        a.Priority = "High"; b.Priority = "Low"; b.Done = true;
+        var legacy = new ModTodo { RecordId = "string-3", RecordName = "Legacy task", Text = "Unknown metadata", Priority = null };
+        var tasks = new List<ModTodo> { a, b, legacy };
+        Check(new ModTodoQuery().Apply(tasks).SequenceEqual(tasks), "default query retains original task order and references");
+        foreach (var test in new[] {
+            new { Field = ModTodoField.ItemName, Search = "SWORD" },
+            new { Field = ModTodoField.StringId, Search = "STRING-1" },
+            new { Field = ModTodoField.ItemType, Search = "item" },
+            new { Field = ModTodoField.Priority, Search = "HIGH" },
+            new { Field = ModTodoField.CreatedDate, Search = "2026-11-05" },
+            new { Field = ModTodoField.Description, Search = "DAMAGE" } })
+            Check(new ModTodoQuery { Field = test.Field, Search = test.Search }.Apply(tasks).SequenceEqual(new[] { a }),
+                "field-specific case-insensitive search: " + test.Field);
+        Check(new ModTodoQuery { Search = "  ReSeArCh  " }.Apply(tasks).SequenceEqual(new[] { b }),
+            "all-field search trims its query and finds captured types/names");
+        Check(new ModTodoQuery { Field = ModTodoField.Description, Search = "sword" }.Apply(tasks).Count == 0,
+            "a scoped search does not leak matches from another field");
+        Check(new ModTodoQuery { State = ModTodoState.Open }.Apply(tasks).SequenceEqual(new[] { a, legacy }) &&
+            new ModTodoQuery { State = ModTodoState.Completed }.Apply(tasks).SequenceEqual(new[] { b }),
+            "completion filters retain open versus completed task identities");
+        Check(new ModTodoQuery { ItemType = "ITEM" }.Apply(tasks).SequenceEqual(new[] { a }) &&
+            new ModTodoQuery { Priority = "Unspecified", ItemType = "Unknown" }.Apply(tasks).SequenceEqual(new[] { legacy }),
+            "captured and explicit unknown metadata can be filtered without inference");
+        DateTime day = created.ToLocalTime().Date;
+        Check(new ModTodoQuery { CreatedFrom = day, CreatedTo = day }.Apply(tasks).SequenceEqual(new[] { a }),
+            "inclusive local-date filters include the boundary day and exclude unknown dates");
+        Check(new ModTodoQuery { CreatedTo = day }.Apply(tasks).SequenceEqual(new[] { a, b }) &&
+            new ModTodoQuery { CreatedFrom = day }.Apply(tasks).SequenceEqual(new[] { a }),
+            "one-sided date filters work independently");
+        Check(new ModTodoQuery { Search = "cost", State = ModTodoState.Completed, ItemType = "RESEARCH", Priority = "Low",
+            CreatedFrom = b.CreatedDateUtc.Value.ToLocalTime().Date, CreatedTo = b.CreatedDateUtc.Value.ToLocalTime().Date }
+            .Apply(tasks).SequenceEqual(new[] { b }), "all filters combine rather than replace each other");
+        Check(new ModTodoQuery { Sort = ModTodoColumn.ItemName }.Apply(tasks).SequenceEqual(new[] { b, legacy, a }),
+            "name sorting is case-insensitive");
+        Check(new ModTodoQuery { Sort = ModTodoColumn.StringId, Descending = true }.Apply(tasks).SequenceEqual(new[] { legacy, b, a }) &&
+            new ModTodoQuery { Sort = ModTodoColumn.ItemType }.Apply(tasks).SequenceEqual(new[] { a, b, legacy }),
+            "string IDs and captured item types sort as literal text");
+        Check(new ModTodoQuery { Sort = ModTodoColumn.Description }.Apply(tasks).SequenceEqual(new[] { b, a, legacy }),
+            "description sorting uses task text rather than record names");
+        Check(new ModTodoQuery { Sort = ModTodoColumn.Priority }.Apply(tasks).SequenceEqual(new[] { legacy, b, a }) &&
+            new ModTodoQuery { Sort = ModTodoColumn.Priority, Descending = true }.Apply(tasks).SequenceEqual(new[] { a, b, legacy }),
+            "priority sorting uses priority rank, not alphabetical labels");
+        Check(new ModTodoQuery { Sort = ModTodoColumn.CreatedDate, Descending = true }.Apply(tasks).SequenceEqual(new[] { a, b, legacy }),
+            "creation sorting uses UTC timestamps with explicit unknown entries");
+        Check(new ModTodoQuery { Sort = ModTodoColumn.Done }.Apply(tasks).SequenceEqual(new[] { a, legacy, b }) &&
+            tasks.SequenceEqual(new[] { a, b, legacy }), "stable completion sorting does not mutate the source list");
+        Reject<InvalidOperationException>(() => new ModTodoQuery { CreatedFrom = day, CreatedTo = day.AddDays(-1) }.Apply(tasks),
+            "reversed date ranges are explicit errors");
+        Reject<InvalidOperationException>(() => new ModTodoQuery { Priority = "invalid" }.Apply(tasks), "unknown priority filters reject");
+        Reject<InvalidOperationException>(() => new ModTodoQuery { Field = (ModTodoField)100 }.Apply(tasks), "unknown search fields reject");
+        Reject<InvalidOperationException>(() => new ModTodoQuery { Sort = (ModTodoColumn)100 }.Apply(tasks), "unknown sort columns reject");
+        Check(ModTodoQuery.CreationLabel(legacy) == "Unknown" && ModTodoQuery.PriorityLabel(legacy) == "Unspecified" &&
+            ModTodoQuery.TypeLabel(legacy) == "Unknown", "missing metadata remains explicitly unknown in presentation");
     }
 }

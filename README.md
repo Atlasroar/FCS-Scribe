@@ -17,6 +17,7 @@ remain editable drafts and require human review and approval.
 - [Markdown changelog exports](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#markdown-changelog-exports): captured facts or validated reviewed prose, with exact values and linked evidence.
 - [Portable draft workspaces](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#portable-draft-workspaces-beta-7): save/open unfinished text with its original AI packet, plus save/discard protection.
 - [Mod-local plain notes and record-linked tasks](https://github.com/Atlasroar/FCS-Scribe/wiki/Installation-and-Workflow#scribe-notes-and-mod-to-do-beta-20): separate text files, an opt-in **Add Mod To Do** context action and optional external project storage.
+- [Task search, filters and sorting](https://github.com/Atlasroar/FCS-Scribe/wiki/Installation-and-Workflow#scribe-notes-and-mod-to-do-beta-20): tab-local table, editable priority and captured type/creation dates; controls hidden when Mod To Do is off.
 - [Local Workshop metadata capture and export](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#7-workshop-info-inspect-and-export-local-publishing-context).
 - [Byte-identical preview-image archiving](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#8-archive-preview-image-preserve-the-original-bytes).
 - [Manual or scheduled recording and configurable export folders](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List#9-plugin-settings-review-scheduling-and-export-defaults).
