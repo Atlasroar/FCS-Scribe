@@ -541,7 +541,8 @@ AI packets and Workshop uploads.
 ## Scribe text files and project locator
 
 `notes.txt` is literal UTF-8 writing, with no JSON/header/markup. `todo.txt` is
-separate UTF-8 plain text with this format (columns are actual tab characters):
+separate UTF-8 plain text. Released beta 20-23 uses format 1 (columns are actual
+tab characters):
 
 ```text
 FCS-Scribe Mod To Do 1
@@ -557,6 +558,33 @@ Unknown/truncated escapes, malformed rows, duplicate GUIDs and another mod
 filename reject loading rather than dropping content. This is Scribe's format,
 not the native FCS sidecar format. No record or native annotation is written
 when tasks are edited.
+
+The **unreleased beta 24 source** also reads format 1 and writes format 2 after
+a real task change or when creating a new file:
+
+```text
+FCS-Scribe Mod To Do 2
+Mod: example.mod
+[ ]	0123456789abcdef0123456789abcdef	record-id	Record name	ITEM	Normal	2026-11-05T12:34:56.0000000Z	Task text
+```
+
+The eight tab-separated columns are completion, task GUID, native record ID,
+captured record name, captured record type, priority, UTC task-creation date and
+description. All text uses the existing escapes. Priority is exactly `Low`,
+`Normal`, `High` or empty (unspecified). Creation dates are exact invariant `o`
+format UTC timestamps or empty (unknown); offsets/local dates and malformed
+metadata reject loading. Empty type means unknown, not inferred ownership.
+New UI tasks capture type and creation time at addition, default to Normal and
+receive a fresh GUID. Editing completion, priority or description retains the
+original identity and creation time.
+
+Format-1 tasks load with unknown type/date and unspecified priority. Opening,
+querying and unchanged saves preserve original raw bytes/BOM/newlines. A real
+task change serializes format 2 through the same hash/lease/atomic replacement
+and unique raw-byte backup mechanism; no separate migration write occurs.
+Filtering/sorting projects task references without reordering the stored list.
+Older versions reject format 2, so retain current tasks and backups before
+any deliberate downgrade. No gameplay/AI packet schema changes are involved.
 
 Disabled features do not read/write their text file. Opening reads exact bytes
 and their hash through the same stream; invalid UTF-8 rejects loading. Saves

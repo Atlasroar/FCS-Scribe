@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -11,13 +12,56 @@ namespace FcsScribe
     {
         public string Id = Guid.NewGuid().ToString("N");
         public string RecordId, RecordName, Text;
+        public string RecordType, CreatedUtc, Priority = "Normal";
         public bool Done;
         public override string ToString() { return RecordName + " [" + RecordId + "] - " + Text; }
+
+        public DateTime? CreatedDateUtc
+        {
+            get
+            {
+                if (CreatedUtc == null) return null;
+                return ParseCreatedUtc(CreatedUtc);
+            }
+        }
+
+        private static DateTime ParseCreatedUtc(string text)
+        {
+            DateTime created;
+            if (!DateTime.TryParseExact(text, "o", CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind, out created) || created.Kind != DateTimeKind.Utc)
+                throw new InvalidDataException("TODO creation dates must be exact UTC timestamps.");
+            return created;
+        }
+
+        public static ModTodo Create(ModTodo target, string text, DateTime createdUtc)
+        {
+            if (target == null || String.IsNullOrWhiteSpace(target.RecordType))
+                throw new InvalidDataException("A new TODO needs a captured record type.");
+            if (createdUtc.Kind != DateTimeKind.Utc)
+                throw new InvalidDataException("A new TODO creation date must be UTC.");
+            var task = new ModTodo { RecordId = target.RecordId, RecordName = target.RecordName,
+                RecordType = target.RecordType, Text = text, CreatedUtc = createdUtc.ToString("o", CultureInfo.InvariantCulture) };
+            task.Validate();
+            return task;
+        }
+
+        internal void Validate()
+        {
+            Guid id;
+            if (!Guid.TryParseExact(Id, "N", out id) || String.IsNullOrWhiteSpace(RecordId) || String.IsNullOrWhiteSpace(Text))
+                throw new InvalidDataException("Each TODO needs a unique ID, a record ID and task text.");
+            if (Priority != null && Priority != "Low" && Priority != "Normal" && Priority != "High")
+                throw new InvalidDataException("TODO priority must be Low, Normal, High or unspecified.");
+            if (RecordType != null && String.IsNullOrWhiteSpace(RecordType))
+                throw new InvalidDataException("TODO record type must be captured text or unknown.");
+            if (CreatedUtc != null) ParseCreatedUtc(CreatedUtc);
+        }
     }
 
     public sealed class ModWork
     {
-        private const string Header = "FCS-Scribe Mod To Do 1";
+        private const string Header = "FCS-Scribe Mod To Do 2", LegacyHeader = "FCS-Scribe Mod To Do 1";
         private readonly string modName;
         private readonly bool notesEnabled, todoEnabled;
         private string notesHash, todoHash, savedNotes, savedTodo;
@@ -43,20 +87,29 @@ namespace FcsScribe
         private void ParseTodos(string text)
         {
             string[] lines = text.Replace("\r\n", "\n").Split('\n');
-            if (lines.Length < 2 || lines[0] != Header || lines[1] != "Mod: " + Escape(modName))
+            if (lines.Length < 2 || (lines[0] != Header && lines[0] != LegacyHeader) ||
+                lines[1] != "Mod: " + Escape(modName))
                 throw new InvalidDataException("todo.txt is not a Scribe TODO file for this mod. Preserve it and choose a separate project folder.");
+            bool legacy = lines[0] == LegacyHeader;
             var ids = new HashSet<Guid>();
             foreach (string line in lines.Skip(2).Where(x => x.Length != 0))
             {
                 string[] fields = line.Split('\t');
                 Guid id;
-                if (fields.Length != 5 || (fields[0] != "[ ]" && fields[0] != "[x]") ||
+                if (fields.Length != (legacy ? 5 : 8) || (fields[0] != "[ ]" && fields[0] != "[x]") ||
                     !Guid.TryParseExact(fields[1], "N", out id) || !ids.Add(id))
                     throw new InvalidDataException("Malformed or duplicate task in todo.txt. Preserve the file and repair or reload it explicitly.");
                 var task = new ModTodo { Done = fields[0] == "[x]", Id = fields[1],
-                    RecordId = Unescape(fields[2]), RecordName = Unescape(fields[3]), Text = Unescape(fields[4]) };
-                if (String.IsNullOrWhiteSpace(task.RecordId) || String.IsNullOrWhiteSpace(task.Text))
-                    throw new InvalidDataException("TODO record IDs and task text must not be empty.");
+                    RecordId = Unescape(fields[2]), RecordName = Unescape(fields[3]),
+                    Text = Unescape(fields[legacy ? 4 : 7]), Priority = null };
+                if (!legacy)
+                {
+                    task.RecordType = Unescape(fields[4]); task.Priority = Unescape(fields[5]); task.CreatedUtc = Unescape(fields[6]);
+                    if (task.RecordType.Length == 0) task.RecordType = null;
+                    if (task.Priority.Length == 0) task.Priority = null;
+                    if (task.CreatedUtc.Length == 0) task.CreatedUtc = null;
+                }
+                task.Validate();
                 Todos.Add(task);
             }
         }
@@ -67,12 +120,15 @@ namespace FcsScribe
             var ids = new HashSet<Guid>();
             foreach (ModTodo task in Todos)
             {
+                if (task == null) throw new InvalidDataException("A TODO entry is missing.");
+                task.Validate();
                 Guid id;
-                if (!Guid.TryParseExact(task.Id, "N", out id) || !ids.Add(id) ||
-                    String.IsNullOrWhiteSpace(task.RecordId) || String.IsNullOrWhiteSpace(task.Text))
+                if (!Guid.TryParseExact(task.Id, "N", out id) || !ids.Add(id))
                     throw new InvalidDataException("Each TODO needs a unique ID, a record ID and task text.");
                 text.Append(task.Done ? "[x]" : "[ ]").Append('\t').Append(task.Id).Append('\t')
                     .Append(Escape(task.RecordId)).Append('\t').Append(Escape(task.RecordName)).Append('\t')
+                    .Append(Escape(task.RecordType)).Append('\t').Append(Escape(task.Priority)).Append('\t')
+                    .Append(Escape(task.CreatedUtc)).Append('\t')
                     .Append(Escape(task.Text)).Append('\n');
             }
             return text.ToString();
