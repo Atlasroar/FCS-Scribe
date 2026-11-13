@@ -154,9 +154,10 @@ namespace FcsScribe
             AddAsyncAction(draftMenu.DropDownItems, "&Import draft", "Load an AI response JSON into the editable draft. Requires an exported batch; save/discard protection keeps existing work safe.", Import);
             AddAsyncAction(draftMenu.DropDownItems, "&Paste draft", "Replace the editable draft with clipboard text after save/discard protection. Nothing is applied by pasting.", Paste);
             AddAsyncAction(draftMenu.DropDownItems, "Export reviewed &Markdown", "After reviewing the prose, export the complete current-state-valid draft and its original catalogue as Markdown. Facts and prose stay separate. No native notes lookup, approval, application or mod save; restored workspaces need no open tracking project.", ExportReviewedMarkdown);
-            var workspaceMenu = AddMenu("&Workspace", "Save or restore a portable AI draft workspace. Scribe notes/TODO files are separate.");
+            var workspaceMenu = AddMenu("&Workspace", "Save or restore a portable AI draft workspace, or manually manage redundant compiled session originals. Scribe notes/TODO files are separate.");
             AddAsyncAction(workspaceMenu.DropDownItems, "&Save workspace", "Atomically save exact editable text, even unfinished JSON, together with its original AI packet. This is separate from tracking and does not save the mod.", SaveWorkspaceAction);
             AddAsyncAction(workspaceMenu.DropDownItems, "&Open workspace", "Restore draft text and its original packet after restart. Validate the bundle, report stale/invalid drafts, and require fresh validation and approval before applying.", OpenWorkspace);
+            AddAsyncAction(workspaceMenu.DropDownItems, "&Manage History", "Inspect tracking storage and manually select closed compiled originals using age/count guidance. Preview private archive space and explicitly confirm archive/restore; every recording stays in the journal. Opening saves nothing.", ManageHistory, true, false);
             AddAction(actions.Items, "&Apply approved notes", "Validate the draft and ask for approval, then append record Notes/TODO entries and mark FCS dirty. Does not save or edit Workshop notes.", Apply);
             AddAsyncAction(actions.Items, "&Settings", "Choose mod notes/TODOs, project storage and recording/export defaults, reload changed settings or explicitly repair settings. Existing tracking files stay at their chosen location.", Settings, true, false);
             MainMenuStrip = actions;
@@ -525,6 +526,22 @@ namespace FcsScribe
             if (project == null || tracker == null) throw new InvalidOperationException("Select Start tracking first.");
             status.Text = "Validating recording sources for history/range selection. No history is being changed.";
             return Task.Run(() => project.ExportRecordings(current));
+        }
+
+        private async Task ManageHistory()
+        {
+            if (project == null || tracker == null) throw new InvalidOperationException("Select Start tracking first.");
+            HistoryStorageInventory inventory = await Task.Run(() => project.HistoryInventory());
+            if (closing) return;
+            using (var management = new HistoryManagementDialog(project, inventory, adapter.InstallationDirectory,
+                text => MessageBox.Show(this, text, "Confirm history storage operation", MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes))
+            {
+                management.ShowDialog(this);
+                if (management.HadError) SetActionFailure(true);
+                status.Text = management.Outcome;
+                RefreshCompilationNotice();
+            }
         }
 
         private async Task BrowseHistory()

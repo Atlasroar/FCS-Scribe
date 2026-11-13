@@ -1,10 +1,11 @@
 # Feature list and behavior
 
-This page describes **implemented features in the current release**: what
+This page describes implemented features: what
 they do, where to find them and their important boundaries. Follow
 [Installation and workflow](Installation-and-Workflow) for procedures,
 [Troubleshooting](Troubleshooting) for errors and
 [Release history](Release-History) for version-by-version changes.
+Entries explicitly marked **unreleased source** are not in published beta 24.
 
 ## At a glance
 
@@ -20,6 +21,7 @@ they do, where to find them and their important boundaries. Follow
 | Reviewed Markdown | Draft > Export reviewed Markdown | Complete validated draft prose, separate from its original captured facts |
 | Editable AI response | Draft > Import draft / Paste draft | Reviewable JSON; import/paste does not apply it |
 | Portable draft workspace | Workspace > Save workspace / Open workspace | Exact unfinished text with its original packet |
+| Guided history archival (unreleased source) | Workspace > Manage History | Age/count-guided selection, space preview and confirmed archive/restore; all recordings retained |
 | Approved native annotations | Apply approved notes | Validated FCS Notes/TODO appends; marks FCS dirty without saving |
 | Plain Scribe notes | Enable in Settings, then Notes tab | Free-form `notes.txt`, separate from native annotations |
 | Record-linked Scribe tasks | Enable in Settings, then main record-list right-click > Add Mod To Do | Separate `todo.txt`; edit/remove/complete in Mod To Do tab |
@@ -165,6 +167,20 @@ retain the draft; edits made while saving remain unsaved. External changes
 block stale overwrite. Save explicitly: this is not autosave or crash recovery.
 See the [workspace contract](Data-and-AI-Contracts#portable-draft-workspace-contract-beta-7).
 
+### Manage History: guided storage controls
+
+**Unreleased source; not beta 24.** Workspace > Manage History displays
+tracking-set usage and closed/active/uncompiled originals. Nothing starts
+selected. Optional last-activity age and keep-newest-eligible guidance is
+applied only on request; individual checks remain editable.
+
+Preview a private destination and explicitly confirm Archive or Restore.
+Only verified redundant compiled originals move; every recording remains
+available from the main journal. Same-drive archival reorganizes storage,
+not drive space. No automatic pruning, expiration, compilation, draft
+replacement, text save or native restore is performed. See
+[guided archive/restore](Installation-and-Workflow#manage-history-guided-archive-and-restore).
+
 ## 6. Apply approved notes: append through FCS
 
 Scribe validates packet identity, current captured state, surviving targets,
@@ -247,7 +263,7 @@ mod, apply notes or recover lost gameplay.
 
 ## Planned features: not implemented
 
-History retention/editing controls, wiki-ready exports and direct
+Automatic retention/expiration, history pruning/editing, wiki-ready exports and direct
 AI connections are not shipped. The [OCS proposal](OpenConstructionSet-Integration)
 is also unimplemented. Scope/checklists belong in the
 [working plan](https://github.com/Atlasroar/FCS-Scribe/blob/main/docs/plan.md),

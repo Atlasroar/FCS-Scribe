@@ -132,7 +132,7 @@ namespace FcsScribe
         { FilePath = path; ValidLength = length; FileHash = TrackingStorage.HashFile(path); }
     }
 
-    public sealed class JournalProject : IDisposable
+    public sealed partial class JournalProject : IDisposable
     {
         private sealed class Stamp
         {
@@ -148,6 +148,7 @@ namespace FcsScribe
         private readonly Dictionary<string, string> sessionHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         private readonly List<RecordingEvidence> evidence = new List<RecordingEvidence>();
         private string sessionHash, journalHash, markerHash;
+        private readonly string baselineHash;
         private bool disposed, faulted;
         public readonly string PathName, DirectoryName, JournalPath, ProjectId;
         public Snapshot State { get; private set; }
@@ -180,6 +181,7 @@ namespace FcsScribe
                         "replaced; restore its original baseline or choose a new filename.");
                 anchor = new FileStream(PathName, FileMode.Open, FileAccess.Read, FileShare.Read);
                 LoadedTracking loaded = TrackingStorage.Load(PathName);
+                baselineHash = loaded.FileHash;
                 if (loaded.Legacy != null) throw new LegacyTrackingException(loaded.Legacy, loaded.FileHash);
                 TrackingDocument root = loaded.Document;
                 ProjectId = root.BaselineId;

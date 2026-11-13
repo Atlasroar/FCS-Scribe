@@ -347,14 +347,14 @@ internal static class IntegrationTests
                 new[] { "Start tracking", "Save Changes", "Compile journal", "Browse history", "Export AI packet", "Export Markdown" },
                 new[] { "Export Workshop info", "Archive preview image" },
                 new[] { "Import draft", "Paste draft", "Export reviewed Markdown" },
-                new[] { "Save workspace", "Open workspace" }
+                new[] { "Save workspace", "Open workspace", "Manage History" }
             };
             for (int i = 0; i < groups.Length; i++)
                 Check(menus[i].DropDownItems.Cast<ToolStripMenuItem>().Select(x => x.Text.Replace("&", "")).SequenceEqual(groups[i]),
                     menus[i].Text + " contains the requested actions in order");
             var commands = menus.SelectMany(x => x.HasDropDownItems ?
                 x.DropDownItems.Cast<ToolStripMenuItem>() : new[] { x }).ToList();
-            Check(commands.Count == 15, "all original/workspace/Markdown actions plus read-only history remain available");
+            Check(commands.Count == 16, "all original/workspace/Markdown actions plus read-only history and manual history storage remain available");
             foreach (ToolStripMenuItem item in menus.Take(4).Concat(commands))
             {
                 typeof(ToolStripItem).GetMethod("HandleMouseEnter", Flags).Invoke(item, new object[] { EventArgs.Empty });

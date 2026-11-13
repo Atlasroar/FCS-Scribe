@@ -397,7 +397,7 @@ chain expose missing required pending sessions. Foreign markers/journals are
 rejected. Failed validation does not repair missing history or make an empty
 folder sufficient.
 
-Fully compiled originals may be archived only with writers closed and the
+Manual archival outside the managed action requires closed writers and the
 main journal retained. If the main journal is missing but **all originals**
 remain, replay can recover the entries as pending and Compile can reconstruct
 it. Missing journal plus required archived originals is not recoverable from
@@ -411,6 +411,47 @@ The [copy/archive/upload procedures](Installation-and-Workflow#complete-tracking
 retain those limits. Baselines include full loaded/dependency data; storage,
 backups and draft workspaces must stay outside public upload content. The
 persistent warning does not inspect or block native Workshop uploads.
+
+### Compiled-session archive contract
+
+**Unreleased source; not beta 24.** Workspace > Manage History uses
+`Format: "FCS-Scribe compiled session archive"` and `SchemaVersion: 1`.
+`manifest.json` binds `ArchiveId`, `ProjectId`, the original `BaselineHash`,
+`ModId`, `CreatedUtc` and the observed `HeadId`, `Fingerprint`, `JournalHash`.
+Each `Sessions` entry gives a single safe `.jsonl` `FileName`, `SessionId`,
+exact raw-byte `Sha256`, `Bytes` and `Recordings`. Payloads live in the
+archive's `sessions` directory. The manifest is one JSON object, capped at
+8 MiB; duplicate/unsafe names and identities are rejected.
+
+Eligibility is derived from validated session headers/local chains and exact
+entry hashes in the unchanged verified main journal, not from timestamps,
+filenames or an unchecked cached completed flag. The parent must also be
+compiled or the original baseline. Archive preview binds observed project,
+baseline, head, fingerprint, journal/marker and selected source hashes.
+Sources are revalidated before mutation. Active/pending originals are never
+archived, and the baseline/main journal/evidence contracts are unchanged.
+
+All selected copies and a flushed, hash-verified manifest precede source
+removal. Removal hashes the exclusively opened original and deletes that
+same handle, not a separately re-resolved pathname; read handles retain the
+verified archive/manifest during removal. Only successful removals leave the
+live observed-source collections. Exact restored originals enter those
+collections without adding evidence or changing the active session/draft.
+Generic external removal/change guards remain intact.
+
+Restore validates the current baseline/project and exact archived entries
+against its current compiled journal; subsequent linear recording/compilation
+is allowed. The archive's earlier journal hash is an audit observation, not
+a requirement that prevents restoring after the journal grows. Conflicts and
+foreign/divergent history fail without overwrite. Unchanged already-present
+files are recognized. Partial operations retain explicit outcomes and recovery
+copies; archives are never automatically expired or deleted.
+
+These are integrity checks, not signatures, complete backups, mod restoration
+or proof against a failed/lost archive device. The writer lease coordinates
+Scribe writers, not every external editor. Keep archives private and preserve
+independent complete backups. See the
+[guided workflow](Installation-and-Workflow#manage-history-guided-archive-and-restore).
 
 <a id="path-identity-and-linear-branches-beta-17"></a>
 

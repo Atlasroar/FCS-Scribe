@@ -455,7 +455,7 @@ for a coherent project. Close all writers before copying or restoring.
 | Baseline JSON | Deltas cannot replace the original full anchor. Restore the exact baseline from the matching private backup. |
 | `project.json` for a modern journal-enabled baseline | Resume rejects missing/incomplete storage. Restore the complete matching set, not an empty folder or a marker from another project. |
 | Latest or middle uncompiled session | The required head or chain cannot replay. Restore the exact missing session; do not archive pending logs or edit IDs/hashes. |
-| Compiled session original, with its entries intact in `journal.jsonl` | Closed-project archival can replay from the journal; follow the procedure below, not deletion based on age. |
+| Compiled session original, with its entries intact in `journal.jsonl` | The journal retains every recording. Use the guided Manage History action in newer source, or the closed-project procedure below; age alone is not eligibility. |
 | `journal.jsonl`, with **all** original session history intact | Resume can replay the originals. Recovered entries are pending; Compile reconstructs the journal. Preserve the damaged set first and validate a private copy. |
 | Journal plus required archived/missing originals | The remaining files cannot reconstruct the required chain; Resume rejects it. Restore the exact journal or the complete original history from the same project. |
 | Foreign marker or journal | Identity/chain validation rejects mixed projects. Restore a coherent set; never merge files to make validation pass. |
@@ -470,8 +470,80 @@ and compare expected recording counts/head before treating restoration as comple
 
 ### Safely archiving compiled session originals
 
-There is **no automatic pruning or archive UI**. Keeping the originals is the
-simplest recovery option. If storage management is necessary:
+There is **no automatic pruning or archive expiration**. Keeping originals
+is the simplest recovery option. Unreleased source adds the guided action
+below; published beta 24 still uses the closed-project manual procedure.
+
+#### Manage History: guided archive and restore
+
+**Unreleased source; not included in beta 24.** Open a valid tracking project,
+then choose **Workspace > Manage History**. Opening, refreshing, choosing
+guidance and previewing save no notes, tasks, drafts or tracking history.
+The existing writer lease is retained and recording/compilation are paused
+while this window is open; the current session and draft association are not
+replaced.
+
+The inventory separates baseline, main journal, session originals and
+recovery/other bytes. Its byte counts are file lengths, not physical allocation
+or compressed-drive savings. Only **closed originals whose complete local
+chain and parent are already represented in the verified main journal/baseline**
+are eligible. Active, pending, unverified and pending-dependent empty sessions
+are retained. No compilation occurs automatically to make files eligible.
+
+1. Start with **nothing selected**. Optionally enable an age limit based on
+   last recorded activity (session start for empty logs) and/or **Keep newest
+   eligible sessions**. Click **Select matching sessions** to apply them;
+   both limits must match. Changing guide controls alone does not change
+   existing checks. Inspect/check individual eligible rows or clear selection.
+2. Choose an existing private archive parent folder outside Kenshi, Workshop
+   content and reserved `.json.scribe` storage. Junctions and symbolic links
+   are rejected. A new unique `Scribe-archive-<id>` subfolder is created only
+   after confirmation; existing archives are never overwritten.
+3. **Preview archive** shows selected payload bytes, additional manifest space
+   and destination free space when available. Same-drive archival reorganizes
+   copies but does **not** free drive space; manifest overhead adds storage.
+   A different drive can reclaim the redundant originals' source-drive space.
+   Destination space for the complete copy is needed before any originals
+   are removed.
+4. Choose **Archive selected** and explicitly confirm (default **No**).
+   Scribe copies exact original bytes, flushes and hash-checks readback,
+   commits and verifies `manifest.json`, then removes each redundant original
+   through an exclusively opened, checksum-verified Windows file handle.
+   Archive/manifest read handles protect verified recovery copies during
+   removal. Live source observations are reconciled under the same lease.
+5. To re-add originals, choose **Restore archive**, select its `manifest.json`,
+   inspect the same-project/baseline evidence checks and explicitly confirm.
+   Missing originals are copied exactly; unchanged already-present files are
+   counted, not overwritten. Foreign/divergent evidence, unsafe names,
+   altered bytes and conflicts fail explicitly. Archive copies remain.
+
+The main journal, baseline, marker, every recording/packet, current head,
+pending debt, recovery files and editable work remain unchanged by archival.
+Restore does not replay evidence twice, restore native `.mod`/annotations or
+approve an AI draft. The main journal keeps growing; archival does not bound
+replay time or memory. This archive is **not a complete tracking backup**.
+
+Cancellation stops between verified file operations; a large copy may finish
+before it is observed. Transfers are not an all-or-nothing multi-file
+transaction. On failure/cancellation, keep the reported archive folder and
+remaining originals. Without a committed manifest, copies are incomplete
+and no originals have been removed. With a valid manifest, explicit Restore
+can restore a partly removed set, or retry a partial restore without overwrites.
+Scribe does not automatically delete incomplete folders or old archives.
+
+Managed restore requires an open, validating project and exact compiled proof
+in its retained journal. If the baseline/journal or required pending history
+is missing, preserve the damaged set and restore a complete matching private
+backup with writers closed instead. All originals from matching archives can
+also be manually restored with writers closed before validating/reconstructing
+a missing journal; do not mix branches or bypass validation. The manifest
+schema has an explicit 8 MiB limit; use smaller selections if necessary.
+
+#### Manual archival without Manage History
+
+For beta 24 and older builds, or manual file operations outside the managed
+action, keep all writers closed. Do not move observed files behind an open
+Scribe project:
 
 1. In the correct project, explicitly Compile until there are no pending
    recordings. Resolve errors first. Then close Scribe and all FCS instances

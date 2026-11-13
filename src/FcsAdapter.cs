@@ -24,6 +24,7 @@ namespace FcsScribe
         private readonly object gameData;
         private readonly IDictionary items;
         private readonly object removedReference;
+        public string InstallationDirectory { get { return Path.GetDirectoryName(assembly.Location); } }
 
         public static void CheckVersion(Assembly assembly)
         {

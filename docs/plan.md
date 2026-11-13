@@ -681,33 +681,38 @@ output formats remain unimplemented and need individually agreed scope.
 - [x] Add read-only session/search browsing, original-context/evidence previews and explicit complete AI/Markdown range selection.
 - [x] Keep filtered/hidden intervening recordings in the inclusive export preview; preserve identities, reversals and original packets.
 - [x] Opening/filtering/closing history saves nothing, including enabled Scribe text; explicit exports keep normal text saves and draft/destination/state guards.
-- [ ] Add retention/editing controls separately; no silent deletion/pruning.
+- [x] Add guided, explicitly confirmed compiled-original archive/restore under Workspace; retain every recording and do not prune history.
+- [ ] Add actual history pruning/editing or automatic retention separately, only if requested.
 - [x] Define versioned storage/legacy conversion, explicit corruption failures, rotating small-marker backup, permanent legacy/recovery backups and unpruned session/main history.
 - [ ] Test restart recovery, stale drafts, changed mods/dependencies, and notes-only changes.
 
-### Proposed retention delivery: discussion draft
+### Guided retention delivery: unreleased source
 
 **November 13, 2026:** the owner requested planning/discussion of retention
-controls and optional AI integrations before implementation. Neither proposal
-below is implemented or an approved final design. OCS is not required.
+controls and optional AI integrations before implementation. Retention now
+implements the selected guided/manual scope in unreleased beta 25 source;
+AI remains a discussion draft and OCS is not required.
 
 Recommended first release: **archive redundant session originals, retain all
 recorded evidence**. This is different from deleting old recordings or making
 history bounded. The main journal still grows, and every retained recording
-remains available to history/range exports. This reduces duplicate disk storage,
-not the full baseline or the main journal's replay/memory cost.
+remains available to history/range exports. This removes redundant originals
+from the active folder by relocating their copies, not reducing the full
+baseline or the main journal's replay/memory cost. Same-drive archival only
+reorganizes storage and adds manifest overhead; different-drive archival can
+free space on the source drive.
 
 | Stage | Proposed deliverable | Safety/decision boundary |
 |---|---|---|
 | R1: inventory and preview | A Manage history action with active/pending/fully compiled session counts, measured byte sizes, archive candidates and projected savings. | No files change during preview. Age alone never establishes eligibility; preserve the active session and pending/unverified originals. |
 | R2: explicit archive and restore | Select verified fully compiled originals, copy them into a private archive with project/session identities and raw-byte hashes, verify readback, then remove only redundant source copies. Add explicit restore with same-project/hash/conflict checks. | Coordinate with the writer lease and pause recording/compilation. Revalidate sources before committing; preserve baseline, marker, main journal, pending sessions, recovery files and all evidence identities. Use a durable recovery state so interruption retains a verified source or archive copy and never claims an ambiguous success. |
-| R3: optional retention policy | Preview age/count-based candidate selection, default off; initially require explicit execution. | Define thresholds and scheduling only after R2 recovery is verified. Protect the active session and never expire archive copies automatically. |
+| R3: later automatic policy | Thresholds/scheduling only if separately requested; current age/count guidance merely changes an explicit selection. | No automatic execution or expiration. Protect the active session and never expire archive copies automatically. |
 | Later: actual pruning | A separately designed bounded active-history/checkpoint scheme, if requested. | Not equivalent to deleting files or filtering the browser. Must account for replay chains, baseline/head identities, original range evidence, drafts/workspaces, restore/compatibility and archived evidence availability. No silent baseline rebinding or recording deletion. |
 
 Archive originals outside upload/export-reserved storage; keep archives private.
 Existing open projects hash-check every observed session, so moving files behind
 the live catalogue is not sufficient. The operation must perform a controlled
-project/catalogue reload and revalidation under its lease/lifecycle before
+reconciliation and revalidation of observed sources under its lease/lifecycle before
 recording, compilation or export resumes; this must preserve the user's draft
 and never silently start a new baseline.
 Verification must prove unchanged current fingerprint/head, original packets
@@ -720,6 +725,31 @@ mod/native-notes backup. Do not scan/delete unrelated files.
 while retaining every recording. R1/R2 is the selected first scope; actual
 pruning, automatic expiration and policy thresholds remain deferred. The
 archive-first release retains everything and does not claim bounded history.
+
+**Owner decision: guided selection with manual confirmation.** The action is
+**Workspace > Manage History**, not permanent toolbar clutter. It opens with
+no checks and optional guides off; last-activity age and keep-newest-eligible
+limits combine only when Select matching sessions is pressed. Manual row
+checks, usage, destination space/same-drive limits, explicit default-No archive
+and restore confirmations, cancellation and copyable recovery paths are in
+that window. Opening/preview/transfer saves no editable Scribe work.
+
+The implementation proves exact compiled parent/entries against the retained
+main journal, copies/flushes/verifies originals, commits a complete hash-checked
+manifest and removes the exact exclusively opened source by handle while its
+archive copy/manifest are protected by read handles. Each successful removal
+or restore updates source observations under the same writer lease, without
+replacing the current project/session, evidence catalogue or draft packet.
+Unknown external changes still fail. Restore rejects foreign/divergent/unsafe
+inputs and conflicts, recognizes exact present copies and never deletes archives.
+Independent file operations can partially finish; completed manifests permit
+explicit recovery, while incomplete copies without a manifest retain originals.
+
+Focused core/non-showing validation and limitations are recorded in
+[Validation history](wiki/Validation-History.md#guided-history-archives-unreleased-source).
+No physical/cross-drive device-loss or power-cut guarantee is claimed.
+The installed plugin, published beta 24, older acceptance history and existing
+testing checklist remain unchanged; this source has not been released.
 
 ### Markdown changelogs/documentation
 
