@@ -7,7 +7,9 @@ For current supported use and open gates, see
 [Validation and limitations](Validation-and-Limitations). For what changed
 in each release, see [Release history](Release-History).
 
-## Guided history archives (unreleased source)
+<a id="guided-history-archives-unreleased-source"></a>
+
+## Guided history archives (beta 25)
 
 On November 13, 2026, unreleased beta 25 source passed **892 core checks**,
 a warnings-as-errors plugin build and **20 non-showing history-management
@@ -43,7 +45,8 @@ These are bounded software/fixture results, **not physical FCS acceptance**,
 real different-drive/free-space exhaustion, device removal, process-kill or
 power-loss tests. Multi-file transfers can partially complete; archives remain
 private recovery copies, not complete backups or bounded history. The installed
-plugin and published beta 24 remain unchanged. The owner's existing beta 23
+plugin was unchanged by these checks; beta 25 publication does not install it.
+The owner's existing beta 23
 checklist and older acceptance/discrepancy evidence remain separate.
 
 <a id="task-table-unreleased-beta-24-source"></a>

@@ -5,7 +5,7 @@ they do, where to find them and their important boundaries. Follow
 [Installation and workflow](Installation-and-Workflow) for procedures,
 [Troubleshooting](Troubleshooting) for errors and
 [Release history](Release-History) for version-by-version changes.
-Entries explicitly marked **unreleased source** are not in published beta 24.
+Guided history archival is available starting with beta 25.
 
 ## At a glance
 
@@ -21,7 +21,7 @@ Entries explicitly marked **unreleased source** are not in published beta 24.
 | Reviewed Markdown | Draft > Export reviewed Markdown | Complete validated draft prose, separate from its original captured facts |
 | Editable AI response | Draft > Import draft / Paste draft | Reviewable JSON; import/paste does not apply it |
 | Portable draft workspace | Workspace > Save workspace / Open workspace | Exact unfinished text with its original packet |
-| Guided history archival (unreleased source) | Workspace > Manage History | Age/count-guided selection, space preview and confirmed archive/restore; all recordings retained |
+| Guided history archival | Workspace > Manage History | Age/count-guided selection, space preview and confirmed archive/restore; all recordings retained |
 | Approved native annotations | Apply approved notes | Validated FCS Notes/TODO appends; marks FCS dirty without saving |
 | Plain Scribe notes | Enable in Settings, then Notes tab | Free-form `notes.txt`, separate from native annotations |
 | Record-linked Scribe tasks | Enable in Settings, then main record-list right-click > Add Mod To Do | Separate `todo.txt`; edit/remove/complete in Mod To Do tab |
@@ -169,7 +169,7 @@ See the [workspace contract](Data-and-AI-Contracts#portable-draft-workspace-cont
 
 ### Manage History: guided storage controls
 
-**Unreleased source; not beta 24.** Workspace > Manage History displays
+**Beta 25 and later.** Workspace > Manage History displays
 tracking-set usage and closed/active/uncompiled originals. Nothing starts
 selected. Optional last-activity age and keep-newest-eligible guidance is
 applied only on request; individual checks remain editable.

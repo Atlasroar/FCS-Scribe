@@ -471,12 +471,12 @@ and compare expected recording counts/head before treating restoration as comple
 ### Safely archiving compiled session originals
 
 There is **no automatic pruning or archive expiration**. Keeping originals
-is the simplest recovery option. Unreleased source adds the guided action
-below; published beta 24 still uses the closed-project manual procedure.
+is the simplest recovery option. Beta 25 adds the guided action below;
+beta 24 and older builds use the closed-project manual procedure.
 
 #### Manage History: guided archive and restore
 
-**Unreleased source; not included in beta 24.** Open a valid tracking project,
+**Beta 25 and later.** Open a valid tracking project,
 then choose **Workspace > Manage History**. Opening, refreshing, choosing
 guidance and previewing save no notes, tasks, drafts or tracking history.
 The existing writer lease is retained and recording/compilation are paused

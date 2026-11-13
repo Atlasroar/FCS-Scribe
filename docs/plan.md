@@ -686,11 +686,11 @@ output formats remain unimplemented and need individually agreed scope.
 - [x] Define versioned storage/legacy conversion, explicit corruption failures, rotating small-marker backup, permanent legacy/recovery backups and unpruned session/main history.
 - [ ] Test restart recovery, stale drafts, changed mods/dependencies, and notes-only changes.
 
-### Guided retention delivery: unreleased source
+### Guided retention delivery: beta 25
 
 **November 13, 2026:** the owner requested planning/discussion of retention
 controls and optional AI integrations before implementation. Retention now
-implements the selected guided/manual scope in unreleased beta 25 source;
+implements the selected guided/manual scope in beta 25;
 AI remains a discussion draft and OCS is not required.
 
 Recommended first release: **archive redundant session originals, retain all
@@ -748,8 +748,9 @@ explicit recovery, while incomplete copies without a manifest retain originals.
 Focused core/non-showing validation and limitations are recorded in
 [Validation history](wiki/Validation-History.md#guided-history-archives-unreleased-source).
 No physical/cross-drive device-loss or power-cut guarantee is claimed.
-The installed plugin, published beta 24, older acceptance history and existing
-testing checklist remain unchanged; this source has not been released.
+The installed plugin, older acceptance history and existing testing checklist
+remain unchanged. The owner requested a new PR, merge and beta 25 prerelease
+with source-matching package/wiki publication; no live installation is requested.
 
 ### Markdown changelogs/documentation
 

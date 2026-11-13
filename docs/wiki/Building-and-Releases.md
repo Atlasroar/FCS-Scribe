@@ -62,7 +62,7 @@ showing forms, launching FCS, loading its executable or displaying modal
 dialogs. It is not native-adapter or physical UI acceptance. Temporary
 synthetic data is removed; the ignored test binary/contract copy remains.
 
-Unreleased source also provides non-showing history-management checks:
+History-management behavior also has non-showing checks:
 
 ```powershell
 .\scripts\Test.ps1 -FcsDirectory '<Kenshi>' -HistoryViewOnly

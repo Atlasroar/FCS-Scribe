@@ -164,8 +164,8 @@ Automatic history retention/expiration, actual pruning/editing, OCS saved-data i
 exports, direct AI-provider connections, native notes-button redirection and
 plain-text vanilla comparisons are not current features.
 
-Guided compiled-original archive/restore is implemented in **unreleased
-source**, not published beta 24. Its synthetic/core evidence is scoped in
+Guided compiled-original archive/restore is implemented in **beta 25**.
+Its synthetic/core evidence is scoped in
 [Validation history](Validation-History#guided-history-archives-unreleased-source);
 it does not establish physical FCS, cross-drive hardware failure or
 power-loss acceptance. It retains every recording and is not full backup or

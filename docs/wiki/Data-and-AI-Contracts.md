@@ -414,7 +414,7 @@ persistent warning does not inspect or block native Workshop uploads.
 
 ### Compiled-session archive contract
 
-**Unreleased source; not beta 24.** Workspace > Manage History uses
+**Beta 25 and later.** Workspace > Manage History uses
 `Format: "FCS-Scribe compiled session archive"` and `SchemaVersion: 1`.
 `manifest.json` binds `ArchiveId`, `ProjectId`, the original `BaselineHash`,
 `ModId`, `CreatedUtc` and the observed `HeadId`, `Fingerprint`, `JournalHash`.

@@ -366,7 +366,7 @@ targets and citations from the correct template; review prose independently.
 
 ## Managed history archive/restore errors
 
-**Unreleased source; not beta 24.** Workspace > Manage History reports
+**Beta 25 and later.** Workspace > Manage History reports
 errors and recovery paths in its copyable outcome box. It saves no editable
 notes, tasks or drafts. Preserve the archive and remaining originals before
 retrying; do not edit hashes or move files behind an open project.
