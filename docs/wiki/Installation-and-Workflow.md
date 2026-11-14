@@ -30,6 +30,18 @@ Extract `FCS-Scribe-v<version>.zip`, then copy its `FCS-Scribe` folder into
 `<Kenshi>\mods\FCS-Scribe`. Launch FCS Extended normally, enable FCS-Scribe in
 the extension selector, and open a writable `.mod` in normal editing mode.
 The plugin adds an FCS-Scribe toolbar button and opens as an embedded MDI child.
+
+Starting with v0.1.0, the full package also includes the project's
+`FCS-Scribe.mod` carrier, `_FCS-Scribe.info` Workshop metadata and
+`_FCS-Scribe.img` preview, imported byte-for-byte from the owner's deployment.
+The metadata retains its existing Workshop identity; it is not a new upload
+or a dependency on RE_Kenshi's game-runtime API. The carrier's embedded
+publishing description is older text, not the authoritative current feature
+or support list; use this wiki. Preserve existing user settings, notes/tasks,
+private tracking and workspaces when upgrading. Those local files and locks
+are not included in release packages. The plugin DLL is built from tagged
+source, never copied from an older deployment.
+
 Tracking/privacy and applicable settings/compilation notices normally appear
 in the shared bottom information box. Hover over menu actions, or select them
 with the keyboard, to see descriptions there temporarily. Leaving the action

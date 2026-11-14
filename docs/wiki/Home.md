@@ -43,7 +43,7 @@ required by the plugin.
 ## Current status
 
 The current release is
-[v0.1.0-beta.25](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.25).
+[v0.1.0](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0).
 It remains experimental and restricted to the inspected Steam FCS 2.14.2
 executable hash. The owner accepted beta 21's feature checklist for the tested
 setup. Markdown/history features have core/copied-native evidence; the task

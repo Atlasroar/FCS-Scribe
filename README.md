@@ -27,7 +27,7 @@ remain editable drafts and require human review and approval.
 
 ## Wiki guide
 
-- [Home](https://github.com/Atlasroar/FCS-Scribe/wiki): purpose, current beta and project status.
+- [Home](https://github.com/Atlasroar/FCS-Scribe/wiki): purpose, current release and project status.
 - [Feature list and behavior](https://github.com/Atlasroar/FCS-Scribe/wiki/Feature-List): every action, safeguards and planned features.
 - [Troubleshooting](https://github.com/Atlasroar/FCS-Scribe/wiki/Troubleshooting): installation checks, error/warning catalogue, solutions and safe recovery.
 - [Installation and workflow](https://github.com/Atlasroar/FCS-Scribe/wiki/Installation-and-Workflow): prerequisites, setup, tracking storage, AI handoff, backups and recovery.
@@ -36,7 +36,7 @@ remain editable drafts and require human review and approval.
 - [Coding decisions](https://github.com/Atlasroar/FCS-Scribe/wiki/Coding-Decisions): integration choices and safety boundaries.
 - [Data and AI contracts](https://github.com/Atlasroar/FCS-Scribe/wiki/Data-and-AI-Contracts): snapshots, schemas, evidence, fingerprints and draft validation.
 - [Validation and limitations](https://github.com/Atlasroar/FCS-Scribe/wiki/Validation-and-Limitations): current supported scope, remaining acceptance and known risks.
-- [Testing checklist](https://github.com/Atlasroar/FCS-Scribe/wiki/Testing-Checklist): self-guided history/Markdown acceptance and related regression checks.
+- [Testing checklist](https://github.com/Atlasroar/FCS-Scribe/wiki/Testing-Checklist): self-guided history/Markdown, task-table and archive/restore acceptance checks.
 - [Release history](https://github.com/Atlasroar/FCS-Scribe/wiki/Release-History): version index, original release notes and upgrade differences.
 - [Validation history](https://github.com/Atlasroar/FCS-Scribe/wiki/Validation-History): historical test results, performance measurements and dated acceptance evidence.
 - [OpenConstructionSet integration](https://github.com/Atlasroar/FCS-Scribe/wiki/OpenConstructionSet-Integration): planned read-only saved-data analysis and its boundaries; not implemented.

@@ -8,9 +8,22 @@ Historical release notes describe their own version, not current support.
 ## Current release and versioning
 
 The current plugin release is
-[v0.1.0-beta.25](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.25).
-All releases remain experimental prereleases. A newer beta number does not
+[v0.1.0](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0).
+This is a normal (non-prerelease) initial-development version under
+[Semantic Versioning 2.0.0](https://semver.org/). Major zero does not promise
+a stable public API; experimental support/acceptance limits still apply.
+A release label does not
 close the [interactive acceptance gate](Validation-and-Limitations#remaining-interactive-acceptance).
+
+The documented integration/storage contracts in
+[Data and AI contracts](Data-and-AI-Contracts) and supported editor scope in
+[Validation and limitations](Validation-and-Limitations) define the versioned
+public compatibility surface. While major zero remains in use, increment the
+minor version for new capabilities or incompatible contracts and the patch
+version for compatible fixes. Reserve 1.0.0 for an explicitly stable public API.
+Use prerelease suffixes for preview builds; never replace published version
+contents. Assembly identity remains `0.1.0.0` for existing loader compatibility;
+informational version and `release.json` identify the SemVer package.
 
 The assembly informational version identifies the release; `release.json`
 records its exact source commit and supported executable hash. Match the ZIP
@@ -27,6 +40,7 @@ reissued historical archive.
 
 | Version and original release notes | Main change |
 |---|---|
+| [v0.1.0](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0) | First normal SemVer package; includes the deployment carrier/Workshop metadata/preview, current plugin and refreshed documentation/checklist |
 | [v0.1.0-beta.25](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.25) | Workspace guided age/count selection, storage/space preview and explicitly confirmed archive/restore of compiled session originals; every recording retained |
 | [v0.1.0-beta.24](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.24) | Opt-in task table with scoped search, completion/type/priority/date filters, stable sorting, editable priority and captured task metadata |
 | [v0.1.0-beta.23](https://github.com/Atlasroar/FCS-Scribe/releases/tag/v0.1.0-beta.23) | Read-only session/search history browsing with original evidence and complete inclusive AI/Markdown range previews |

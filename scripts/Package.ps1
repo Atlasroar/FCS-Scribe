@@ -16,13 +16,17 @@ if ($version -notmatch '^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$') {
 }
 $release = Join-Path $root 'build\release'
 New-Item -ItemType Directory -Force -Path $release | Out-Null
+$archive = Join-Path $release ("FCS-Scribe-v$version.zip")
+if ((Test-Path -LiteralPath $archive) -or (Test-Path -LiteralPath ($archive + '.sha256'))) {
+    throw 'A package already exists for this version. Published versions are immutable; choose a new version rather than replacing assets.'
+}
 $staging = Join-Path $release ('stage-' + [Guid]::NewGuid().ToString('N'))
 $payload = Join-Path $staging 'FCS-Scribe'
 New-Item -ItemType Directory -Force -Path $payload | Out-Null
 foreach ($file in @('FCS-Scribe.dll', 'FCS_extended.json')) {
     Copy-Item -LiteralPath (Join-Path $root ('build\FCS-Scribe\' + $file)) -Destination $payload
 }
-foreach ($file in @('README.md', 'LICENSE', 'SECURITY.md')) {
+foreach ($file in @('README.md', 'LICENSE', 'SECURITY.md', 'FCS-Scribe.mod', '_FCS-Scribe.info', '_FCS-Scribe.img')) {
     Copy-Item -LiteralPath (Join-Path $root $file) -Destination $payload
 }
 Copy-Item -LiteralPath (Join-Path $root 'docs') -Destination (Join-Path $payload 'docs') -Recurse
@@ -35,8 +39,7 @@ $metadata = [ordered]@{
     upstream_binaries_included = $false
 }
 $metadata | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $payload 'release.json') -Encoding UTF8
-$archive = Join-Path $release ("FCS-Scribe-v$version.zip")
-Compress-Archive -LiteralPath $payload -DestinationPath $archive -Force
+Compress-Archive -LiteralPath $payload -DestinationPath $archive
 $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
 [IO.File]::WriteAllText(($archive + '.sha256'),
     ($hash + '  ' + [IO.Path]::GetFileName($archive) + "`n"), (New-Object Text.UTF8Encoding($false)))

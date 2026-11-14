@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<ModData xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <id>3834992623</id>
+  <mod>FCS-Scribe</mod>
+  <title>FCS Scribe</title>
+  <tags>
+    <string>RE_Kenshi</string>
+  </tags>
+  <visibility>0</visibility>
+  <lastUpdate>2026-11-06T19:00:59.5540924-05:00</lastUpdate>
+</ModData>

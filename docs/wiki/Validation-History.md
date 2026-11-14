@@ -7,6 +7,29 @@ For current supported use and open gates, see
 [Validation and limitations](Validation-and-Limitations). For what changed
 in each release, see [Release history](Release-History).
 
+## Full package and SemVer transition (v0.1.0)
+
+On November 14, 2026, the release source passed 892 core checks, a
+warnings-as-errors plugin build, 20 non-showing history-management checks
+and 34 non-showing task-view checks. No native/visible FCS tests or live
+installation were performed. The 32-item owner checklist remains Not run.
+
+Read-only deployment comparison identified beta 23 binaries/manifest,
+29 identical and 12 differing documentation files, and three missing
+distribution assets. Only the carrier/Workshop metadata/preview were imported
+exactly; old DLL/docs, settings and locks were excluded. The preview decoded
+as a 500x500 PNG. Imported SHA-256 identities:
+
+| File | SHA-256 |
+|---|---|
+| `FCS-Scribe.mod` | `7362c0d99a3e1b731ee81c39d00ba25ed7b8ab76c36926fb5904ab28e18a068b` |
+| `_FCS-Scribe.info` | `f2a7da3ca485ae3946e3c2eb7e0e56abc49eef1a2ec831ca75ed428e8c7bc7c9` |
+| `_FCS-Scribe.img` | `0d61c567c351388ce6f36480401c7d82d18d51754cdfdd1e0e923d6c35dd1f64` |
+
+These establish source-byte provenance and package completeness, not new
+gameplay/native-loader acceptance. Normal major-zero SemVer publication
+does not resolve the earlier saved-mod discrepancy or promise a stable API.
+
 <a id="guided-history-archives-unreleased-source"></a>
 
 ## Guided history archives (beta 25)
