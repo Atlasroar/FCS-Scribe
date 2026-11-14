@@ -1,6 +1,7 @@
 name: Announce release on Discord
 
 on:
+  workflow_dispatch:
   release:
     types: [published]
 
@@ -28,7 +29,22 @@ jobs:
 
           with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as event_file:
               event = json.load(event_file)
-          release = event["release"]
+          if os.environ["GITHUB_EVENT_NAME"] == "workflow_dispatch":
+              latest_url = (
+                  os.environ["GITHUB_API_URL"] + "/repos/" +
+                  os.environ["GITHUB_REPOSITORY"] + "/releases/latest"
+              )
+              latest_request = urllib.request.Request(
+                  latest_url,
+                  headers={"Accept": "application/vnd.github+json", "User-Agent": "FCS-Scribe-release"},
+              )
+              try:
+                  with urllib.request.urlopen(latest_request, timeout=30) as response:
+                      release = json.load(response)
+              except (urllib.error.URLError, TimeoutError):
+                  raise SystemExit("Could not retrieve the latest published non-prerelease from GitHub.") from None
+          else:
+              release = event["release"]
           payload = {
               "allowed_mentions": {"parse": []},
               "embeds": [{
