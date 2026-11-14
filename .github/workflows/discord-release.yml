@@ -1,0 +1,68 @@
+name: Announce release on Discord
+
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Post release announcement
+        env:
+          DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import urllib.error
+          import urllib.request
+
+          webhook = os.environ.get("DISCORD_RELEASE_WEBHOOK", "")
+          if not re.fullmatch(r"https://discord\.com/api/webhooks/[0-9]+/[A-Za-z0-9_-]+", webhook):
+              raise SystemExit("Configure the DISCORD_RELEASE_WEBHOOK Actions secret with a Discord webhook URL.")
+
+          with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as event_file:
+              event = json.load(event_file)
+          release = event["release"]
+          payload = {
+              "allowed_mentions": {"parse": []},
+              "embeds": [{
+                  "title": (release.get("name") or release["tag_name"])[:256],
+                  "url": release["html_url"],
+                  "description": (release.get("body") or "Open the release for details and downloads.")[:3500],
+                  "color": 0x3498DB,
+                  "fields": [{
+                      "name": "Version",
+                      "value": release["tag_name"][:1024],
+                  }],
+                  "footer": {
+                      "text": "Prerelease" if release["prerelease"] else "Release",
+                  },
+              }],
+          }
+
+          class NoRedirects(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+
+          request = urllib.request.Request(
+              webhook + "?wait=true",
+              data=json.dumps(payload).encode("utf-8"),
+              headers={"Content-Type": "application/json", "User-Agent": "FCS-Scribe-release"},
+              method="POST",
+          )
+          try:
+              with urllib.request.build_opener(NoRedirects()).open(request, timeout=30) as response:
+                  if response.status != 200:
+                      raise SystemExit(f"Discord returned unexpected HTTP status {response.status}.")
+          except urllib.error.HTTPError as error:
+              raise SystemExit(f"Discord announcement failed (HTTP {error.code}).") from None
+          except (urllib.error.URLError, TimeoutError):
+              raise SystemExit("Discord announcement failed due to a network error or timeout.") from None
+          print("Release announcement delivered to Discord.")
+          PY

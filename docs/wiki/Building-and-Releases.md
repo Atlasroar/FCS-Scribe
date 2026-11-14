@@ -276,6 +276,26 @@ The matching Git tag/source archives supply corresponding source;
 `release.json` identifies the package's version, source commit, supported FCS
 hash and experimental status.
 
+### Discord release announcements
+
+`.github\workflows\discord-release.yml` posts an announcement when a GitHub
+release is **published**, including prereleases. It uses the repository Actions
+secret **`DISCORD_RELEASE_WEBHOOK`**. In repository Settings > Secrets and
+variables > Actions, create that secret with a newly generated Discord channel
+webhook URL. Never commit the URL; regenerate any webhook exposed in chat or
+logs and update the secret.
+
+The announcement includes the release title, version, link and truncated
+release notes, with Discord mentions disabled. The job has no GitHub token
+permissions, checkout, third-party action or automatic paid service. It rejects
+redirects and reports failures without printing the webhook. It does not retry
+automatically: rerunning a successful job can produce a duplicate announcement.
+The workflow must be merged into the default branch before future published
+releases can trigger it; it does not announce older releases retroactively.
+Releases published using another workflow's `GITHUB_TOKEN` do not trigger
+this workflow; use an appropriately scoped GitHub App token or personal token
+for that release-publishing workflow instead.
+
 ## Documentation sources and project checklists
 
 The wiki is the detailed user guide; the README is a short feature/wiki index.
