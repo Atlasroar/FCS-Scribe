@@ -1,6 +1,6 @@
 # Testing checklist
 
-Self-guided acceptance checks for **v0.1.0-beta.25**: history browsing,
+Self-guided acceptance checks for **v0.1.0**: history browsing,
 Markdown exports, the task table and guided history archive/restore.
 The original checks **1-15** are retained; **16-21** cover tasks and **22-32**
 cover history storage. Every item starts **Not run**; earlier owner-reported
@@ -13,6 +13,11 @@ Close FCS before installing the release. Verify the ZIP against its matching
 `.sha256` asset and use the supported executable. Back up private mod/native
 annotations, Scribe text/settings, complete tracking sets and draft workspaces;
 see [installation and backups](Installation-and-Workflow).
+
+Confirm the complete package includes `FCS-Scribe.mod`, `_FCS-Scribe.info`,
+`_FCS-Scribe.img`, the newly built DLL and loader JSON. Existing user settings,
+locks, notes/tasks and tracking data must not be replaced by deployment imports.
+The Workshop ID/preview are distribution metadata, not an automatic upload.
 
 Use a disposable test mod, not the original acceptance mod. Choose Manual
 recording/compilation for these checks and a separate export folder outside

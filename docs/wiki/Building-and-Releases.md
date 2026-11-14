@@ -257,8 +257,17 @@ The version comes from the plugin's assembly metadata, and the package records
 the exact source commit. Packaging does not publish or install anything.
 
 Release archives contain the `FCS-Scribe` folder with this project's plugin,
-`FCS_extended.json`, README, security policy, documentation, GPL-3.0 license and `release.json`.
+`FCS_extended.json`, `FCS-Scribe.mod`, `_FCS-Scribe.info`, `_FCS-Scribe.img`,
+README, security policy, documentation, GPL-3.0 license and `release.json`.
 No Kenshi, FCS or upstream FCS Extended binaries are bundled.
+
+The three carrier/Workshop files are tracked distribution assets, not local
+settings or gameplay tracking. Build the DLL from source; do not synchronize
+older deployed binaries/docs back into the repository. Settings, lock files,
+notes/tasks, private journals and workspaces stay out of packages. Packaging
+refuses to overwrite an existing version's ZIP/checksum.
+See [versioning](Release-History#current-release-and-versioning) for SemVer
+and the distinction between a normal major-zero release and API stability.
 
 Download published assets from
 [GitHub releases](https://github.com/Atlasroar/FCS-Scribe/releases).
