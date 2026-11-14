@@ -291,7 +291,11 @@ permissions, checkout, third-party action or automatic paid service. It rejects
 redirects and reports failures without printing the webhook. It does not retry
 automatically: rerunning a successful job can produce a duplicate announcement.
 The workflow must be merged into the default branch before future published
-releases can trigger it; it does not announce older releases retroactively.
+releases can trigger it. To explicitly announce the latest published
+non-prerelease, open Actions > Announce release on Discord > Run workflow
+and select `main`. This manual trigger retrieves the latest release without
+changing or republishing it. Run it only once per intended announcement:
+manual runs are not deduplicated. Older releases are not announced automatically.
 Releases published using another workflow's `GITHUB_TOKEN` do not trigger
 this workflow; use an appropriately scoped GitHub App token or personal token
 for that release-publishing workflow instead.
